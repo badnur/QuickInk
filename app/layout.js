@@ -7,15 +7,15 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'QuickInk - Print Anything, Anytime, Near You',
-  description: 'Self-service printing kiosk platform. Upload, Pay, Print in 60 seconds.',
+  description: 'Fast, simple, and affordable printing. Upload from phone, print at nearby kiosk in 60 seconds. ৳2 per page. Available across Bangladesh.',
 }
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body className={inter.className}>
+      <body className={`${inter.className} antialiased`}>
         <Navbar />
-        <main className="min-h-screen">
+        <main className="min-h-screen pt-20">
           {children}
         </main>
         <Footer />

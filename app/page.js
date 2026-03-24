@@ -1,232 +1,446 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Upload, MapPin, Printer, Clock, DollarSign, Users, Star, ArrowRight } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Upload, MapPin, Printer, Clock, DollarSign, Users, Star, ArrowRight, Zap, Shield, TrendingUp, CheckCircle, Sparkles, QrCode } from 'lucide-react'
 
 export default function HomePage() {
+  const [isVisible, setIsVisible] = useState(false)
+
+  useEffect(() => {
+    setIsVisible(true)
+  }, [])
+
   return (
-    <div className="bg-background">
+    <div className="bg-white">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-50 to-white py-20 md:py-32">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-              Print Anything, Anytime — <span className="text-blue-600">Near You</span>
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-8">
-              Upload → Pay → Print in 60 seconds
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/find-printer">
-                <Button size="lg" className="w-full sm:w-auto text-lg px-8 py-6">
-                  <MapPin className="mr-2 h-5 w-5" />
-                  Find Printer
-                </Button>
-              </Link>
-              <Link href="/partner">
-                <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 py-6">
-                  <Users className="mr-2 h-5 w-5" />
-                  Become a Partner
-                </Button>
-              </Link>
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-white to-indigo-50 pt-20 pb-28">
+        <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left: Content */}
+            <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
+              <Badge className="mb-6 bg-blue-100 text-blue-700 hover:bg-blue-100 px-4 py-1.5 text-sm font-medium">
+                <Sparkles className="h-3 w-3 mr-1.5 inline" />
+                Available near campus areas
+              </Badge>
+              <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+                Print Anything,
+                <br />
+                Anytime —{' '}
+                <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  Near You
+                </span>
+              </h1>
+              <p className="text-xl md:text-2xl text-gray-600 mb-4 leading-relaxed">
+                Upload → Get QR Code → Print in <span className="font-semibold text-blue-600">60 seconds</span>
+              </p>
+              <p className="text-lg text-gray-600 mb-8">
+                No need to visit a print shop. Print assignments without pen drive.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link href="/find-printer">
+                  <Button size="lg" className="w-full sm:w-auto text-lg px-8 py-6 bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                    <MapPin className="mr-2 h-5 w-5" />
+                    Find Nearest Printer
+                  </Button>
+                </Link>
+                <Link href="/partner">
+                  <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 py-6 border-2 border-gray-300 hover:border-blue-600 hover:bg-blue-50 transition-all duration-300">
+                    <TrendingUp className="mr-2 h-5 w-5" />
+                    Become a Partner
+                  </Button>
+                </Link>
+              </div>
+              <div className="mt-10 flex items-center gap-8">
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">500+</p>
+                  <p className="text-sm text-gray-600">Kiosks</p>
+                </div>
+                <div className="h-12 w-px bg-gray-300"></div>
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">50K+</p>
+                  <p className="text-sm text-gray-600">Students & Offices</p>
+                </div>
+                <div className="h-12 w-px bg-gray-300"></div>
+                <div>
+                  <p className="text-3xl font-bold text-gray-900">৳2/pg</p>
+                  <p className="text-sm text-gray-600">Starting Price</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Visual Element */}
+            <div className={`relative transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`}>
+              <div className="relative">
+                {/* Main card with mockup */}
+                <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-200">
+                  <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-8 text-white">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+                          <Upload className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="text-sm opacity-80">Step 1</p>
+                          <p className="font-semibold">Upload Document</p>
+                        </div>
+                      </div>
+                      <CheckCircle className="h-6 w-6" />
+                    </div>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="w-10 h-12 bg-white/20 rounded"></div>
+                        <div className="flex-1">
+                          <div className="h-3 bg-white/20 rounded mb-2 w-3/4"></div>
+                          <div className="h-2 bg-white/20 rounded w-1/2"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-center py-6">
+                      <div className="w-32 h-32 bg-white rounded-xl flex items-center justify-center">
+                        <QrCode className="h-20 w-20 text-blue-600" />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm opacity-80 mb-1">Your Print Code</p>
+                      <p className="text-2xl font-bold">QK-7492</p>
+                    </div>
+                  </div>
+                </div>
+                {/* Floating elements */}
+                <div className="absolute -top-6 -right-6 w-20 h-20 bg-green-400 rounded-2xl shadow-lg flex items-center justify-center animate-bounce">
+                  <CheckCircle className="h-10 w-10 text-white" />
+                </div>
+                <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-yellow-400 rounded-full shadow-lg flex items-center justify-center">
+                  <Zap className="h-8 w-8 text-white" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* How It Works */}
-      <section className="py-20 bg-white">
+      {/* How It Works Section */}
+      <section className="py-24 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">How It Works</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="pt-8 text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Upload className="h-8 w-8 text-blue-600" />
-                </div>
-                <h3 className="text-xl font-semibold mb-3">1. Upload Your File</h3>
-                <p className="text-gray-600">Select your document from any device. We support PDF, Word, Images, and more.</p>
-              </CardContent>
-            </Card>
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">Simple Process</Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">How It Works</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">Fast, simple, and affordable printing in 3 steps</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto relative">
+            {/* Connecting line for desktop */}
+            <div className="hidden md:block absolute top-20 left-1/4 right-1/4 h-0.5 bg-gradient-to-r from-blue-200 via-blue-400 to-blue-200"></div>
             
-            <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="pt-8 text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <DollarSign className="h-8 w-8 text-blue-600" />
+            {[{
+              step: '01',
+              icon: Upload,
+              title: 'Upload Your File',
+              description: 'Upload your document from any device. We support PDF, Word, Images, and more.',
+              color: 'from-blue-500 to-blue-600'
+            }, {
+              step: '02',
+              icon: QrCode,
+              title: 'Get QR Code',
+              description: 'Pay using bKash or card and receive a unique QR code instantly on your phone.',
+              color: 'from-indigo-500 to-indigo-600'
+            }, {
+              step: '03',
+              icon: Printer,
+              title: 'Print at Kiosk',
+              description: 'Visit any nearby kiosk, scan your code, and collect your prints immediately.',
+              color: 'from-purple-500 to-purple-600'
+            }].map((item, index) => {
+              const Icon = item.icon
+              return (
+                <Card key={index} className="relative border-none shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 group overflow-hidden">
+                  <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${item.color}`}></div>
+                  <CardContent className="pt-10 pb-8 px-8">
+                    <div className="relative mb-6">
+                      <div className={`w-16 h-16 bg-gradient-to-br ${item.color} rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-300`}>
+                        <Icon className="h-8 w-8 text-white" />
+                      </div>
+                      <div className="absolute -top-3 -right-3 w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center font-bold text-gray-400 text-sm">
+                        {item.step}
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-bold mb-3 text-gray-900">{item.title}</h3>
+                    <p className="text-gray-600 leading-relaxed">{item.description}</p>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Trust & Privacy Section */}
+      <section className="py-20 bg-gradient-to-r from-green-50 to-blue-50">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-4xl mx-auto">
+            <Card className="border-none shadow-xl bg-white">
+              <CardContent className="p-10 text-center">
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Shield className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold mb-3">2. Pay Securely</h3>
-                <p className="text-gray-600">Quick checkout with card, UPI, or wallet. Get instant confirmation.</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="border-none shadow-lg hover:shadow-xl transition-shadow">
-              <CardContent className="pt-8 text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Printer className="h-8 w-8 text-blue-600" />
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">Safe & Private Printing</h2>
+                <p className="text-xl text-gray-600 mb-6">
+                  Your files are automatically deleted after printing. We don't store any documents.
+                </p>
+                <div className="flex items-center justify-center gap-8 flex-wrap">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <span className="text-gray-700">Auto-delete after print</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <span className="text-gray-700">Secure payment</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="h-5 w-5 text-green-500" />
+                    <span className="text-gray-700">No file storage</span>
+                  </div>
                 </div>
-                <h3 className="text-xl font-semibold mb-3">3. Print Instantly</h3>
-                <p className="text-gray-600">Visit the nearest kiosk, enter your code, and collect your prints.</p>
               </CardContent>
             </Card>
           </div>
         </div>
       </section>
 
-      {/* Map Preview */}
-      <section className="py-20 bg-gray-50">
+      {/* Map Preview Section */}
+      <section className="py-24 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Find Printers Near You</h2>
-            <p className="text-xl text-gray-600">Over 500+ kiosks across the city</p>
-          </div>
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">
+                <MapPin className="h-3 w-3 mr-1 inline" />
+                Available Nationwide
+              </Badge>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Printers Available Near You</h2>
+              <p className="text-xl text-gray-600">Over 500+ kiosks in Dhaka, Chittagong, and other cities</p>
+            </div>
             <Link href="/find-printer">
-              <div className="relative bg-white rounded-2xl shadow-xl overflow-hidden h-96 cursor-pointer group hover:shadow-2xl transition-shadow">
-                <div className="absolute inset-0 bg-gradient-to-br from-blue-100 to-blue-50 flex items-center justify-center">
-                  <div className="text-center">
-                    <MapPin className="h-16 w-16 text-blue-600 mx-auto mb-4" />
-                    <p className="text-xl font-semibold text-gray-700">Click to view interactive map</p>
-                    <p className="text-gray-500 mt-2">Find the closest QuickInk kiosk</p>
+              <Card className="border-none shadow-2xl overflow-hidden group cursor-pointer hover:shadow-3xl transition-all duration-500">
+                <div className="relative h-[500px] bg-gradient-to-br from-blue-100 via-white to-indigo-100">
+                  {/* Mock Map Interface */}
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="relative inline-block mb-6">
+                        <div className="w-24 h-24 bg-blue-600 rounded-full flex items-center justify-center shadow-2xl group-hover:scale-110 transition-transform duration-500">
+                          <MapPin className="h-12 w-12 text-white" />
+                        </div>
+                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-green-500 rounded-full border-4 border-white animate-pulse"></div>
+                      </div>
+                      <p className="text-2xl font-bold text-gray-800 mb-2">Find Nearest Kiosk</p>
+                      <p className="text-gray-600 mb-6">Click to see printers near you</p>
+                      <Button size="lg" className="bg-white text-blue-600 hover:bg-gray-50 shadow-lg group-hover:shadow-xl transition-all duration-300">
+                        Open Map
+                        <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                      </Button>
+                    </div>
+                  </div>
+                  {/* Stats overlay */}
+                  <div className="absolute bottom-6 left-6 right-6 flex gap-4">
+                    <div className="flex-1 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
+                      <p className="text-2xl font-bold text-gray-900">500+</p>
+                      <p className="text-sm text-gray-600">Kiosks</p>
+                    </div>
+                    <div className="flex-1 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
+                      <p className="text-2xl font-bold text-green-600">98%</p>
+                      <p className="text-sm text-gray-600">Online Now</p>
+                    </div>
+                    <div className="flex-1 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
+                      <p className="text-2xl font-bold text-blue-600">&lt;2 km</p>
+                      <p className="text-sm text-gray-600">Avg Distance</p>
+                    </div>
                   </div>
                 </div>
-                <div className="absolute bottom-4 right-4">
-                  <Button size="lg" className="group-hover:scale-105 transition-transform">
-                    Open Map <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
+              </Card>
             </Link>
           </div>
         </div>
       </section>
 
-      {/* Pricing */}
-      <section className="py-20 bg-white">
+      {/* Pricing Section */}
+      <section className="py-24 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">Simple, Transparent Pricing</h2>
-          <div className="max-w-4xl mx-auto">
-            <Card className="shadow-xl">
-              <CardContent className="p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="flex justify-between items-center py-4 border-b">
-                    <div>
-                      <p className="font-semibold text-lg">Black & White</p>
-                      <p className="text-sm text-gray-500">Standard quality</p>
-                    </div>
-                    <p className="text-2xl font-bold text-blue-600">₹2/page</p>
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-green-100 text-green-700 hover:bg-green-100">Student Friendly Pricing</Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Affordable Pricing</h2>
+            <p className="text-xl text-gray-600">No hidden charges. Pay only for what you print.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+            {[{
+              name: 'Black & White',
+              price: '৳2',
+              unit: 'per page',
+              description: 'Perfect for assignments',
+              features: ['A4 Size', 'Single/Double sided', 'Standard paper', 'Quick printing'],
+              popular: true,
+              badge: 'Most Popular'
+            }, {
+              name: 'Color Print',
+              price: '৳10',
+              unit: 'per page',
+              description: 'For presentations & reports',
+              features: ['A4 Size', 'Vibrant colors', 'Premium paper', 'High quality'],
+              popular: false
+            }].map((plan, index) => (
+              <Card key={index} className={`relative overflow-hidden border-2 transition-all duration-300 hover:-translate-y-2 hover:shadow-2xl ${
+                plan.popular ? 'border-blue-600 shadow-xl scale-105' : 'border-gray-200 shadow-lg'
+              }`}>
+                {plan.popular && (
+                  <div className="absolute top-0 left-0 right-0 bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-center py-2 text-sm font-semibold">
+                    ⭐ {plan.badge}
                   </div>
-                  <div className="flex justify-between items-center py-4 border-b">
-                    <div>
-                      <p className="font-semibold text-lg">Color Print</p>
-                      <p className="text-sm text-gray-500">High quality</p>
-                    </div>
-                    <p className="text-2xl font-bold text-blue-600">₹8/page</p>
+                )}
+                <CardContent className={`p-8 ${plan.popular ? 'pt-16' : 'pt-8'}`}>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                  <p className="text-gray-600 mb-6">{plan.description}</p>
+                  <div className="mb-6">
+                    <span className="text-5xl font-bold text-gray-900">{plan.price}</span>
+                    <span className="text-gray-600 ml-2">{plan.unit}</span>
                   </div>
-                  <div className="flex justify-between items-center py-4 border-b">
-                    <div>
-                      <p className="font-semibold text-lg">Photo Print</p>
-                      <p className="text-sm text-gray-500">Premium glossy</p>
-                    </div>
-                    <p className="text-2xl font-bold text-blue-600">₹15/page</p>
-                  </div>
-                  <div className="flex justify-between items-center py-4 border-b">
-                    <div>
-                      <p className="font-semibold text-lg">Scanning</p>
-                      <p className="text-sm text-gray-500">High resolution</p>
-                    </div>
-                    <p className="text-2xl font-bold text-blue-600">₹5/page</p>
-                  </div>
-                </div>
-                <div className="mt-6 text-center">
-                  <p className="text-gray-600">No hidden fees • Pay only for what you print</p>
-                </div>
-              </CardContent>
-            </Card>
+                  <ul className="space-y-3 mb-8">
+                    {plan.features.map((feature, i) => (
+                      <li key={i} className="flex items-center text-gray-700">
+                        <CheckCircle className="h-5 w-5 text-green-500 mr-3 flex-shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/find-printer">
+                    <Button className={`w-full ${plan.popular ? 'bg-blue-600 hover:bg-blue-700' : ''}`} variant={plan.popular ? 'default' : 'outline'}>
+                      Find Printer
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-20 bg-gray-50">
+      {/* Testimonials Section */}
+      <section className="py-24 bg-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-12">What Our Users Say</h2>
+          <div className="text-center mb-16">
+            <Badge className="mb-4 bg-yellow-100 text-yellow-700 hover:bg-yellow-100">
+              <Star className="h-3 w-3 mr-1 inline fill-yellow-600" />
+              What People Say
+            </Badge>
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Real Stories</h2>
+            <p className="text-xl text-gray-600">From students and shop owners</p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            <Card className="border-none shadow-lg">
-              <CardContent className="pt-6">
-                <div className="flex mb-4">
-                  {[1,2,3,4,5].map(i => <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />)}
-                </div>
-                <p className="text-gray-700 mb-4">"Super convenient! Found a printer near my college and got my assignment printed in minutes. No more searching for cyber cafes."</p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-blue-600 font-semibold">RP</span>
+            {[{
+              name: 'Rahim Ahmed',
+              role: 'Student, Rajshahi University',
+              avatar: 'RA',
+              quote: 'Found a printer near my campus at midnight before exam. Printed my notes in 2 minutes. Very helpful!',
+              rating: 5
+            }, {
+              name: 'Fariha Islam',
+              role: 'Office Worker, Dhaka',
+              avatar: 'FI',
+              quote: 'I use QuickInk for office documents. No need to carry pen drive. Just upload from phone and print.',
+              rating: 5
+            }, {
+              name: 'Tanvir Hossain',
+              role: 'Shop Owner, Chittagong',
+              avatar: 'TH',
+              quote: 'Earning ৳18,000 extra every month from QuickInk machine in my shop. Installation was free and simple.',
+              rating: 5
+            }].map((testimonial, index) => (
+              <Card key={index} className="border-none shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 group bg-white">
+                <CardContent className="p-8">
+                  <div className="flex mb-4">
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+                    ))}
                   </div>
-                  <div>
-                    <p className="font-semibold">Rahul Patel</p>
-                    <p className="text-sm text-gray-500">Student</p>
+                  <p className="text-gray-700 text-lg mb-6 leading-relaxed">"{testimonial.quote}"</p>
+                  <div className="flex items-center">
+                    <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mr-4 text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform">
+                      {testimonial.avatar}
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-lg">{testimonial.name}</p>
+                      <p className="text-gray-600 text-sm">{testimonial.role}</p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-lg">
-              <CardContent className="pt-6">
-                <div className="flex mb-4">
-                  {[1,2,3,4,5].map(i => <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />)}
-                </div>
-                <p className="text-gray-700 mb-4">"As a freelancer, I need quick prints for client meetings. QuickInk saved me so many times. Great quality and fast service!"</p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-blue-600 font-semibold">PS</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold">Priya Sharma</p>
-                    <p className="text-sm text-gray-500">Freelancer</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-lg">
-              <CardContent className="pt-6">
-                <div className="flex mb-4">
-                  {[1,2,3,4,5].map(i => <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />)}
-                </div>
-                <p className="text-gray-700 mb-4">"I installed a QuickInk kiosk in my shop. It's been a great passive income source and customers love the convenience!"</p>
-                <div className="flex items-center">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                    <span className="text-blue-600 font-semibold">AK</span>
-                  </div>
-                  <div>
-                    <p className="font-semibold">Amit Kumar</p>
-                    <p className="text-sm text-gray-500">Shop Owner</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Banner */}
-      <section className="py-20 bg-gradient-to-r from-blue-600 to-blue-700">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-            Ready to Print Smarter?
-          </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of users who trust QuickInk for their printing needs
-          </p>
-          <Link href="/find-printer">
-            <Button size="lg" variant="secondary" className="text-lg px-8 py-6">
-              Find Nearest Printer <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </Link>
+      {/* Partner CTA Section */}
+      <section className="py-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="max-w-4xl mx-auto text-center text-white">
+            <Badge className="mb-6 bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm px-4 py-2">
+              <TrendingUp className="h-4 w-4 mr-1.5 inline" />
+              Partner Program
+            </Badge>
+            <h2 className="text-4xl md:text-6xl font-bold mb-6">
+              Earn Extra Income from Your Shop
+            </h2>
+            <p className="text-xl md:text-2xl mb-4 text-blue-100">
+              Get a QuickInk machine in your shop and earn ৳15,000-৳25,000 monthly
+            </p>
+            <p className="text-lg mb-12 text-blue-100">
+              Free installation. No maintenance cost. We handle everything.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+              {[{
+                icon: DollarSign,
+                title: '40% Commission',
+                description: 'On every print'
+              }, {
+                icon: Clock,
+                title: 'No Maintenance',
+                description: 'Fully automatic'
+              }, {
+                icon: Shield,
+                title: 'Free Setup',
+                description: 'We install for free'
+              }].map((benefit, index) => {
+                const Icon = benefit.icon
+                return (
+                  <div key={index} className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 hover:bg-white/20 transition-all duration-300">
+                    <Icon className="h-12 w-12 mx-auto mb-4" />
+                    <p className="font-bold text-lg mb-2">{benefit.title}</p>
+                    <p className="text-blue-100">{benefit.description}</p>
+                  </div>
+                )
+              })}
+            </div>
+            <Link href="/partner">
+              <Button size="lg" variant="secondary" className="text-lg px-10 py-7 shadow-2xl hover:scale-105 transition-transform duration-300">
+                Become a Partner
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Button>
+            </Link>
+          </div>
         </div>
       </section>
+
+      {/* Mobile Sticky CTA */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-2xl z-50">
+        <Link href="/find-printer">
+          <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-6">
+            <MapPin className="mr-2 h-5 w-5" />
+            Find Nearest Printer
+          </Button>
+        </Link>
+      </div>
     </div>
   )
 }

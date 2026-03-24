@@ -1,100 +1,115 @@
 import Link from 'next/link'
-import { Printer, Mail, Phone, MapPin } from 'lucide-react'
+import { Printer, Mail, Phone, MapPin, Twitter, Facebook, Instagram, Linkedin } from 'lucide-react'
 
 export default function Footer() {
+  const year = new Date().getFullYear()
+
   return (
     <footer className="bg-gray-900 text-gray-300">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 mb-12">
           {/* Brand */}
-          <div>
-            <div className="flex items-center gap-2 mb-4">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Printer className="h-6 w-6 text-white" />
+          <div className="lg:col-span-2">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Printer className="h-7 w-7 text-white" />
               </div>
-              <span className="text-xl font-bold text-white">QuickInk</span>
+              <span className="text-2xl font-bold text-white">QuickInk</span>
             </div>
-            <p className="text-sm text-gray-400">
-              Making printing accessible, affordable, and convenient for everyone.
+            <p className="text-gray-400 mb-6 max-w-sm leading-relaxed">
+              Making printing accessible, affordable, and convenient for everyone. Print anything, anytime, anywhere.
             </p>
+            <div className="flex gap-4">
+              {[Twitter, Facebook, Instagram, Linkedin].map((Icon, index) => (
+                <a
+                  key={index}
+                  href="#"
+                  className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors duration-300"
+                >
+                  <Icon className="h-5 w-5" />
+                </a>
+              ))}
+            </div>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Quick Links</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/" className="text-sm hover:text-blue-400 transition-colors">
-                  Home
-                </Link>
-              </li>
-              <li>
-                <Link href="/find-printer" className="text-sm hover:text-blue-400 transition-colors">
-                  Find Printer
-                </Link>
-              </li>
-              <li>
-                <Link href="/partner" className="text-sm hover:text-blue-400 transition-colors">
-                  Become Partner
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="text-sm hover:text-blue-400 transition-colors">
-                  Contact Us
-                </Link>
-              </li>
+            <h3 className="text-white font-bold text-lg mb-6">Quick Links</h3>
+            <ul className="space-y-3">
+              {[
+                { label: 'Home', href: '/' },
+                { label: 'Find Printer', href: '/find-printer' },
+                { label: 'Become Partner', href: '/partner' },
+                { label: 'Contact Us', href: '/contact' }
+              ].map((link) => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    className="text-gray-400 hover:text-blue-400 transition-colors duration-300 flex items-center group"
+                  >
+                    <span className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Support */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Support</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="#" className="text-sm hover:text-blue-400 transition-colors">
-                  Help Center
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-sm hover:text-blue-400 transition-colors">
-                  Terms of Service
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-sm hover:text-blue-400 transition-colors">
-                  Privacy Policy
-                </Link>
-              </li>
-              <li>
-                <Link href="#" className="text-sm hover:text-blue-400 transition-colors">
-                  FAQs
-                </Link>
-              </li>
+            <h3 className="text-white font-bold text-lg mb-6">Support</h3>
+            <ul className="space-y-3">
+              {[
+                { label: 'Help Center', href: '#' },
+                { label: 'Terms of Service', href: '#' },
+                { label: 'Privacy Policy', href: '#' },
+                { label: 'FAQs', href: '#' }
+              ].map((link) => (
+                <li key={link.label}>
+                  <Link
+                    href={link.href}
+                    className="text-gray-400 hover:text-blue-400 transition-colors duration-300 flex items-center group"
+                  >
+                    <span className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="text-white font-semibold mb-4">Contact</h3>
-            <ul className="space-y-3">
-              <li className="flex items-center gap-2 text-sm">
-                <Mail className="h-4 w-4" />
-                <span>support@quickink.com</span>
+            <h3 className="text-white font-bold text-lg mb-6">Contact</h3>
+            <ul className="space-y-4">
+              <li className="flex items-start gap-3 text-gray-400 hover:text-blue-400 transition-colors group">
+                <Mail className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                <span className="text-sm">support@quickink.com</span>
               </li>
-              <li className="flex items-center gap-2 text-sm">
-                <Phone className="h-4 w-4" />
-                <span>+91 1800-123-4567</span>
+              <li className="flex items-start gap-3 text-gray-400 hover:text-blue-400 transition-colors group">
+                <Phone className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                <span className="text-sm">+91 1800-123-4567</span>
               </li>
-              <li className="flex items-start gap-2 text-sm">
-                <MapPin className="h-4 w-4 mt-1" />
-                <span>123 Business Park, Mumbai, Maharashtra 400001</span>
+              <li className="flex items-start gap-3 text-gray-400 hover:text-blue-400 transition-colors group">
+                <MapPin className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
+                <span className="text-sm">123 Business Park,<br />Mumbai, MH 400001</span>
               </li>
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
-          <p>&copy; {new Date().getFullYear()} QuickInk. All rights reserved.</p>
+        {/* Bottom bar */}
+        <div className="border-t border-gray-800 pt-8">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-sm text-gray-400">
+              © {year} QuickInk. All rights reserved.
+            </p>
+            <div className="flex gap-6 text-sm text-gray-400">
+              <Link href="#" className="hover:text-blue-400 transition-colors">Terms</Link>
+              <Link href="#" className="hover:text-blue-400 transition-colors">Privacy</Link>
+              <Link href="#" className="hover:text-blue-400 transition-colors">Cookies</Link>
+            </div>
+          </div>
         </div>
       </div>
     </footer>
