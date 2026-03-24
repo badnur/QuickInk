@@ -33,7 +33,7 @@ export default function HomePage() {
                 </span>
               </h1>
               <p className="text-xl md:text-2xl text-gray-600 mb-4 leading-relaxed">
-                Upload → Get QR Code → Print in <span className="font-semibold text-blue-600">60 seconds</span>
+                Get QR Code → Upload → Print in <span className="font-semibold text-blue-600">60 seconds</span>
               </p>
               <p className="text-lg text-gray-600 mb-8">
                 No need to visit a print shop. Print assignments without pen drive.
