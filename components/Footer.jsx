@@ -15,7 +15,7 @@ export default function Footer() {
                 src="/images/quickink-logo.png" 
                 alt="QuickInk Logo" 
                 className="w-auto"
-                style={{ height: '80px' }}
+                style={{ height: '100px' }}
               />
             </div>
             <p className="text-gray-400 mb-6 max-w-sm leading-relaxed">
@@ -86,15 +86,15 @@ export default function Footer() {
             <ul className="space-y-4">
               <li className="flex items-start gap-3 text-gray-400 hover:text-blue-400 transition-colors group">
                 <Mail className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                <span className="text-sm">support@quickink.com</span>
+                <span className="text-sm">support@quickink.online</span>
               </li>
               <li className="flex items-start gap-3 text-gray-400 hover:text-blue-400 transition-colors group">
                 <Phone className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                <span className="text-sm">+91 1800-123-4567</span>
+                <span className="text-sm">+880 1733-398911</span>
               </li>
               <li className="flex items-start gap-3 text-gray-400 hover:text-blue-400 transition-colors group">
                 <MapPin className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                <span className="text-sm">123 Business Park,<br />Mumbai, MH 400001</span>
+                <span className="text-sm">Bagha, Rajshahi, Bangladesh</span>
               </li>
             </ul>
           </div>

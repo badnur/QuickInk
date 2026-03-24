@@ -86,11 +86,8 @@ export default function ContactPage() {
                   </div>
                   <h3 className="font-bold text-xl mb-4 text-gray-900">Email Us</h3>
                   <div className="space-y-2">
-                    <a href="mailto:support@quickink.com" className="block text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                      support@quickink.com
-                    </a>
-                    <a href="mailto:partner@quickink.com" className="block text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                      partner@quickink.com
+                    <a href="mailto:support@quickink.online" className="block text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                      support@quickink.online
                     </a>
                   </div>
                   <p className="text-sm text-gray-500 mt-4">We reply within 24 hours</p>
@@ -105,8 +102,8 @@ export default function ContactPage() {
                     <Phone className="h-8 w-8 text-white" />
                   </div>
                   <h3 className="font-bold text-xl mb-4 text-gray-900">Call Us</h3>
-                  <a href="tel:+8801812345678" className="block text-gray-700 hover:text-green-600 transition-colors font-medium text-lg mb-2">
-                    +880 1812-345678
+                  <a href="tel:+8801733398911" className="block text-gray-700 hover:text-green-600 transition-colors font-medium text-lg mb-2">
+                    +880 1733-398911
                   </a>
                   <div className="flex items-center gap-2 text-sm text-gray-600 mt-4">
                     <Clock className="h-4 w-4" />
@@ -124,8 +121,7 @@ export default function ContactPage() {
                   </div>
                   <h3 className="font-bold text-xl mb-4 text-gray-900">Visit Us</h3>
                   <p className="text-gray-700 leading-relaxed">
-                    House 123, Road 5,<br />
-                    Dhanmondi, Dhaka-1205<br />
+                    Bagha, Rajshahi<br />
                     Bangladesh
                   </p>
                 </CardContent>
@@ -143,7 +139,7 @@ export default function ContactPage() {
                       <p className="text-green-100 text-sm">Quick help available</p>
                     </div>
                   </div>
-                  <Link href="https://wa.me/8801812345678" target="_blank">
+                  <Link href="https://wa.me/8801733398911" target="_blank">
                     <Button variant="secondary" className="w-full h-14 text-lg font-semibold shadow-lg hover:scale-105 transition-transform">
                       Chat on WhatsApp
                     </Button>

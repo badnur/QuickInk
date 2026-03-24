@@ -70,41 +70,43 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Right: Visual Element */}
+            {/* Right: Visual Element - Vending Machine Illustration */}
             <div className={`relative transition-all duration-1000 delay-300 ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 translate-x-10'}`}>
               <div className="relative">
-                {/* Main card with mockup */}
-                <div className="bg-white rounded-3xl shadow-2xl p-8 border border-gray-200">
-                  <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl p-8 text-white">
-                    <div className="flex items-center justify-between mb-6">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
-                          <Upload className="h-6 w-6" />
-                        </div>
-                        <div>
-                          <p className="text-sm opacity-80">Step 1</p>
-                          <p className="font-semibold">Upload Document</p>
-                        </div>
+                {/* Vending Machine Mockup */}
+                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-3xl shadow-2xl p-12 text-white">
+                  <div className="text-center mb-8">
+                    <Printer className="h-32 w-32 mx-auto mb-6 text-white/90" />
+                    <h3 className="text-3xl font-bold mb-2">QuickInk Vending Machine</h3>
+                    <p className="text-blue-100 text-lg">Print anytime, anywhere</p>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                        <Clock className="h-6 w-6" />
                       </div>
-                      <CheckCircle className="h-6 w-6" />
-                    </div>
-                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mb-4">
-                      <div className="flex items-center gap-3 mb-3">
-                        <div className="w-10 h-12 bg-white/20 rounded"></div>
-                        <div className="flex-1">
-                          <div className="h-3 bg-white/20 rounded mb-2 w-3/4"></div>
-                          <div className="h-2 bg-white/20 rounded w-1/2"></div>
-                        </div>
+                      <div>
+                        <p className="font-semibold text-lg">24/7 Available</p>
+                        <p className="text-blue-100 text-sm">Always ready to serve</p>
                       </div>
                     </div>
-                    <div className="flex items-center justify-center py-6">
-                      <div className="w-32 h-32 bg-white rounded-xl flex items-center justify-center">
-                        <QrCode className="h-20 w-20 text-blue-600" />
+                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                        <Zap className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-lg">Fast Printing</p>
+                        <p className="text-blue-100 text-sm">Ready in 60 seconds</p>
                       </div>
                     </div>
-                    <div className="text-center">
-                      <p className="text-sm opacity-80 mb-1">Your Print Code</p>
-                      <p className="text-2xl font-bold">QK-7492</p>
+                    <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 flex items-center gap-4">
+                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                        <DollarSign className="h-6 w-6" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-lg">Affordable</p>
+                        <p className="text-blue-100 text-sm">From ৳2 per page</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -335,22 +337,22 @@ export default function HomePage() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
             {[{
-              name: 'Rahim Ahmed',
-              role: 'Student, Rajshahi University',
-              avatar: 'RA',
+              name: 'Satisfied Customer',
+              role: 'Student',
+              avatar: 'SC',
               quote: 'Found a printer near my campus at midnight before exam. Printed my notes in 2 minutes. Very helpful!',
               rating: 5
             }, {
-              name: 'Fariha Islam',
-              role: 'Office Worker, Dhaka',
-              avatar: 'FI',
+              name: 'Happy User',
+              role: 'Office Worker',
+              avatar: 'HU',
               quote: 'I use QuickInk for office documents. No need to carry pen drive. Just upload from phone and print.',
               rating: 5
             }, {
-              name: 'Tanvir Hossain',
-              role: 'Shop Owner, Chittagong',
-              avatar: 'TH',
-              quote: 'Earning ৳18,000 extra every month from QuickInk machine in my shop. Installation was free and simple.',
+              name: 'Business Owner',
+              role: 'Shop Owner',
+              avatar: 'BO',
+              quote: 'Earning extra monthly from QuickInk machine in my shop. Installation was free and simple.',
               rating: 5
             }].map((testimonial, index) => (
               <Card key={index} className="border-none shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 group bg-white">
