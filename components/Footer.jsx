@@ -15,7 +15,7 @@ export default function Footer() {
                 src="/images/quickink-logo.png" 
                 alt="QuickInk Logo" 
                 className="w-auto"
-                style={{ height: '60px' }}
+                style={{ height: '80px' }}
               />
             </div>
             <p className="text-gray-400 mb-6 max-w-sm leading-relaxed">
