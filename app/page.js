@@ -138,15 +138,15 @@ export default function HomePage() {
             
             {[{
               step: '01',
-              icon: Upload,
-              title: 'Upload Your File',
-              description: 'Upload your document from any device. We support PDF, Word, Images, and more.',
-              color: 'from-blue-500 to-blue-600'
-            }, {
-              step: '02',
               icon: QrCode,
               title: 'Get QR Code',
               description: 'Pay using bKash or card and receive a unique QR code instantly on your phone.',
+              color: 'from-blue-500 to-blue-600'
+            }, {
+              step: '02',
+              icon: Upload,
+              title: 'Upload Your File',
+              description: 'Upload your document from any device. We support PDF, Word, Images, and more.',
               color: 'from-indigo-500 to-indigo-600'
             }, {
               step: '03',
