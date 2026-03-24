@@ -11,10 +11,11 @@ export default function Footer() {
           {/* Brand */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Printer className="h-7 w-7 text-white" />
-              </div>
-              <span className="text-2xl font-bold text-white">QuickInk</span>
+              <img 
+                src="/images/quickink-logo.png" 
+                alt="QuickInk Logo" 
+                className="h-10 w-auto"
+              />
             </div>
             <p className="text-gray-400 mb-6 max-w-sm leading-relaxed">
               Making printing accessible, affordable, and convenient for everyone. Print anything, anytime, anywhere.
