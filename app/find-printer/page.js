@@ -50,7 +50,7 @@ export default function FindPrinterPage() {
               Find Nearest Printer
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              Locate QuickInk kiosks near you and check if they're online
+              Our printing vending machines will be available soon in your area
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="flex-1 relative">
@@ -95,10 +95,10 @@ export default function FindPrinterPage() {
                       <div className="w-32 h-32 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl animate-pulse">
                         <MapPin className="h-16 w-16 text-white" />
                       </div>
-                      <p className="text-2xl font-bold text-gray-800 mb-2">Find Kiosk Near You</p>
-                      <p className="text-gray-600 mb-4">{filteredMachines.length} printers found nearby</p>
-                      <Badge className="bg-green-100 text-green-700 hover:bg-green-100">
-                        {onlineMachines} Online Now
+                      <p className="text-2xl font-bold text-gray-800 mb-2">Coming Soon</p>
+                      <p className="text-gray-600 mb-4">Launching in major cities</p>
+                      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
+                        Expanding Nationwide
                       </Badge>
                     </div>
                   </div>
@@ -187,64 +187,12 @@ export default function FindPrinterPage() {
                       <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                       <p className="text-gray-500">Loading printers...</p>
                     </div>
-                  ) : filteredMachines.length === 0 ? (
+                  ) : (
                     <div className="text-center py-12">
                       <MapPin className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-500 font-medium">No printers found</p>
-                      <p className="text-gray-400 text-sm mt-2">Try different location</p>
+                      <p className="text-gray-700 font-semibold text-lg mb-2">Coming Soon</p>
+                      <p className="text-gray-500 text-sm">Printing vending machines launching soon in your area</p>
                     </div>
-                  ) : (
-                    filteredMachines.map((machine) => (
-                      <Card 
-                        key={machine.id} 
-                        className={`cursor-pointer transition-all duration-300 border-2 ${
-                          selectedMachine?.id === machine.id 
-                            ? 'border-blue-500 shadow-lg scale-105' 
-                            : 'border-transparent hover:border-blue-200 hover:shadow-md'
-                        }`}
-                        onClick={() => setSelectedMachine(machine)}
-                      >
-                        <CardContent className="p-5">
-                          <div className="flex items-start justify-between mb-3">
-                            <div className="flex-1">
-                              <h3 className="font-bold text-lg text-gray-900 mb-1">{machine.name}</h3>
-                              <p className="text-sm text-gray-600 leading-relaxed">{machine.address}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <Badge className={`${
-                                machine.status === 'online' 
-                                  ? 'bg-green-100 text-green-700 hover:bg-green-100' 
-                                  : 'bg-red-100 text-red-700 hover:bg-red-100'
-                              }`}>
-                                <Circle className={`h-2 w-2 mr-1 ${
-                                  machine.status === 'online' ? 'fill-green-500 text-green-500' : 'fill-red-500 text-red-500'
-                                }`} />
-                                {machine.status === 'online' ? 'Online' : 'Offline'}
-                              </Badge>
-                              {machine.paper_available && (
-                                <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
-                                  <CheckCircle className="h-3 w-3 mr-1" />
-                                  Paper OK
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <div className="mt-3 pt-3 border-t flex items-center justify-between">
-                            <span className="text-sm text-gray-600 flex items-center">
-                              <MapPin className="h-3.5 w-3.5 mr-1 text-blue-600" />
-                              {machine.distance}
-                            </span>
-                            {selectedMachine?.id === machine.id && (
-                              <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                                Get Directions
-                              </Button>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))
                   )}
                 </div>
               </CardContent>

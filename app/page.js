@@ -54,18 +54,8 @@ export default function HomePage() {
               </div>
               <div className="mt-10 flex items-center gap-8">
                 <div>
-                  <p className="text-3xl font-bold text-gray-900">500+</p>
-                  <p className="text-sm text-gray-600">Kiosks</p>
-                </div>
-                <div className="h-12 w-px bg-gray-300"></div>
-                <div>
-                  <p className="text-3xl font-bold text-gray-900">50K+</p>
-                  <p className="text-sm text-gray-600">Students & Offices</p>
-                </div>
-                <div className="h-12 w-px bg-gray-300"></div>
-                <div>
-                  <p className="text-3xl font-bold text-gray-900">৳2/pg</p>
-                  <p className="text-sm text-gray-600">Starting Price</p>
+                  <p className="text-3xl font-bold text-gray-900">Coming Soon</p>
+                  <p className="text-sm text-gray-600">Expanding Nationwide</p>
                 </div>
               </div>
             </div>
@@ -217,10 +207,10 @@ export default function HomePage() {
             <div className="text-center mb-12">
               <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">
                 <MapPin className="h-3 w-3 mr-1 inline" />
-                Available Nationwide
+                Coming Soon
               </Badge>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Printers Available Near You</h2>
-              <p className="text-xl text-gray-600">Over 500+ kiosks in Dhaka, Chittagong, and other cities</p>
+              <p className="text-xl text-gray-600">Launching in major cities across Bangladesh</p>
             </div>
             <Link href="/find-printer">
               <Card className="border-none shadow-2xl overflow-hidden group cursor-pointer hover:shadow-3xl transition-all duration-500">
@@ -242,19 +232,11 @@ export default function HomePage() {
                       </Button>
                     </div>
                   </div>
-                  {/* Stats overlay */}
-                  <div className="absolute bottom-6 left-6 right-6 flex gap-4">
-                    <div className="flex-1 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
-                      <p className="text-2xl font-bold text-gray-900">500+</p>
-                      <p className="text-sm text-gray-600">Kiosks</p>
-                    </div>
-                    <div className="flex-1 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
-                      <p className="text-2xl font-bold text-green-600">98%</p>
-                      <p className="text-sm text-gray-600">Online Now</p>
-                    </div>
-                    <div className="flex-1 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
-                      <p className="text-2xl font-bold text-blue-600">&lt;2 km</p>
-                      <p className="text-sm text-gray-600">Avg Distance</p>
+                  {/* Stats overlay - removed fake data */}
+                  <div className="absolute bottom-6 left-6 right-6">
+                    <div className="bg-white/90 backdrop-blur-sm rounded-2xl p-6 shadow-lg text-center">
+                      <p className="text-lg font-semibold text-gray-900">Launching Soon</p>
+                      <p className="text-gray-600 mt-1">Check back for updates</p>
                     </div>
                   </div>
                 </div>
@@ -324,60 +306,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section className="py-24 bg-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-yellow-100 text-yellow-700 hover:bg-yellow-100">
-              <Star className="h-3 w-3 mr-1 inline fill-yellow-600" />
-              What People Say
-            </Badge>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Real Stories</h2>
-            <p className="text-xl text-gray-600">From students and shop owners</p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {[{
-              name: 'Satisfied Customer',
-              role: 'Student',
-              avatar: 'SC',
-              quote: 'Found a printer near my campus at midnight before exam. Printed my notes in 2 minutes. Very helpful!',
-              rating: 5
-            }, {
-              name: 'Happy User',
-              role: 'Office Worker',
-              avatar: 'HU',
-              quote: 'I use QuickInk for office documents. No need to carry pen drive. Just upload from phone and print.',
-              rating: 5
-            }, {
-              name: 'Business Owner',
-              role: 'Shop Owner',
-              avatar: 'BO',
-              quote: 'Earning extra monthly from QuickInk machine in my shop. Installation was free and simple.',
-              rating: 5
-            }].map((testimonial, index) => (
-              <Card key={index} className="border-none shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 group bg-white">
-                <CardContent className="p-8">
-                  <div className="flex mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 fill-yellow-400 text-yellow-400" />
-                    ))}
-                  </div>
-                  <p className="text-gray-700 text-lg mb-6 leading-relaxed">"{testimonial.quote}"</p>
-                  <div className="flex items-center">
-                    <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mr-4 text-white font-bold text-lg shadow-lg group-hover:scale-110 transition-transform">
-                      {testimonial.avatar}
-                    </div>
-                    <div>
-                      <p className="font-bold text-gray-900 text-lg">{testimonial.name}</p>
-                      <p className="text-gray-600 text-sm">{testimonial.role}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* Testimonials Section - Removed */}
 
       {/* Partner CTA Section */}
       <section className="py-24 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 relative overflow-hidden">
