@@ -37,7 +37,8 @@ export default function Navbar() {
             <img 
               src="/images/quickink-logo.png" 
               alt="QuickInk Logo" 
-              className="h-14 w-auto transition-all duration-300 group-hover:scale-105"
+              className="w-auto transition-all duration-300 group-hover:scale-105"
+              style={{ height: '60px' }}
             />
           </Link>
 
