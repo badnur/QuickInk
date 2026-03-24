@@ -28,11 +28,8 @@ export default function HomePage() {
                 Available near campus areas
               </Badge>
               <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-                Print Anything,
-                <br />
-                Anytime —{' '}
                 <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  Near You
+                  From phone to paper
                 </span>
               </h1>
               <p className="text-xl md:text-2xl text-gray-600 mb-4 leading-relaxed">

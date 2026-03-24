@@ -22,7 +22,6 @@ export default function Navbar() {
   const navLinks = [
     { href: '/', label: 'Home' },
     { href: '/find-printer', label: 'Find Printer' },
-    { href: '/upload', label: 'Upload & Print' },
     { href: '/partner', label: 'Become Partner' },
     { href: '/contact', label: 'Contact' }
   ]
@@ -61,7 +60,7 @@ export default function Navbar() {
                 }`}></span>
               </Link>
             ))}
-            <Link href="/upload">
+            <Link href="/find-printer">
               <Button className="bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105">
                 Print Now
               </Button>
