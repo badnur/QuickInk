@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Printer, Mail, Phone, MapPin, Twitter, Facebook, Instagram, Linkedin } from 'lucide-react'
+import { Printer, Mail, Phone, MapPin, Globe, Share2, Send, AtSign } from 'lucide-react'
 
 export default function Footer() {
   const year = new Date().getFullYear()
@@ -22,7 +22,7 @@ export default function Footer() {
               Making printing accessible, affordable, and convenient for everyone. Print anything, anytime, anywhere.
             </p>
             <div className="flex gap-4">
-              {[Twitter, Facebook, Instagram, Linkedin].map((Icon, index) => (
+              {[Globe, Share2, Send, AtSign].map((Icon, index) => (
                 <a
                   key={index}
                   href="#"
