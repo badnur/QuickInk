@@ -39,16 +39,16 @@ export default function HomePage() {
                 No need to visit a print shop. Print assignments without pen drive.
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/find-printer">
-                  <Button size="lg" className="w-full sm:w-auto text-lg px-8 py-6 bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <MapPin className="mr-2 h-5 w-5" />
-                    Find Nearest Printer
+                <Link href="/print">
+                  <Button size="lg" className="w-full sm:w-auto text-lg px-8 py-6 bg-blue-600 hover:bg-blue-700 shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 font-bold">
+                    <Printer className="mr-2 h-5 w-5" />
+                    Print Document Now
                   </Button>
                 </Link>
-                <Link href="/partner">
+                <Link href="/find-printer">
                   <Button size="lg" variant="outline" className="w-full sm:w-auto text-lg px-8 py-6 border-2 border-gray-300 hover:border-blue-600 hover:bg-blue-50 transition-all duration-300">
-                    <TrendingUp className="mr-2 h-5 w-5" />
-                    Become a Partner
+                    <MapPin className="mr-2 h-5 w-5" />
+                    Find Nearest Kiosk
                   </Button>
                 </Link>
               </div>
@@ -361,11 +361,16 @@ export default function HomePage() {
       </section>
 
       {/* Mobile Sticky CTA */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-2xl z-50">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 shadow-2xl z-50 flex gap-2">
+        <Link href="/print" className="flex-1">
+          <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-base py-6 font-bold shadow-md">
+            <Printer className="mr-2 h-5 w-5" />
+            Print Now
+          </Button>
+        </Link>
         <Link href="/find-printer">
-          <Button size="lg" className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-6">
-            <MapPin className="mr-2 h-5 w-5" />
-            Find Nearest Printer
+          <Button size="lg" variant="outline" className="px-4 py-6">
+            <MapPin className="h-5 w-5" />
           </Button>
         </Link>
       </div>

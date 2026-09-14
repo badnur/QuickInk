@@ -60,7 +60,7 @@ export default function Navbar() {
                 }`}></span>
               </Link>
             ))}
-            <Link href="/find-printer">
+            <Link href="/print">
               <Button className="bg-blue-600 hover:bg-blue-700 shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105">
                 Print Now
               </Button>
@@ -94,7 +94,7 @@ export default function Navbar() {
                   {link.label}
                 </Link>
               ))}
-              <Link href="/find-printer" onClick={() => setIsOpen(false)}>
+              <Link href="/print" onClick={() => setIsOpen(false)}>
                 <Button className="w-full bg-blue-600 hover:bg-blue-700">
                   Print Now
                 </Button>
