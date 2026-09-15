@@ -1,0 +1,28 @@
+{
+  "name": "quickink-desktop",
+  "version": "1.0.0",
+  "description": "QuickInk Partner Shop & Kiosk Native Desktop Application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron .",
+    "desktop:dev": "electron ."
+  },
+  "keywords": [
+    "quickink",
+    "kiosk",
+    "print-shop",
+    "pos",
+    "electron"
+  ],
+  "author": "QuickInk",
+  "license": "ISC",
+  "dependencies": {
+    "jimp": "^1.6.1",
+    "pdf-lib": "^1.17.1",
+    "pdf-to-printer": "^5.8.1"
+  },
+  "devDependencies": {
+    "electron": "^34.0.0"
+  }
+}

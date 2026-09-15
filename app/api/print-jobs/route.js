@@ -21,6 +21,7 @@ export async function POST(request) {
       color_mode = 'bw',
       duplex = false,
       page_count = 1,
+      page_range = null,   // e.g. "1-3,5" or null for all pages
       payment_type = 'online',
       amount = 0,
     } = body
@@ -44,6 +45,7 @@ export async function POST(request) {
       p_color_mode: validColorMode,
       p_duplex: Boolean(duplex),
       p_page_count: parsedPages,
+      p_page_range: page_range || null,
       p_payment_type: validPaymentType,
       p_amount: parsedAmount,
     })
@@ -77,6 +79,7 @@ export async function POST(request) {
           color_mode: validColorMode,
           duplex: Boolean(duplex),
           page_count: parsedPages,
+          page_range: page_range || null,
           status: 'awaiting_redemption',
           payment_type: validPaymentType,
           expires_at: expiresAt,
@@ -140,6 +143,7 @@ export async function POST(request) {
           color_mode: job.color_mode,
           duplex: job.duplex,
           page_count: job.page_count,
+          page_range: job.page_range || null,
           amount: parsedAmount,
           payment_type: job.payment_type,
           status: job.status,

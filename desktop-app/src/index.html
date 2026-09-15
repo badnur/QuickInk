@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuickInk — Shop POS & Kiosk Terminal</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body class="theme-dark">
+  <div id="app-container">
+    <!-- ========================================================================= -->
+    <!-- TOP STATUS BAR -->
+    <!-- ========================================================================= -->
+    <header id="top-bar">
+      <div class="brand-group">
+        <div class="brand-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00bf63" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+          <span class="brand-title">QuickInk</span>
+          <span class="badge-terminal">STATION POS & KIOSK</span>
+        </div>
+
+        <div class="station-selector-wrapper">
+          <label for="station-select">STATION:</label>
+          <select id="station-select">
+            <option value="11111111-1111-1111-1111-111111111111">QuickInk Partner Shop — Dhanmondi</option>
+            <option value="22222222-2222-2222-2222-222222222222">QuickInk Kiosk — Central Mall</option>
+            <option value="33333333-3333-3333-3333-333333333333">QuickInk Partner Shop — University Campus</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="system-status-group">
+        <div class="status-indicator">
+          <span class="status-dot pulse"></span>
+          <span class="status-text">Online & Ready</span>
+        </div>
+
+        <div class="clock-display" id="clock-display">--:--:-- --</div>
+
+        <button id="btn-toggle-kiosk" class="btn-icon" title="Toggle Fullscreen Kiosk Mode">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path>
+          </svg>
+          <span>Kiosk</span>
+        </button>
+
+        <div class="window-controls">
+          <button id="btn-win-min" class="win-btn" title="Minimize">─</button>
+          <button id="btn-win-max" class="win-btn" title="Maximize">□</button>
+          <button id="btn-win-close" class="win-btn win-close" title="Close">✕</button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ========================================================================= -->
+    <!-- TAB NAVIGATION -->
+    <!-- ========================================================================= -->
+    <nav id="nav-tabs">
+      <button class="nav-tab active" data-tab="tab-keypad">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><line x1="8" y1="9" x2="8" y2="9"/><line x1="12" y1="9" x2="12" y2="9"/><line x1="16" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="8" y2="13"/><line x1="12" y1="13" x2="12" y2="13"/><line x1="16" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="8" y2="17"/><line x1="12" y1="17" x2="12" y2="17"/><line x1="16" y1="17" x2="16" y2="17"/></svg>
+        <span>OTP Keypad & Print</span>
+      </button>
+
+      <button class="nav-tab" data-tab="tab-printers">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        <span>Printers Setup</span>
+        <span class="badge-pill" id="printers-badge-pill">Hardware Scan</span>
+      </button>
+
+      <button class="nav-tab" data-tab="tab-queue">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        <span>Queue & History</span>
+      </button>
+
+      <button class="nav-tab" data-tab="tab-earnings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>
+        <span>Today's Earnings</span>
+      </button>
+    </nav>
+
+    <!-- ========================================================================= -->
+    <!-- MAIN CONTENT AREA -->
+    <!-- ========================================================================= -->
+    <main id="tab-container">
+      <!-- --------------------------------------------------------------------- -->
+      <!-- TAB 1: OTP KEYPAD & RELEASE -->
+      <!-- --------------------------------------------------------------------- -->
+      <section id="tab-keypad" class="tab-panel active">
+        <div class="keypad-layout">
+          <!-- Left / Center: The 6-Digit OTP Terminal -->
+          <div class="card terminal-card">
+            <div class="terminal-card-header">
+              <h2>Enter 6-Digit Numerical OTP</h2>
+              <p>Type or tap the 6-digit code provided to the customer after document upload.</p>
+            </div>
+
+            <!-- 6 Big Digit Slots -->
+            <div class="otp-inputs-row">
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-0" autocomplete="off" autofocus />
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-1" autocomplete="off" />
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-2" autocomplete="off" />
+              <span class="otp-hyphen">—</span>
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-3" autocomplete="off" />
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-4" autocomplete="off" />
+              <input type="text" maxlength="1" inputmode="numeric" class="otp-box" id="otp-5" autocomplete="off" />
+            </div>
+
+            <!-- Keypad Status Message -->
+            <div id="otp-status-msg" class="status-msg-box hidden"></div>
+
+            <!-- Touch Keypad (Touchscreen POS / Kiosk) -->
+            <div class="numpad-grid">
+              <button class="numpad-btn" data-val="1">1</button>
+              <button class="numpad-btn" data-val="2">2</button>
+              <button class="numpad-btn" data-val="3">3</button>
+              <button class="numpad-btn" data-val="4">4</button>
+              <button class="numpad-btn" data-val="5">5</button>
+              <button class="numpad-btn" data-val="6">6</button>
+              <button class="numpad-btn" data-val="7">7</button>
+              <button class="numpad-btn" data-val="8">8</button>
+              <button class="numpad-btn" data-val="9">9</button>
+              <button class="numpad-btn fn-btn" id="btn-clear-otp">Clear</button>
+              <button class="numpad-btn" data-val="0">0</button>
+              <button class="numpad-btn fn-btn" id="btn-backspace-otp">⌫</button>
+            </div>
+
+            <!-- Submit Action -->
+            <button id="btn-verify-otp" class="btn-primary btn-large">
+              <span class="spinner hidden" id="verify-spinner"></span>
+              <span id="verify-btn-text">Verify & Fetch Print Job</span>
+            </button>
+
+            <!-- Bottom Mini Printer Status Strip -->
+            <div class="hardware-strip">
+              <div class="printer-indicator" id="bw-indicator">
+                <span class="dot" id="bw-strip-dot"></span>
+                <span class="label">B&W Printer:</span>
+                <span class="name" id="strip-bw-name">Detecting...</span>
+              </div>
+              <div class="printer-indicator" id="color-indicator">
+                <span class="dot" id="color-strip-dot"></span>
+                <span class="label">Color Printer:</span>
+                <span class="name" id="strip-color-name">Detecting...</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Instructions & Quick Stats Overview -->
+          <div class="side-panel">
+            <div class="card info-card">
+              <h3>Kiosk & Counter Workflow</h3>
+              <ol class="workflow-steps">
+                <li>
+                  <div class="step-num">1</div>
+                  <div class="step-info">
+                    <strong>Customer Enters OTP</strong>
+                    <span>Input numerical 6-digit code via physical keyboard or screen keypad.</span>
+                  </div>
+                </li>
+                <li>
+                  <div class="step-num">2</div>
+                  <div class="step-info">
+                    <strong>Inspect Job Details</strong>
+                    <span>Verify page count, copies, color vs B&W, and payment mode.</span>
+                  </div>
+                </li>
+                <li>
+                  <div class="step-num">3</div>
+                  <div class="step-info">
+                    <strong>Collect Cash (If Applicable)</strong>
+                    <span>Confirm cash received for cash orders before releasing print.</span>
+                  </div>
+                </li>
+                <li>
+                  <div class="step-num">4</div>
+                  <div class="step-info">
+                    <strong>Automated Routing</strong>
+                    <span>Color jobs route to Color printer, B&W jobs route to Laser printer.</span>
+                  </div>
+                </li>
+              </ol>
+            </div>
+
+            <div class="card mini-stats-card">
+              <h3>Today's Station Summary</h3>
+              <div class="stats-mini-grid">
+                <div class="stat-mini">
+                  <div class="stat-mini-val" id="mini-stat-jobs">0</div>
+                  <div class="stat-mini-lbl">Jobs Completed</div>
+                </div>
+                <div class="stat-mini">
+                  <div class="stat-mini-val" id="mini-stat-pages">0</div>
+                  <div class="stat-mini-lbl">Sheets Printed</div>
+                </div>
+                <div class="stat-mini highlight">
+                  <div class="stat-mini-val" id="mini-stat-commission">৳0.00</div>
+                  <div class="stat-mini-lbl">Your 40% Commission</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- --------------------------------------------------------------------- -->
+      <!-- TAB 2: PRINTERS SETUP (Dual-Printer Configuration) -->
+      <!-- --------------------------------------------------------------------- -->
+      <section id="tab-printers" class="tab-panel">
+        <div class="printers-setup-container">
+          <div class="section-header">
+            <div>
+              <h2>Dual-Printer Hardware Configuration</h2>
+              <p>Configure dedicated Black & White and Color printers. Jobs are automatically routed based on the customer's selection.</p>
+            </div>
+            <button id="btn-refresh-printers" class="btn-secondary">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+              <span>Scan OS Printers</span>
+            </button>
+          </div>
+
+          <div class="printers-grid">
+            <!-- PRINTER 1: BLACK & WHITE -->
+            <div class="card printer-config-card">
+              <div class="printer-card-header">
+                <div class="printer-badge bw">PRINTER 1 — BLACK & WHITE</div>
+                <span class="status-pill green" id="bw-status-pill">Ready</span>
+              </div>
+              <div class="printer-icon-wrap">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              </div>
+              <div class="form-group">
+                <label for="select-bw-printer">Select Connected Hardware Printer:</label>
+                <select id="select-bw-printer" class="printer-select">
+                  <option value="">Scanning installed printers...</option>
+                </select>
+              </div>
+              <div class="printer-capabilities">
+                <div class="cap-item"><span>Target Job Types:</span> <strong>B&W Single & Duplex</strong></div>
+                <div class="cap-item"><span>Paper Spec:</span> <strong>A4 Standard</strong></div>
+              </div>
+              <button class="btn-secondary btn-full" id="btn-test-bw">
+                Send Test Page (B&W)
+              </button>
+            </div>
+
+            <!-- PRINTER 2: COLOR -->
+            <div class="card printer-config-card">
+              <div class="printer-card-header">
+                <div class="printer-badge color">PRINTER 2 — FULL COLOR</div>
+                <span class="status-pill green" id="color-status-pill">Ready</span>
+              </div>
+              <div class="printer-icon-wrap color">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#00bf63" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+              </div>
+              <div class="form-group">
+                <label for="select-color-printer">Select Connected Hardware Printer:</label>
+                <select id="select-color-printer" class="printer-select">
+                  <option value="">Scanning installed printers...</option>
+                </select>
+              </div>
+              <div class="printer-capabilities">
+                <div class="cap-item"><span>Target Job Types:</span> <strong>Full Color Prints</strong></div>
+                <div class="cap-item"><span>Paper Spec:</span> <strong>A4 Color / Photo</strong></div>
+              </div>
+              <button class="btn-secondary btn-full" id="btn-test-color">
+                Send Test Page (Color)
+              </button>
+            </div>
+          </div>
+
+          <div class="save-actions-bar">
+            <button id="btn-save-printers" class="btn-primary">
+              Save Printer Preferences
+            </button>
+            <span id="save-printers-status" class="save-status-msg"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- --------------------------------------------------------------------- -->
+      <!-- TAB 3: QUEUE & HISTORY -->
+      <!-- --------------------------------------------------------------------- -->
+      <section id="tab-queue" class="tab-panel">
+        <div class="queue-container">
+          <div class="section-header">
+            <div>
+              <h2>Recent Print Jobs & Queue</h2>
+              <p>Real-time audit log of all jobs redeemed and processed at this station.</p>
+            </div>
+            <div class="queue-actions">
+              <input type="text" id="queue-search" placeholder="Search by OTP or document name..." class="search-input" />
+              <button id="btn-refresh-queue" class="btn-secondary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                <span>Refresh</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="card table-card">
+            <table class="data-table" id="jobs-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>OTP Code</th>
+                  <th>Document Name</th>
+                  <th>Mode</th>
+                  <th>Duplex</th>
+                  <th>Pages</th>
+                  <th>Amount</th>
+                  <th>Payment</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="jobs-table-body">
+                <tr>
+                  <td colspan="9" class="empty-state">Loading recent jobs...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- --------------------------------------------------------------------- -->
+      <!-- TAB 4: TODAY'S EARNINGS -->
+      <!-- --------------------------------------------------------------------- -->
+      <section id="tab-earnings" class="tab-panel">
+        <div class="earnings-container">
+          <div class="section-header">
+            <div>
+              <h2>Today's Station Revenue & Commission</h2>
+              <p>QuickInk partner print shops earn an attractive 40% net commission on every page printed.</p>
+            </div>
+            <div class="date-badge" id="earnings-date-badge">Today</div>
+          </div>
+
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-title">Completed Jobs</div>
+              <div class="metric-val" id="metric-total-jobs">0</div>
+              <div class="metric-sub">Processed at this station today</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-title">B&W Sheets</div>
+              <div class="metric-val" id="metric-bw-sheets">0</div>
+              <div class="metric-sub">৳2.00 / sheet base rate</div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-title">Color Sheets</div>
+              <div class="metric-val" id="metric-color-sheets">0</div>
+              <div class="metric-sub">৳8.00 / sheet base rate</div>
+            </div>
+
+            <div class="metric-card highlight-green">
+              <div class="metric-title">Partner Net Commission (40%)</div>
+              <div class="metric-val" id="metric-partner-commission">৳0.00</div>
+              <div class="metric-sub">Your guaranteed daily profit</div>
+            </div>
+          </div>
+
+          <div class="card payout-info-card">
+            <h3>Partner Settlement Notice</h3>
+            <p>Cash collected by the counter belongs to the partner shop. Digital payments processed online (bKash/Nagad/Cards) are auto-settled daily to your registered merchant wallet every night at 11:59 PM.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- ========================================================================= -->
+    <!-- JOB VERIFICATION & PRINT RELEASE MODAL -->
+    <!-- ========================================================================= -->
+    <div id="job-modal" class="modal-overlay hidden">
+      <div class="modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="badge-success">OTP VERIFIED</span>
+            <h2 id="modal-doc-title">Document Name.pdf</h2>
+          </div>
+          <button id="btn-close-modal" class="btn-close">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <!-- Job Details Summary Grid -->
+          <div class="job-spec-grid">
+            <div class="spec-item">
+              <span class="spec-label">OTP Code</span>
+              <strong class="spec-val highlight" id="modal-otp">123456</strong>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Print Mode</span>
+              <strong class="spec-val" id="modal-color-mode">Black & White</strong>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Pages / Copies</span>
+              <strong class="spec-val" id="modal-pages-copies">1 page × 1 copy</strong>
+            </div>
+            <div class="spec-item">
+              <span class="spec-label">Sides</span>
+              <strong class="spec-val" id="modal-duplex">Single-Sided</strong>
+            </div>
+          </div>
+
+          <!-- Smart Printer Routing Notification -->
+          <div class="routing-alert" id="routing-alert">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#00bf63" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 14 14"/></svg>
+            <div class="routing-text">
+              <span class="routing-heading">Selected Hardware Printer:</span>
+              <span id="modal-routed-printer">Detecting...</span>
+            </div>
+          </div>
+
+          <!-- Payment Verification Alert -->
+          <div class="payment-alert cash" id="modal-payment-alert">
+            <div class="alert-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><line x1="12" y1="6" x2="12" y2="8"/><line x1="12" y1="16" x2="12" y2="18"/></svg>
+            </div>
+            <div class="alert-details">
+              <h4 id="modal-pay-heading">Collect Cash at Counter</h4>
+              <p id="modal-pay-instruction">Please collect <strong id="modal-pay-amount">৳10.00</strong> from customer before confirming print.</p>
+            </div>
+          </div>
+
+          <!-- Spooling Progress Bar (Active during printing) -->
+          <div class="spooling-panel hidden" id="spooling-panel">
+            <div class="spooling-status-line">
+              <span id="spooling-step-label">Connecting to printer...</span>
+              <span id="spooling-percentage">0%</span>
+            </div>
+            <div class="progress-bar-bg">
+              <div class="progress-bar-fill" id="spooling-progress-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button id="btn-cancel-job" class="btn-secondary">Cancel</button>
+          <button id="btn-release-print" class="btn-primary btn-large">
+            <span id="release-btn-icon">🖨️</span>
+            <span id="release-btn-text">Confirm & Release Print</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

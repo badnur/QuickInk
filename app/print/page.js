@@ -115,6 +115,8 @@ function PrintOrderPageContent({ initialDeviceId }) {
   const [totalPages, setTotalPages] = useState(1)
   const [pageRangeMode, setPageRangeMode] = useState('all') // 'all' | 'custom'
   const [customRangeStr, setCustomRangeStr] = useState('')
+  const [selectedPages, setSelectedPages] = useState(new Set()) // For visual bubble picker
+  const [rangeInputStr, setRangeInputStr] = useState('') // typed range like "1-3, 5"
   const [pagesPerSheet, setPagesPerSheet] = useState(1) // 1, 2, 4, 6, 8
   const [miniBorder, setMiniBorder] = useState(true)
   const [colorMode, setColorMode] = useState('bw') // 'bw' | 'color'
@@ -153,8 +155,30 @@ function PrintOrderPageContent({ initialDeviceId }) {
   const PRICE_COLOR = 8.0
   const unitPrice = colorMode === 'color' ? PRICE_COLOR : PRICE_BW
 
+  // Build effective page range string for API/print
+  // Returns null when 'all', else a SumatraPDF-compatible range string like "1-3,5,8"
+  const effectivePageRange = (() => {
+    if (pageRangeMode === 'all') return null
+    if (selectedPages.size > 0) {
+      // Convert Set to sorted array, then build compact range string
+      const sorted = Array.from(selectedPages).sort((a, b) => a - b)
+      const ranges = []
+      let start = sorted[0], end = sorted[0]
+      for (let i = 1; i < sorted.length; i++) {
+        if (sorted[i] === end + 1) { end = sorted[i] }
+        else { ranges.push(start === end ? `${start}` : `${start}-${end}`); start = end = sorted[i] }
+      }
+      ranges.push(start === end ? `${start}` : `${start}-${end}`)
+      return ranges.join(',')
+    }
+    // fallback: typed range input
+    return rangeInputStr.trim() || null
+  })()
+
   // Calculate effective printed sheets based on range and multi-page layout
-  const selectedPagesCount = pageRangeMode === 'all' ? totalPages : parsePageRange(customRangeStr, totalPages)
+  const selectedPagesCount = pageRangeMode === 'all'
+    ? totalPages
+    : (selectedPages.size > 0 ? selectedPages.size : parsePageRange(rangeInputStr, totalPages))
   const calculatedSheets = Math.max(1, Math.ceil(selectedPagesCount / pagesPerSheet))
   const totalPrice = (calculatedSheets * unitPrice * copies).toFixed(2)
 
@@ -304,11 +328,11 @@ function PrintOrderPageContent({ initialDeviceId }) {
     try {
       const fileExt = selectedFile.name.split('.').pop() || 'pdf'
       const cleanFileName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-      const storagePath = `jobs/${Date.now()}_${cleanFileName}`
+      let storagePath = `jobs/${Date.now()}_${cleanFileName}`
 
       setUploadProgress(40)
 
-      // Upload document file to Supabase Storage
+      // Upload document file to Supabase Storage or server fallback
       const { error: uploadError } = await supabase.storage
         .from('print-files')
         .upload(storagePath, selectedFile, {
@@ -317,7 +341,21 @@ function PrintOrderPageContent({ initialDeviceId }) {
         })
 
       if (uploadError) {
-        console.warn('Storage upload notice (continuing with relative path):', uploadError.message)
+        console.warn('Supabase storage notice, using server upload fallback:', uploadError.message)
+        try {
+          const fd = new FormData()
+          fd.append('file', selectedFile)
+          const upRes = await fetch('/api/upload', {
+            method: 'POST',
+            body: fd,
+          })
+          const upData = await upRes.json()
+          if (upData?.file_path) {
+            storagePath = upData.file_path
+          }
+        } catch (serverUpErr) {
+          console.warn('Server upload fallback notice:', serverUpErr)
+        }
       }
 
       setUploadProgress(75)
@@ -334,6 +372,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
           color_mode: colorMode,
           duplex: colorMode === 'color' ? false : duplex,
           page_count: calculatedSheets,
+          page_range: effectivePageRange,   // null = all pages; "1-3,5" = specific range
           payment_type: paymentMethod,
           amount: parseFloat(totalPrice),
         }),
@@ -749,47 +788,105 @@ function PrintOrderPageContent({ initialDeviceId }) {
                   </div>
                 )}
 
-                {/* Page Range Selection Box */}
+                {/* Page Range Selection Box — Visual Bubble Picker */}
                 <div className="border border-gray-200 rounded-xl p-3 bg-gray-50/50 mb-3">
-                  <label className="block text-xs font-bold text-gray-800 mb-1.5">
-                    📄 Which Pages to Print?
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 mb-1.5">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold text-gray-800">📄 Which Pages to Print?</label>
+                    {pageRangeMode === 'custom' && selectedPages.size > 0 && (
+                      <span className="text-[10px] font-bold text-[#00bf63] bg-[#00bf63]/10 px-2 py-0.5 rounded-full">
+                        {selectedPages.size}/{totalPages} selected
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Mode Toggle */}
+                  <div className="grid grid-cols-2 gap-1.5 mb-2">
                     <button
                       type="button"
-                      onClick={() => setPageRangeMode('all')}
-                      className={`py-1.5 px-2.5 rounded-lg text-xs font-bold border transition-colors ${
+                      onClick={() => { setPageRangeMode('all'); setSelectedPages(new Set()); setRangeInputStr('') }}
+                      className={`py-1.5 px-2.5 rounded-lg text-xs font-bold border transition-all ${
                         pageRangeMode === 'all'
-                          ? 'bg-[#00bf63] text-white border-[#00bf63]'
-                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+                          ? 'bg-[#00bf63] text-white border-[#00bf63] shadow-sm'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-[#00bf63] hover:text-[#00bf63]'
                       }`}
                     >
-                      All Pages ({totalPages})
+                      ✅ All Pages ({totalPages})
                     </button>
                     <button
                       type="button"
-                      onClick={() => setPageRangeMode('custom')}
-                      className={`py-1.5 px-2.5 rounded-lg text-xs font-bold border transition-colors ${
+                      onClick={() => { setPageRangeMode('custom'); if (selectedPages.size === 0 && totalPages > 0) setSelectedPages(new Set([1])) }}
+                      className={`py-1.5 px-2.5 rounded-lg text-xs font-bold border transition-all ${
                         pageRangeMode === 'custom'
-                          ? 'bg-[#00bf63] text-white border-[#00bf63]'
-                          : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100'
+                          ? 'bg-[#00bf63] text-white border-[#00bf63] shadow-sm'
+                          : 'bg-white text-gray-600 border-gray-200 hover:border-[#00bf63] hover:text-[#00bf63]'
                       }`}
                     >
-                      Specific Range
+                      🎯 Pick Pages
                     </button>
                   </div>
 
                   {pageRangeMode === 'custom' && (
-                    <div className="mt-1.5">
-                      <Input
-                        value={customRangeStr}
-                        onChange={(e) => setCustomRangeStr(e.target.value)}
-                        placeholder="e.g. 1, 3, 5-8"
-                        className="bg-white text-xs h-8 border-gray-200 focus:border-[#00bf63]"
-                      />
-                      <span className="text-[10px] text-gray-500 mt-1 block">
-                        Printing <strong>{selectedPagesCount}</strong> of {totalPages} pages
-                      </span>
+                    <div className="space-y-2">
+                      {/* Quick-select presets */}
+                      <div className="flex gap-1.5 flex-wrap">
+                        <button type="button"
+                          onClick={() => setSelectedPages(new Set(Array.from({ length: totalPages }, (_, i) => i + 1)))}
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-300 bg-white hover:bg-[#00bf63] hover:text-white hover:border-[#00bf63] transition-colors"
+                        >Select All</button>
+                        <button type="button"
+                          onClick={() => setSelectedPages(new Set(Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p % 2 !== 0)))}
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-300 bg-white hover:bg-[#00bf63] hover:text-white hover:border-[#00bf63] transition-colors"
+                        >Odd Only</button>
+                        <button type="button"
+                          onClick={() => setSelectedPages(new Set(Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p % 2 === 0)))}
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-300 bg-white hover:bg-[#00bf63] hover:text-white hover:border-[#00bf63] transition-colors"
+                        >Even Only</button>
+                        <button type="button"
+                          onClick={() => setSelectedPages(new Set())}
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-red-200 text-red-500 bg-white hover:bg-red-500 hover:text-white transition-colors"
+                        >Clear</button>
+                      </div>
+
+                      {/* Page bubble grid — up to 50 pages shown as bubbles, fallback to text input for large docs */}
+                      {totalPages <= 50 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => {
+                                const next = new Set(selectedPages)
+                                next.has(p) ? next.delete(p) : next.add(p)
+                                setSelectedPages(next)
+                              }}
+                              className={`w-7 h-7 rounded-lg text-[11px] font-bold border transition-all ${
+                                selectedPages.has(p)
+                                  ? 'bg-[#00bf63] text-white border-[#00bf63] shadow-sm scale-105'
+                                  : 'bg-white text-gray-600 border-gray-200 hover:border-[#00bf63] hover:text-[#00bf63]'
+                              }`}
+                            >{p}</button>
+                          ))}
+                        </div>
+                      ) : (
+                        /* Fallback typed input for docs > 50 pages */
+                        <div>
+                          <Input
+                            value={rangeInputStr}
+                            onChange={(e) => { setRangeInputStr(e.target.value); setSelectedPages(new Set()) }}
+                            placeholder="e.g. 1-5, 8, 11-13"
+                            className="bg-white text-xs h-8 border-gray-200 focus:border-[#00bf63]"
+                          />
+                          <span className="text-[10px] text-gray-400 mt-0.5 block">Enter page numbers or ranges separated by commas</span>
+                        </div>
+                      )}
+
+                      {selectedPages.size > 0 && (
+                        <div className="text-[10px] text-gray-500 bg-white border border-gray-100 rounded-lg px-2 py-1.5">
+                          <span className="font-semibold text-gray-700">Print order: </span>
+                          <span className="text-[#00bf63] font-bold">{effectivePageRange}</span>
+                          <span className="text-gray-400 ml-1">({selectedPages.size} page{selectedPages.size !== 1 ? 's' : ''})</span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

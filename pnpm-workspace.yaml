@@ -1,3 +1,8 @@
+packages:
+  - '.'
+  - 'desktop-app'
+
 allowBuilds:
   core-js: true
   sharp: true
+  electron: true
