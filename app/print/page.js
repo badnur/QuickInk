@@ -114,9 +114,8 @@ function PrintOrderPageContent({ initialDeviceId }) {
   // Print settings
   const [totalPages, setTotalPages] = useState(1)
   const [pageRangeMode, setPageRangeMode] = useState('all') // 'all' | 'custom'
-  const [customRangeStr, setCustomRangeStr] = useState('')
-  const [selectedPages, setSelectedPages] = useState(new Set()) // For visual bubble picker
-  const [rangeInputStr, setRangeInputStr] = useState('') // typed range like "1-3, 5"
+  const [fromPage, setFromPage] = useState(1)
+  const [toPage, setToPage] = useState(1)
   const [pagesPerSheet, setPagesPerSheet] = useState(1) // 1, 2, 4, 6, 8
   const [miniBorder, setMiniBorder] = useState(true)
   const [colorMode, setColorMode] = useState('bw') // 'bw' | 'color'
@@ -156,29 +155,13 @@ function PrintOrderPageContent({ initialDeviceId }) {
   const unitPrice = colorMode === 'color' ? PRICE_COLOR : PRICE_BW
 
   // Build effective page range string for API/print
-  // Returns null when 'all', else a SumatraPDF-compatible range string like "1-3,5,8"
-  const effectivePageRange = (() => {
-    if (pageRangeMode === 'all') return null
-    if (selectedPages.size > 0) {
-      // Convert Set to sorted array, then build compact range string
-      const sorted = Array.from(selectedPages).sort((a, b) => a - b)
-      const ranges = []
-      let start = sorted[0], end = sorted[0]
-      for (let i = 1; i < sorted.length; i++) {
-        if (sorted[i] === end + 1) { end = sorted[i] }
-        else { ranges.push(start === end ? `${start}` : `${start}-${end}`); start = end = sorted[i] }
-      }
-      ranges.push(start === end ? `${start}` : `${start}-${end}`)
-      return ranges.join(',')
-    }
-    // fallback: typed range input
-    return rangeInputStr.trim() || null
-  })()
+  // Returns null when 'all pages', else a SumatraPDF-compatible range string like "2-20"
+  const clampedFrom = Math.max(1, Math.min(fromPage || 1, totalPages))
+  const clampedTo   = Math.max(clampedFrom, Math.min(toPage || totalPages, totalPages))
+  const effectivePageRange = pageRangeMode === 'all' ? null : `${clampedFrom}-${clampedTo}`
 
   // Calculate effective printed sheets based on range and multi-page layout
-  const selectedPagesCount = pageRangeMode === 'all'
-    ? totalPages
-    : (selectedPages.size > 0 ? selectedPages.size : parsePageRange(rangeInputStr, totalPages))
+  const selectedPagesCount = pageRangeMode === 'all' ? totalPages : Math.max(1, clampedTo - clampedFrom + 1)
   const calculatedSheets = Math.max(1, Math.ceil(selectedPagesCount / pagesPerSheet))
   const totalPrice = (calculatedSheets * unitPrice * copies).toFixed(2)
 
@@ -788,22 +771,22 @@ function PrintOrderPageContent({ initialDeviceId }) {
                   </div>
                 )}
 
-                {/* Page Range Selection Box — Visual Bubble Picker */}
+                {/* Page Range — From / To Selector */}
                 <div className="border border-gray-200 rounded-xl p-3 bg-gray-50/50 mb-3">
                   <div className="flex items-center justify-between mb-2">
                     <label className="text-xs font-bold text-gray-800">📄 Which Pages to Print?</label>
-                    {pageRangeMode === 'custom' && selectedPages.size > 0 && (
+                    {pageRangeMode === 'custom' && (
                       <span className="text-[10px] font-bold text-[#00bf63] bg-[#00bf63]/10 px-2 py-0.5 rounded-full">
-                        {selectedPages.size}/{totalPages} selected
+                        {selectedPagesCount} of {totalPages} pages
                       </span>
                     )}
                   </div>
 
-                  {/* Mode Toggle */}
-                  <div className="grid grid-cols-2 gap-1.5 mb-2">
+                  {/* All / Custom toggle */}
+                  <div className="grid grid-cols-2 gap-1.5 mb-2.5">
                     <button
                       type="button"
-                      onClick={() => { setPageRangeMode('all'); setSelectedPages(new Set()); setRangeInputStr('') }}
+                      onClick={() => setPageRangeMode('all')}
                       className={`py-1.5 px-2.5 rounded-lg text-xs font-bold border transition-all ${
                         pageRangeMode === 'all'
                           ? 'bg-[#00bf63] text-white border-[#00bf63] shadow-sm'
@@ -814,79 +797,112 @@ function PrintOrderPageContent({ initialDeviceId }) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => { setPageRangeMode('custom'); if (selectedPages.size === 0 && totalPages > 0) setSelectedPages(new Set([1])) }}
+                      onClick={() => { setPageRangeMode('custom'); setFromPage(1); setToPage(totalPages) }}
                       className={`py-1.5 px-2.5 rounded-lg text-xs font-bold border transition-all ${
                         pageRangeMode === 'custom'
                           ? 'bg-[#00bf63] text-white border-[#00bf63] shadow-sm'
                           : 'bg-white text-gray-600 border-gray-200 hover:border-[#00bf63] hover:text-[#00bf63]'
                       }`}
                     >
-                      🎯 Pick Pages
+                      🎯 Page Range
                     </button>
                   </div>
 
                   {pageRangeMode === 'custom' && (
-                    <div className="space-y-2">
-                      {/* Quick-select presets */}
-                      <div className="flex gap-1.5 flex-wrap">
-                        <button type="button"
-                          onClick={() => setSelectedPages(new Set(Array.from({ length: totalPages }, (_, i) => i + 1)))}
-                          className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-300 bg-white hover:bg-[#00bf63] hover:text-white hover:border-[#00bf63] transition-colors"
-                        >Select All</button>
-                        <button type="button"
-                          onClick={() => setSelectedPages(new Set(Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p % 2 !== 0)))}
-                          className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-300 bg-white hover:bg-[#00bf63] hover:text-white hover:border-[#00bf63] transition-colors"
-                        >Odd Only</button>
-                        <button type="button"
-                          onClick={() => setSelectedPages(new Set(Array.from({ length: totalPages }, (_, i) => i + 1).filter(p => p % 2 === 0)))}
-                          className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-gray-300 bg-white hover:bg-[#00bf63] hover:text-white hover:border-[#00bf63] transition-colors"
-                        >Even Only</button>
-                        <button type="button"
-                          onClick={() => setSelectedPages(new Set())}
-                          className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-red-200 text-red-500 bg-white hover:bg-red-500 hover:text-white transition-colors"
-                        >Clear</button>
+                    <div className="space-y-2.5">
+
+                      {/* From / To number inputs */}
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <label className="text-[10px] font-bold text-gray-500 mb-1 block">FROM</label>
+                          <div className="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden focus-within:border-[#00bf63] transition-colors">
+                            <button
+                              type="button"
+                              onClick={() => setFromPage(p => Math.max(1, (p || 1) - 1))}
+                              className="px-2.5 py-2 text-gray-400 hover:text-[#00bf63] hover:bg-gray-50 font-bold text-sm transition-colors"
+                            >−</button>
+                            <input
+                              type="number"
+                              min={1}
+                              max={toPage || totalPages}
+                              value={fromPage}
+                              onChange={e => {
+                                const v = Math.max(1, Math.min(parseInt(e.target.value) || 1, toPage || totalPages))
+                                setFromPage(v)
+                              }}
+                              className="flex-1 text-center text-sm font-bold text-gray-800 bg-transparent border-none outline-none py-2 w-0 min-w-0"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setFromPage(p => Math.min((p || 1) + 1, toPage || totalPages))}
+                              className="px-2.5 py-2 text-gray-400 hover:text-[#00bf63] hover:bg-gray-50 font-bold text-sm transition-colors"
+                            >+</button>
+                          </div>
+                        </div>
+
+                        <div className="pt-4 text-gray-400 font-bold text-sm">→</div>
+
+                        <div className="flex-1">
+                          <label className="text-[10px] font-bold text-gray-500 mb-1 block">TO</label>
+                          <div className="flex items-center border border-gray-200 rounded-lg bg-white overflow-hidden focus-within:border-[#00bf63] transition-colors">
+                            <button
+                              type="button"
+                              onClick={() => setToPage(p => Math.max(fromPage || 1, (p || totalPages) - 1))}
+                              className="px-2.5 py-2 text-gray-400 hover:text-[#00bf63] hover:bg-gray-50 font-bold text-sm transition-colors"
+                            >−</button>
+                            <input
+                              type="number"
+                              min={fromPage || 1}
+                              max={totalPages}
+                              value={toPage}
+                              onChange={e => {
+                                const v = Math.max(fromPage || 1, Math.min(parseInt(e.target.value) || totalPages, totalPages))
+                                setToPage(v)
+                              }}
+                              className="flex-1 text-center text-sm font-bold text-gray-800 bg-transparent border-none outline-none py-2 w-0 min-w-0"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setToPage(p => Math.min((p || totalPages) + 1, totalPages))}
+                              className="px-2.5 py-2 text-gray-400 hover:text-[#00bf63] hover:bg-gray-50 font-bold text-sm transition-colors"
+                            >+</button>
+                          </div>
+                        </div>
                       </div>
 
-                      {/* Page bubble grid — up to 50 pages shown as bubbles, fallback to text input for large docs */}
-                      {totalPages <= 50 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                            <button
-                              key={p}
-                              type="button"
-                              onClick={() => {
-                                const next = new Set(selectedPages)
-                                next.has(p) ? next.delete(p) : next.add(p)
-                                setSelectedPages(next)
-                              }}
-                              className={`w-7 h-7 rounded-lg text-[11px] font-bold border transition-all ${
-                                selectedPages.has(p)
-                                  ? 'bg-[#00bf63] text-white border-[#00bf63] shadow-sm scale-105'
-                                  : 'bg-white text-gray-600 border-gray-200 hover:border-[#00bf63] hover:text-[#00bf63]'
-                              }`}
-                            >{p}</button>
-                          ))}
-                        </div>
-                      ) : (
-                        /* Fallback typed input for docs > 50 pages */
-                        <div>
-                          <Input
-                            value={rangeInputStr}
-                            onChange={(e) => { setRangeInputStr(e.target.value); setSelectedPages(new Set()) }}
-                            placeholder="e.g. 1-5, 8, 11-13"
-                            className="bg-white text-xs h-8 border-gray-200 focus:border-[#00bf63]"
-                          />
-                          <span className="text-[10px] text-gray-400 mt-0.5 block">Enter page numbers or ranges separated by commas</span>
-                        </div>
-                      )}
+                      {/* Quick preset chips */}
+                      <div className="flex gap-1.5 flex-wrap">
+                        <span className="text-[10px] font-bold text-gray-400 self-center">Quick:</span>
+                        <button type="button"
+                          onClick={() => { setFromPage(1); setToPage(totalPages) }}
+                          className="text-[10px] font-bold px-2.5 py-1 rounded-full border border-gray-200 bg-white hover:bg-[#00bf63] hover:text-white hover:border-[#00bf63] transition-colors"
+                        >All</button>
+                        <button type="button"
+                          onClick={() => { setFromPage(1); setToPage(Math.floor(totalPages / 2)) }}
+                          className="text-[10px] font-bold px-2.5 py-1 rounded-full border border-gray-200 bg-white hover:bg-[#00bf63] hover:text-white hover:border-[#00bf63] transition-colors"
+                        >First Half</button>
+                        <button type="button"
+                          onClick={() => { setFromPage(Math.ceil(totalPages / 2) + 1); setToPage(totalPages) }}
+                          className="text-[10px] font-bold px-2.5 py-1 rounded-full border border-gray-200 bg-white hover:bg-[#00bf63] hover:text-white hover:border-[#00bf63] transition-colors"
+                        >Last Half</button>
+                        <button type="button"
+                          onClick={() => { setFromPage(1); setToPage(1) }}
+                          className="text-[10px] font-bold px-2.5 py-1 rounded-full border border-gray-200 bg-white hover:bg-[#00bf63] hover:text-white hover:border-[#00bf63] transition-colors"
+                        >Page 1 Only</button>
+                      </div>
 
-                      {selectedPages.size > 0 && (
-                        <div className="text-[10px] text-gray-500 bg-white border border-gray-100 rounded-lg px-2 py-1.5">
-                          <span className="font-semibold text-gray-700">Print order: </span>
-                          <span className="text-[#00bf63] font-bold">{effectivePageRange}</span>
-                          <span className="text-gray-400 ml-1">({selectedPages.size} page{selectedPages.size !== 1 ? 's' : ''})</span>
+                      {/* Live summary bar */}
+                      <div className="flex items-center justify-between bg-white border border-[#00bf63]/30 rounded-lg px-3 py-2">
+                        <div className="text-[11px] text-gray-500">
+                          Printing pages <span className="font-bold text-gray-800">{clampedFrom}</span>
+                          <span className="mx-1 text-gray-400">to</span>
+                          <span className="font-bold text-gray-800">{clampedTo}</span>
                         </div>
-                      )}
+                        <span className="text-[11px] font-bold text-[#00bf63]">
+                          {selectedPagesCount} page{selectedPagesCount !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+
                     </div>
                   )}
                 </div>
