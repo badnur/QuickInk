@@ -2,12 +2,8 @@ import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
 function generateOtpCode() {
-  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ'
-  let code = 'QK'
-  for (let i = 0; i < 4; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length))
-  }
-  return code
+  // Generate random 6-digit numerical code (100000 - 999999)
+  return Math.floor(100000 + Math.random() * 900000).toString()
 }
 
 /**

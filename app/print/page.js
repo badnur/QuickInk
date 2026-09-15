@@ -3,7 +3,6 @@
 import { useState, useEffect, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import QRCode from 'qrcode'
 import { supabase } from '@/lib/supabase'
 import DocumentScannerModal from '@/components/scanner/DocumentScannerModal'
 import PassportPhotoModal from '@/components/print/PassportPhotoModal'
@@ -131,7 +130,6 @@ function PrintOrderPageContent({ initialDeviceId }) {
   // Generated Ticket state
   const [ticketOrder, setTicketOrder] = useState(null)
   const [ticketOtp, setTicketOtp] = useState(null)
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState('')
   const [copied, setCopied] = useState(false)
   const [timeLeft, setTimeLeft] = useState(3600)
   const [liveStatus, setLiveStatus] = useState('awaiting_redemption')
@@ -143,6 +141,10 @@ function PrintOrderPageContent({ initialDeviceId }) {
     if (searchParams.get('step') === '3') {
       setSelectedFile(new File(['Sample QuickInk Document Content'], 'QuickInk_Sample.pdf', { type: 'application/pdf' }))
       setStep(3)
+    } else if (searchParams.get('step') === '4') {
+      setSelectedFile(new File(['Sample QuickInk Document Content'], 'QuickInk_Sample.pdf', { type: 'application/pdf' }))
+      setTicketOtp({ code: '582914', otp_type: 'type_a' })
+      setStep(4)
     }
   }, [searchParams])
 
@@ -222,22 +224,6 @@ function PrintOrderPageContent({ initialDeviceId }) {
       supabase.removeChannel(channel)
     }
   }, [ticketOrder?.id])
-
-  // Generate QR Code when ticket is ready
-  useEffect(() => {
-    if (ticketOtp?.code) {
-      QRCode.toDataURL(ticketOtp.code, {
-        width: 240,
-        margin: 2,
-        color: {
-          dark: '#111827',
-          light: '#ffffff',
-        },
-      })
-        .then((url) => setQrCodeDataUrl(url))
-        .catch((err) => console.error('QR code generation error:', err))
-    }
-  }, [ticketOtp])
 
   // Handle standard file selection
   const handleFileChange = (e) => {
@@ -1121,7 +1107,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 4: PRINT TICKET & QR SCREEN (Minimal) */}
+        {/* STEP 4: PRINT TICKET & 6-DIGIT OTP SCREEN (Minimal) */}
         {/* ========================================================================= */}
         {step === 4 && ticketOtp && (
           <div className="space-y-3 animate-in zoom-in duration-200">
@@ -1131,28 +1117,28 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 Print Order Placed!
               </h2>
               <p className="text-xs text-gray-400 mb-5">
-                Enter code on machine keypad or scan QR code.
+                Enter this 6-digit code on the machine keypad to release your print.
               </p>
 
-              {/* Main OTP Box */}
-              <div className="bg-white text-gray-900 rounded-2xl p-5 max-w-xs mx-auto border border-gray-200">
-                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400 block mb-0.5">
-                  Redemption OTP
+              {/* Main 6-Digit Numerical OTP Box */}
+              <div className="bg-white text-gray-900 rounded-2xl p-6 max-w-xs mx-auto border border-gray-200">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400 block mb-2">
+                  Redemption OTP Code
                 </span>
-                <div className="flex items-center justify-center gap-2 mb-2">
-                  <span className="text-4xl sm:text-5xl font-mono font-black tracking-wider text-[#00bf63]">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <span className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-[#00bf63]">
                     {ticketOtp.code}
                   </span>
                   <button
                     onClick={handleCopyOtp}
-                    className="p-1 text-gray-400 hover:text-[#00bf63] rounded"
-                    title="Copy OTP"
+                    className="p-1.5 text-gray-400 hover:text-[#00bf63] hover:bg-gray-100 rounded-lg transition-colors"
+                    title="Copy 6-Digit OTP"
                   >
-                    {copied ? <Check className="h-4 w-4 text-[#00bf63]" /> : <Copy className="h-4 w-4" />}
+                    {copied ? <Check className="h-5 w-5 text-[#00bf63]" /> : <Copy className="h-5 w-5" />}
                   </button>
                 </div>
 
-                <span className={`inline-block text-[10px] font-bold px-2.5 py-0.5 rounded-full mb-3 ${
+                <span className={`inline-block text-[10px] font-bold px-3 py-1 rounded-full ${
                   ticketOtp.otp_type === 'type_a'
                     ? 'bg-[#00bf63]/10 text-[#00bf63]'
                     : 'bg-amber-100 text-amber-800'
@@ -1160,12 +1146,20 @@ function PrintOrderPageContent({ initialDeviceId }) {
                   {ticketOtp.otp_type === 'type_a' ? 'Valid at Kiosks & Shops' : 'Valid at Partner Shops Only'}
                 </span>
 
-                {qrCodeDataUrl && (
-                  <div className="pt-3 border-t border-gray-100 flex flex-col items-center">
-                    <img src={qrCodeDataUrl} alt="Print Ticket QR" className="w-40 h-40 rounded-lg border p-1" />
-                    <span className="text-[10px] text-gray-400 mt-1">Scan at kiosk QR camera</span>
+                <div className="mt-4 pt-3 border-t border-gray-100 text-left space-y-2">
+                  <div className="flex items-center gap-2 text-[11px] text-gray-600">
+                    <span className="w-4 h-4 rounded-full bg-gray-100 text-gray-700 font-bold flex items-center justify-center text-[10px] flex-shrink-0">1</span>
+                    <span>Go to any nearby QuickInk station</span>
                   </div>
-                )}
+                  <div className="flex items-center gap-2 text-[11px] text-gray-600">
+                    <span className="w-4 h-4 rounded-full bg-gray-100 text-gray-700 font-bold flex items-center justify-center text-[10px] flex-shrink-0">2</span>
+                    <span>Type this 6-digit code on keypad</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-gray-600">
+                    <span className="w-4 h-4 rounded-full bg-gray-100 text-gray-700 font-bold flex items-center justify-center text-[10px] flex-shrink-0">3</span>
+                    <span>Collect your printed pages</span>
+                  </div>
+                </div>
               </div>
 
               {/* Countdown & Realtime Status */}
