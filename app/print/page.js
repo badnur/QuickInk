@@ -138,6 +138,14 @@ function PrintOrderPageContent({ initialDeviceId }) {
 
   const fileInputRef = useRef(null)
 
+  // Direct step navigation helper for preview/testing
+  useEffect(() => {
+    if (searchParams.get('step') === '3') {
+      setSelectedFile(new File(['Sample QuickInk Document Content'], 'QuickInk_Sample.pdf', { type: 'application/pdf' }))
+      setStep(3)
+    }
+  }, [searchParams])
+
   // Pricing constants (in BDT ৳)
   const PRICE_BW = 2.0
   const PRICE_COLOR = 8.0
@@ -274,6 +282,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
     setSubmitError(null)
     setServiceType('photo4x6')
     setColorMode('color')
+    setDuplex(false)
     setStep(3)
   }
 
@@ -337,7 +346,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
           file_name: selectedFile.name,
           copies,
           color_mode: colorMode,
-          duplex,
+          duplex: colorMode === 'color' ? false : duplex,
           page_count: calculatedSheets,
           payment_type: paymentMethod,
           amount: parseFloat(totalPrice),
@@ -899,7 +908,10 @@ function PrintOrderPageContent({ initialDeviceId }) {
                   </div>
 
                   <div
-                    onClick={() => setColorMode('color')}
+                    onClick={() => {
+                      setColorMode('color')
+                      setDuplex(false)
+                    }}
                     className={`p-3.5 rounded-xl border-2 cursor-pointer transition-colors ${
                       colorMode === 'color'
                         ? 'border-[#00bf63] bg-[#00bf63]/5'
@@ -938,21 +950,42 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between py-0.5">
                 <div>
-                  <b className="text-xs font-bold text-gray-900 block">Dual-Side (Duplex)</b>
-                  <span className="text-[10px] text-gray-500">Prints front and back</span>
+                  <div className="flex items-center gap-1.5">
+                    <b className={`text-xs font-bold block ${colorMode === 'color' ? 'text-gray-400' : 'text-gray-900'}`}>
+                      Dual-Side (Duplex)
+                    </b>
+                    {colorMode === 'color' && (
+                      <span className="bg-gray-100 text-gray-500 text-[9px] font-semibold px-1.5 py-0.5 rounded border border-gray-200">
+                        B&W Only
+                      </span>
+                    )}
+                  </div>
+                  <span className={`text-[10px] block ${colorMode === 'color' ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {colorMode === 'color' ? 'Color print supports single-side only' : 'Prints front and back'}
+                  </span>
                 </div>
                 <button
                   type="button"
-                  onClick={() => setDuplex(!duplex)}
+                  disabled={colorMode === 'color'}
+                  onClick={() => {
+                    if (colorMode !== 'color') {
+                      setDuplex(!duplex)
+                    }
+                  }}
                   className={`w-11 h-6 rounded-full transition-colors relative p-0.5 ${
-                    duplex ? 'bg-[#00bf63]' : 'bg-gray-200'
+                    colorMode === 'color'
+                      ? 'bg-gray-100 cursor-not-allowed opacity-40'
+                      : duplex
+                      ? 'bg-[#00bf63] cursor-pointer'
+                      : 'bg-gray-200 cursor-pointer'
                   }`}
+                  title={colorMode === 'color' ? 'Dual-side printing is only supported for Black & White' : undefined}
                 >
                   <span
                     className={`block w-5 h-5 rounded-full bg-white transition-transform ${
-                      duplex ? 'translate-x-5' : 'translate-x-0'
+                      duplex && colorMode !== 'color' ? 'translate-x-5' : 'translate-x-0'
                     }`}
                   />
                 </button>
@@ -1017,7 +1050,13 @@ function PrintOrderPageContent({ initialDeviceId }) {
               <div className="bg-gray-50 rounded-xl p-3.5 space-y-1 text-xs text-gray-600 border border-gray-200">
                 <div className="flex justify-between">
                   <span>Print Type:</span>
-                  <strong className="text-gray-900">{colorMode === 'color' ? 'Full Color' : 'Black & White'}</strong>
+                  <strong className="text-gray-900">
+                    {colorMode === 'color'
+                      ? 'Full Color (Single-Side)'
+                      : duplex
+                      ? 'Black & White (Dual-Side)'
+                      : 'Black & White (Single-Side)'}
+                  </strong>
                 </div>
                 <div className="flex justify-between">
                   <span>Sheets to print:</span>
