@@ -378,40 +378,6 @@ function PrintOrderPageContent({ initialDeviceId }) {
     <div className="min-h-screen bg-slate-50 pt-20 pb-20 font-sans text-gray-900">
       <div className="container mx-auto px-4 sm:px-6 max-w-lg sm:max-w-xl">
 
-        {/* ========================================================================= */}
-        {/* SHOP / KIOSK HEADER (Minimal & Crisp) */}
-        {/* ========================================================================= */}
-        <div className="bg-[#111827] text-white rounded-2xl p-5 mb-5 border border-gray-800">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-2xl flex-shrink-0 text-slate-900">
-              🖨️
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h2 className="font-bold text-base text-white truncate">
-                  {deviceInfo ? deviceInfo.name : 'QuickInk Smart Print Station'}
-                </h2>
-                <span className="w-4 h-4 rounded-full bg-[#00bf63] text-white text-[10px] font-bold flex items-center justify-center">
-                  ✓
-                </span>
-              </div>
-              <p className="text-xs text-gray-400 truncate mt-0.5">
-                {deviceInfo?.location?.address || 'Self-Service Print Kiosk & Partner Shop'}
-              </p>
-              <div className="flex items-center gap-2 mt-2 flex-wrap">
-                <span className="bg-white/10 text-white border border-white/10 text-[11px] font-medium px-2.5 py-0.5 rounded-md">
-                  B&W: ৳{PRICE_BW}/page
-                </span>
-                <span className="bg-[#00bf63] text-white text-[11px] font-bold px-2.5 py-0.5 rounded-md">
-                  Color: ৳{PRICE_COLOR}/page
-                </span>
-                <span className="text-[#00bf63] text-[11px] font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#00bf63]" /> Online & Ready
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* ========================================================================= */}
         {/* STEP PROGRESS BAR */}

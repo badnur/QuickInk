@@ -31,14 +31,14 @@ export default function Navbar() {
       scrolled ? 'bg-white/95 border-b border-gray-200/80 shadow-xs' : 'bg-white border-b border-gray-100'
     }`}>
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16 sm:h-20">
+        <div className="flex justify-between items-center h-20">
           {/* Logo */}
-          <Link href="/" className="flex items-center">
+          <Link href="/" className="flex items-center group">
             <img 
               src="/images/quickink-logo.png" 
               alt="QuickInk Logo" 
-              className="w-auto transition-transform duration-150 active:scale-95"
-              style={{ height: '52px' }}
+              className="w-auto transition-all duration-300 group-hover:scale-105"
+              style={{ height: '180px' }}
             />
           </Link>
 
