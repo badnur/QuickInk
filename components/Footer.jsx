@@ -26,7 +26,7 @@ export default function Footer() {
                 <a
                   key={index}
                   href="#"
-                  className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors duration-300"
+                  className="w-10 h-10 bg-gray-800 rounded-lg flex items-center justify-center hover:bg-[#00bf63] transition-colors duration-300"
                 >
                   <Icon className="h-5 w-5" />
                 </a>
@@ -47,7 +47,7 @@ export default function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-gray-400 hover:text-blue-400 transition-colors duration-300 flex items-center group"
+                    className="text-gray-400 hover:text-[#00bf63] transition-colors duration-300 flex items-center group"
                   >
                     <span className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
                     {link.label}
@@ -70,7 +70,7 @@ export default function Footer() {
                 <li key={link.label}>
                   <Link
                     href={link.href}
-                    className="text-gray-400 hover:text-blue-400 transition-colors duration-300 flex items-center group"
+                    className="text-gray-400 hover:text-[#00bf63] transition-colors duration-300 flex items-center group"
                   >
                     <span className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity">→</span>
                     {link.label}
@@ -84,15 +84,15 @@ export default function Footer() {
           <div>
             <h3 className="text-white font-bold text-lg mb-6">Contact</h3>
             <ul className="space-y-4">
-              <li className="flex items-start gap-3 text-gray-400 hover:text-blue-400 transition-colors group">
+              <li className="flex items-start gap-3 text-gray-400 hover:text-[#00bf63] transition-colors group">
                 <Mail className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
                 <span className="text-sm">support@quickink.online</span>
               </li>
-              <li className="flex items-start gap-3 text-gray-400 hover:text-blue-400 transition-colors group">
+              <li className="flex items-start gap-3 text-gray-400 hover:text-[#00bf63] transition-colors group">
                 <Phone className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
                 <span className="text-sm">+880 1733-398911</span>
               </li>
-              <li className="flex items-start gap-3 text-gray-400 hover:text-blue-400 transition-colors group">
+              <li className="flex items-start gap-3 text-gray-400 hover:text-[#00bf63] transition-colors group">
                 <MapPin className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
                 <span className="text-sm">Bagha, Rajshahi, Bangladesh</span>
               </li>
@@ -107,9 +107,9 @@ export default function Footer() {
               © {year} QuickInk. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm text-gray-400">
-              <Link href="#" className="hover:text-blue-400 transition-colors">Terms</Link>
-              <Link href="#" className="hover:text-blue-400 transition-colors">Privacy</Link>
-              <Link href="#" className="hover:text-blue-400 transition-colors">Cookies</Link>
+              <Link href="#" className="hover:text-[#00bf63] transition-colors">Terms</Link>
+              <Link href="#" className="hover:text-[#00bf63] transition-colors">Privacy</Link>
+              <Link href="#" className="hover:text-[#00bf63] transition-colors">Cookies</Link>
             </div>
           </div>
         </div>

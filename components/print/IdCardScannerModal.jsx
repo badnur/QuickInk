@@ -82,7 +82,6 @@ export default function IdCardScannerModal({ isOpen, onClose, onComplete }) {
         const y1 = Math.round(A4_H * 0.22)
 
         ctx.drawImage(frontImg, x1, y1, cardWidth, h1)
-        // Light subtle cut border
         ctx.strokeStyle = '#cccccc'
         ctx.lineWidth = 3
         ctx.strokeRect(x1, y1, cardWidth, h1)
@@ -162,45 +161,45 @@ export default function IdCardScannerModal({ isOpen, onClose, onComplete }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden border border-gray-200 flex flex-col max-h-[90vh] animate-in zoom-in duration-150">
         {/* Modal Header */}
-        <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between bg-slate-50">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center text-lg">
+            <div className="w-8 h-8 rounded-lg bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center text-base">
               🆔
             </div>
             <div>
-              <h3 className="font-extrabold text-gray-900 text-base flex items-center gap-2">
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
                 ID Card 2-in-1 Photocopy
-                <Badge className="bg-blue-100 text-blue-700 text-[10px] border-none">
+                <span className="bg-[#00bf63]/10 text-[#00bf63] text-[10px] font-bold px-2 py-0.5 rounded">
                   Single A4 Sheet
-                </Badge>
+                </span>
               </h3>
-              <p className="text-xs text-gray-500">
+              <p className="text-[11px] text-gray-500">
                 Front & Back printed cleanly on the same page
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"
+            className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-3.5 flex-1">
           {/* Card Slots */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2.5">
             {/* 1. FRONT SIDE SLOT */}
             <div
               onClick={() => frontInputRef.current?.click()}
-              className={`border-2 rounded-2xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[170px] ${
+              className={`border rounded-xl p-3.5 text-center cursor-pointer transition-colors flex flex-col items-center justify-center min-h-[150px] ${
                 frontImage
-                  ? 'border-blue-500 bg-blue-50/20'
-                  : 'border-dashed border-gray-300 hover:border-blue-400 bg-gray-50/50'
+                  ? 'border-[#00bf63] bg-[#00bf63]/5'
+                  : 'border-dashed border-gray-300 hover:border-[#00bf63] bg-gray-50/50'
               }`}
             >
               <input
@@ -215,17 +214,17 @@ export default function IdCardScannerModal({ isOpen, onClose, onComplete }) {
                   <img
                     src={frontImage}
                     alt="Front side"
-                    className="max-h-24 max-w-full rounded-lg shadow-sm object-contain border"
+                    className="max-h-20 max-w-full rounded border object-contain bg-white"
                   />
-                  <span className="text-[11px] font-bold text-blue-700 mt-2 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Front Ready
+                  <span className="text-[10px] font-bold text-[#00bf63] mt-1.5 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Front Ready
                   </span>
-                  <span className="text-[10px] text-gray-400">Tap to retake</span>
+                  <span className="text-[9px] text-gray-400">Tap to retake</span>
                 </div>
               ) : (
                 <>
-                  <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center mb-2">
-                    <CreditCard className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-lg bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center mb-1.5">
+                    <CreditCard className="w-4 h-4" />
                   </div>
                   <b className="text-xs font-bold text-gray-800 block">1. Front Side</b>
                   <span className="text-[10px] text-gray-400 mt-0.5">Upload or Snap</span>
@@ -236,10 +235,10 @@ export default function IdCardScannerModal({ isOpen, onClose, onComplete }) {
             {/* 2. BACK SIDE SLOT */}
             <div
               onClick={() => backInputRef.current?.click()}
-              className={`border-2 rounded-2xl p-4 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[170px] ${
+              className={`border rounded-xl p-3.5 text-center cursor-pointer transition-colors flex flex-col items-center justify-center min-h-[150px] ${
                 backImage
-                  ? 'border-blue-500 bg-blue-50/20'
-                  : 'border-dashed border-gray-300 hover:border-blue-400 bg-gray-50/50'
+                  ? 'border-[#00bf63] bg-[#00bf63]/5'
+                  : 'border-dashed border-gray-300 hover:border-[#00bf63] bg-gray-50/50'
               }`}
             >
               <input
@@ -254,17 +253,17 @@ export default function IdCardScannerModal({ isOpen, onClose, onComplete }) {
                   <img
                     src={backImage}
                     alt="Back side"
-                    className="max-h-24 max-w-full rounded-lg shadow-sm object-contain border"
+                    className="max-h-20 max-w-full rounded border object-contain bg-white"
                   />
-                  <span className="text-[11px] font-bold text-blue-700 mt-2 flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Back Ready
+                  <span className="text-[10px] font-bold text-[#00bf63] mt-1.5 flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Back Ready
                   </span>
-                  <span className="text-[10px] text-gray-400">Tap to retake</span>
+                  <span className="text-[9px] text-gray-400">Tap to retake</span>
                 </div>
               ) : (
                 <>
-                  <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center mb-2">
-                    <CreditCard className="w-5 h-5" />
+                  <div className="w-9 h-9 rounded-lg bg-gray-100 text-gray-500 flex items-center justify-center mb-1.5">
+                    <CreditCard className="w-4 h-4" />
                   </div>
                   <b className="text-xs font-bold text-gray-800 block">2. Back Side</b>
                   <span className="text-[10px] text-gray-400 mt-0.5">Upload or Snap</span>
@@ -275,16 +274,16 @@ export default function IdCardScannerModal({ isOpen, onClose, onComplete }) {
 
           {/* Layout Orientation */}
           <div>
-            <label className="block text-xs font-bold text-gray-800 mb-1.5">
+            <label className="block text-xs font-bold text-gray-800 mb-1">
               Arrangement on A4 Sheet
             </label>
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
                 onClick={() => setLayoutMode('vertical')}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                className={`p-2 rounded-lg border text-xs font-bold transition-colors ${
                   layoutMode === 'vertical'
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    ? 'bg-[#00bf63] text-white border-[#00bf63]'
                     : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                 }`}
               >
@@ -293,9 +292,9 @@ export default function IdCardScannerModal({ isOpen, onClose, onComplete }) {
               <button
                 type="button"
                 onClick={() => setLayoutMode('horizontal')}
-                className={`p-2.5 rounded-xl border text-xs font-bold transition-all ${
+                className={`p-2 rounded-lg border text-xs font-bold transition-colors ${
                   layoutMode === 'horizontal'
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                    ? 'bg-[#00bf63] text-white border-[#00bf63]'
                     : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                 }`}
               >
@@ -306,22 +305,22 @@ export default function IdCardScannerModal({ isOpen, onClose, onComplete }) {
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-gray-100 bg-slate-50 flex items-center justify-end gap-2.5">
-          <Button variant="outline" onClick={onClose} className="rounded-xl text-xs font-bold py-2">
+        <div className="p-3.5 border-t border-gray-100 bg-slate-50 flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={onClose} className="rounded-lg text-xs font-medium py-1.5 h-8">
             Cancel
           </Button>
           <Button
             disabled={!frontImage || isProcessing}
             onClick={handleFinish}
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-md py-2 px-4"
+            className="bg-[#00bf63] hover:bg-[#00a656] text-white rounded-lg text-xs font-bold shadow-none py-1.5 px-3.5 h-8"
           >
             {isProcessing ? (
               <>
-                <RefreshCw className="mr-1.5 w-3.5 h-3.5 animate-spin" /> Merging A4...
+                <RefreshCw className="mr-1.5 w-3 h-3 animate-spin" /> Merging...
               </>
             ) : (
               <>
-                Compile & Print <ArrowRight className="ml-1.5 w-3.5 h-3.5" />
+                Compile & Print <ArrowRight className="ml-1 w-3 h-3" />
               </>
             )}
           </Button>

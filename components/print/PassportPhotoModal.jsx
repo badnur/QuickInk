@@ -149,39 +149,39 @@ export default function PassportPhotoModal({ isOpen, onClose, onComplete }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
-      <div className="bg-white rounded-3xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-2xl max-w-lg w-full overflow-hidden border border-gray-200 flex flex-col max-h-[90vh] animate-in zoom-in duration-150">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-gray-100 flex items-center justify-between bg-slate-50">
+        <div className="p-4 border-b border-gray-100 flex items-center justify-between bg-slate-50">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center text-lg">
+            <div className="w-8 h-8 rounded-lg bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center text-base">
               📷
             </div>
             <div>
-              <h3 className="font-extrabold text-gray-900 text-base flex items-center gap-2">
+              <h3 className="font-bold text-gray-900 text-sm flex items-center gap-2">
                 Passport Photo Maker
-                <Badge className="bg-purple-100 text-purple-700 text-[10px] border-none">
-                  Standard 35×45mm
-                </Badge>
+                <span className="bg-[#00bf63]/10 text-[#00bf63] text-[10px] font-bold px-2 py-0.5 rounded">
+                  35×45mm
+                </span>
               </h3>
-              <p className="text-xs text-gray-500">Auto-arranged with dashed cutting guidelines</p>
+              <p className="text-[11px] text-gray-500">Auto-arranged with cutting guidelines</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"
+            className="w-7 h-7 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content Body */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1">
+        <div className="p-4 sm:p-5 overflow-y-auto space-y-3.5 flex-1">
           {!photoSrc ? (
             /* Upload Initial Photo */
             <div
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-purple-300 hover:border-purple-500 bg-purple-50/30 rounded-3xl p-8 text-center cursor-pointer transition-all flex flex-col items-center justify-center min-h-[260px]"
+              className="border border-dashed border-gray-300 hover:border-[#00bf63] bg-gray-50/50 hover:bg-[#00bf63]/5 rounded-2xl p-6 text-center cursor-pointer transition-colors flex flex-col items-center justify-center min-h-[220px]"
             >
               <input
                 ref={fileInputRef}
@@ -190,51 +190,51 @@ export default function PassportPhotoModal({ isOpen, onClose, onComplete }) {
                 onChange={handleFileSelect}
                 className="hidden"
               />
-              <div className="w-16 h-16 rounded-2xl bg-purple-100 text-purple-600 flex items-center justify-center mb-3">
-                <Upload className="w-8 h-8" />
+              <div className="w-12 h-12 rounded-xl bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center mb-2.5">
+                <Upload className="w-6 h-6" />
               </div>
-              <h4 className="font-bold text-gray-900 text-base mb-1">Choose Portrait Photo</h4>
-              <p className="text-xs text-gray-500 max-w-xs mb-4">
-                Select a passport photo, selfie, or portrait picture from your gallery or files.
+              <h4 className="font-bold text-gray-900 text-sm mb-0.5">Select Portrait Photo</h4>
+              <p className="text-xs text-gray-500 max-w-xs mb-3">
+                Select a passport photo, selfie, or portrait picture from your gallery.
               </p>
-              <Button className="bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-md">
-                Browse Photo <Upload className="ml-1.5 w-3.5 h-3.5" />
+              <Button className="bg-[#00bf63] hover:bg-[#00a656] text-white rounded-lg text-xs font-bold shadow-none py-1.5 px-3">
+                Browse Photo <Upload className="ml-1.5 w-3 h-3" />
               </Button>
             </div>
           ) : (
             /* Framing and Adjustment View */
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Interactive Framing Viewport */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-center">
                 {/* 1. Passport Cropping Box */}
                 <div className="flex flex-col items-center">
-                  <span className="text-[11px] font-bold text-gray-500 mb-1.5 flex items-center gap-1">
+                  <span className="text-[10px] font-bold text-gray-500 mb-1 flex items-center gap-1">
                     ✂️ Drag to position face
                   </span>
                   <div
                     onPointerDown={handlePointerDown}
                     onPointerMove={handlePointerMove}
                     onPointerUp={handlePointerUp}
-                    className="relative w-[154px] h-[203px] rounded-xl border-2 border-purple-600 overflow-hidden bg-gray-950 cursor-grab active:cursor-grabbing shadow-md touch-none select-none"
+                    className="relative w-[140px] h-[185px] rounded-lg border-2 border-[#00bf63] overflow-hidden bg-gray-900 cursor-grab active:cursor-grabbing touch-none select-none"
                   >
                     <img
                       ref={imageRef}
                       src={photoSrc}
                       alt="Crop preview"
                       draggable={false}
-                      className="absolute max-w-none transition-transform pointer-events-none"
+                      className="absolute max-w-none pointer-events-none"
                       style={{
                         transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
                         transformOrigin: 'center center'
                       }}
                     />
                     {/* Head/Face Alignment Guide Oval */}
-                    <div className="absolute inset-x-4 inset-y-6 border border-dashed border-white/50 rounded-[50%] pointer-events-none" />
+                    <div className="absolute inset-x-3 inset-y-5 border border-dashed border-white/40 rounded-[50%] pointer-events-none" />
                   </div>
 
                   {/* Zoom Slider */}
-                  <div className="w-full max-w-[170px] mt-3 flex items-center gap-2">
-                    <ZoomIn className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                  <div className="w-full max-w-[150px] mt-2 flex items-center gap-1.5">
+                    <ZoomIn className="w-3 h-3 text-gray-400 flex-shrink-0" />
                     <input
                       type="range"
                       min="0.6"
@@ -242,25 +242,25 @@ export default function PassportPhotoModal({ isOpen, onClose, onComplete }) {
                       step="0.05"
                       value={zoom}
                       onChange={(e) => setZoom(parseFloat(e.target.value))}
-                      className="w-full accent-purple-600 cursor-pointer h-1.5 bg-gray-200 rounded-lg"
+                      className="w-full accent-[#00bf63] cursor-pointer h-1.5 bg-gray-200 rounded-lg"
                     />
                   </div>
                 </div>
 
                 {/* 2. Live Sheet Preview with Dashed Lines */}
                 <div className="flex flex-col items-center">
-                  <span className="text-[11px] font-bold text-gray-500 mb-1.5 flex items-center gap-1">
-                    <Scissors className="w-3 h-3 text-purple-600" /> Live Print Sheet ({photoCount} Photos)
+                  <span className="text-[10px] font-bold text-gray-500 mb-1 flex items-center gap-1">
+                    <Scissors className="w-3 h-3 text-[#00bf63]" /> Live Print Sheet ({photoCount} Photos)
                   </span>
-                  <div className="w-[170px] h-[210px] bg-slate-100 rounded-xl border border-gray-200 p-2 flex items-center justify-center shadow-inner">
+                  <div className="w-[150px] h-[190px] bg-slate-100 rounded-lg border border-gray-200 p-1.5 flex items-center justify-center">
                     {previewSheetUrl ? (
                       <img
                         src={previewSheetUrl}
                         alt="Sheet preview"
-                        className="max-h-full max-w-full rounded shadow-sm object-contain"
+                        className="max-h-full max-w-full rounded border object-contain bg-white"
                       />
                     ) : (
-                      <RefreshCw className="w-6 h-6 text-gray-400 animate-spin" />
+                      <RefreshCw className="w-5 h-5 text-gray-400 animate-spin" />
                     )}
                   </div>
                 </div>
@@ -268,22 +268,22 @@ export default function PassportPhotoModal({ isOpen, onClose, onComplete }) {
 
               {/* Photo Count Selector (4, 6, 8, 10, 12) */}
               <div>
-                <label className="block text-xs font-bold text-gray-800 mb-1.5">
+                <label className="block text-xs font-bold text-gray-800 mb-1">
                   How many photos on sheet?
                 </label>
-                <div className="grid grid-cols-5 gap-1.5">
+                <div className="grid grid-cols-5 gap-1">
                   {[4, 6, 8, 10, 12].map((cnt) => (
                     <button
                       key={cnt}
                       type="button"
                       onClick={() => setPhotoCount(cnt)}
-                      className={`py-2 px-1 rounded-xl text-center border font-bold text-xs transition-all ${
+                      className={`py-1.5 px-1 rounded-lg text-center border font-bold text-xs transition-colors ${
                         photoCount === cnt
-                          ? 'bg-purple-600 text-white border-purple-600 shadow-sm'
+                          ? 'bg-[#00bf63] text-white border-[#00bf63]'
                           : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'
                       }`}
                     >
-                      <b className="block text-sm">{cnt}</b>
+                      <b className="block text-xs">{cnt}</b>
                       <span className="text-[9px] opacity-80 block">Photos</span>
                     </button>
                   ))}
@@ -291,13 +291,13 @@ export default function PassportPhotoModal({ isOpen, onClose, onComplete }) {
               </div>
 
               {/* Options Row: Border Toggle & Retake */}
-              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-gray-700">
+              <div className="flex items-center justify-between pt-1.5 border-t border-gray-100">
+                <label className="flex items-center gap-1.5 cursor-pointer text-xs font-medium text-gray-700">
                   <input
                     type="checkbox"
                     checked={withBorder}
                     onChange={(e) => setWithBorder(e.target.checked)}
-                    className="rounded accent-purple-600 w-4 h-4"
+                    className="rounded accent-[#00bf63] w-3.5 h-3.5"
                   />
                   <span>Black cutting border on photos</span>
                 </label>
@@ -315,23 +315,23 @@ export default function PassportPhotoModal({ isOpen, onClose, onComplete }) {
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 border-t border-gray-100 bg-slate-50 flex items-center justify-end gap-2.5">
-          <Button variant="outline" onClick={onClose} className="rounded-xl text-xs font-bold py-2">
+        <div className="p-3.5 border-t border-gray-100 bg-slate-50 flex items-center justify-end gap-2">
+          <Button variant="outline" onClick={onClose} className="rounded-lg text-xs font-medium py-1.5 h-8">
             Cancel
           </Button>
           {photoSrc && (
             <Button
               disabled={isProcessing}
               onClick={handleConfirmSheet}
-              className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold shadow-md py-2 px-4"
+              className="bg-[#00bf63] hover:bg-[#00a656] text-white rounded-lg text-xs font-bold shadow-none py-1.5 px-3.5 h-8"
             >
               {isProcessing ? (
                 <>
-                  <RefreshCw className="mr-1.5 w-3.5 h-3.5 animate-spin" /> Generating Sheet...
+                  <RefreshCw className="mr-1.5 w-3 h-3 animate-spin" /> Generating...
                 </>
               ) : (
                 <>
-                  Use This Sheet <ArrowRight className="ml-1.5 w-3.5 h-3.5" />
+                  Use This Sheet <ArrowRight className="ml-1 w-3 h-3" />
                 </>
               )}
             </Button>

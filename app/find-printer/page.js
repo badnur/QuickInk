@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { MapPin, Navigation, Printer, Circle, Search, Clock, CheckCircle } from 'lucide-react'
+import { MapPin, Navigation, Printer, Circle, Search, Clock } from 'lucide-react'
 
 export default function FindPrinterPage() {
   const [machines, setMachines] = useState([])
@@ -37,68 +37,71 @@ export default function FindPrinterPage() {
   const onlineMachines = filteredMachines.filter(m => m.status === 'online').length
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
+    <div className="min-h-screen bg-gray-50/50">
       {/* Header Section */}
-      <div className="bg-white border-b shadow-sm">
-        <div className="container mx-auto px-4 py-8">
-          <div className="max-w-4xl mx-auto">
-            <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">
-              <MapPin className="h-3 w-3 mr-1 inline" />
-              500+ Locations
-            </Badge>
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              Find Nearest Printer
-            </h1>
-            <p className="text-xl text-gray-600 mb-8">
-              Our printing vending machines will be available soon in your area
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-                <Input 
-                  placeholder="Search by area or location..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-12 h-14 text-lg border-2 focus:border-blue-500 rounded-xl"
-                />
-              </div>
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 h-14 px-8 shadow-lg hover:shadow-xl transition-all duration-300">
-                <Navigation className="mr-2 h-5 w-5" />
-                Use My Location
-              </Button>
+      <div className="bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4 py-10 max-w-5xl">
+          <Badge className="mb-3 bg-[#00bf63]/10 text-[#00bf63] hover:bg-[#00bf63]/15 font-semibold border-none px-3 py-1">
+            <MapPin className="h-3 w-3 mr-1 inline" />
+            500+ Locations
+          </Badge>
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 tracking-tight mb-2">
+            Find Nearest Printer
+          </h1>
+          <p className="text-base text-gray-600 mb-6">
+            Smart self-service printing kiosks launching in your neighborhood soon.
+          </p>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="absolute left-3.5 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input 
+                placeholder="Search by area or location..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 h-11 text-sm border-gray-200 focus:border-[#00bf63] focus:ring-1 focus:ring-[#00bf63] rounded-lg"
+              />
             </div>
-            {/* Stats */}
-            <div className="flex gap-6 mt-6">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-gray-600"><strong>{onlineMachines}</strong> printers online now</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-gray-400" />
-                <span className="text-sm text-gray-600">Updated just now</span>
-              </div>
+            <Button size="default" className="bg-[#00bf63] hover:bg-[#00a656] text-white font-semibold h-11 px-5 rounded-lg shadow-none transition-colors">
+              <Navigation className="mr-2 h-4 w-4" />
+              Use My Location
+            </Button>
+          </div>
+
+          {/* Stats */}
+          <div className="flex gap-6 mt-4 pt-4 border-t border-gray-100">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-[#00bf63] rounded-full"></div>
+              <span className="text-xs text-gray-600"><strong className="text-gray-900">{onlineMachines}</strong> kiosks online now</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Clock className="h-3.5 w-3.5 text-gray-400" />
+              <span className="text-xs text-gray-500">Updated live</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Map Section */}
           <div className="lg:col-span-2">
-            <Card className="shadow-2xl border-none h-[700px] overflow-hidden group">
+            <Card className="border border-gray-200 bg-white rounded-xl overflow-hidden shadow-none h-[580px]">
               <CardContent className="p-0 h-full">
-                <div className="relative h-full bg-gradient-to-br from-blue-100 via-white to-indigo-100">
-                  {/* Mock Map */}
+                <div className="relative h-full bg-gray-50">
+                  {/* Subtle Grid */}
+                  <div className="absolute inset-0 bg-grid-pattern opacity-60"></div>
+
+                  {/* Mock Map Center */}
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="w-32 h-32 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl animate-pulse">
-                        <MapPin className="h-16 w-16 text-white" />
+                    <div className="text-center p-6 bg-white/90 border border-gray-200 rounded-xl max-w-sm">
+                      <div className="w-12 h-12 bg-[#00bf63]/10 text-[#00bf63] rounded-full flex items-center justify-center mx-auto mb-3">
+                        <MapPin className="h-6 w-6" />
                       </div>
-                      <p className="text-2xl font-bold text-gray-800 mb-2">Coming Soon</p>
-                      <p className="text-gray-600 mb-4">Launching in major cities</p>
-                      <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100">
-                        Expanding Nationwide
+                      <p className="text-lg font-bold text-gray-900 mb-1">Interactive Map Launching Soon</p>
+                      <p className="text-xs text-gray-600 mb-3">Expanding nationwide across universities, metros, and markets</p>
+                      <Badge className="bg-gray-100 text-gray-700 hover:bg-gray-100 border border-gray-200 font-medium text-xs">
+                        50+ New Stations Next Month
                       </Badge>
                     </div>
                   </div>
@@ -108,40 +111,36 @@ export default function FindPrinterPage() {
                     {filteredMachines.slice(0, 6).map((machine, index) => (
                       <div 
                         key={machine.id}
-                        className="absolute animate-in fade-in zoom-in"
+                        className="absolute"
                         style={{
-                          left: `${25 + (index * 12)}%`,
-                          top: `${30 + ((index % 3) * 18)}%`,
-                          animationDelay: `${index * 100}ms`
+                          left: `${22 + (index * 13)}%`,
+                          top: `${26 + ((index % 3) * 22)}%`
                         }}
                       >
                         <div className="relative pointer-events-auto cursor-pointer" onClick={() => setSelectedMachine(machine)}>
-                          <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-2xl transform transition-all duration-300 hover:scale-125 ${
+                          <div className={`w-9 h-9 rounded-full flex items-center justify-center border transition-all ${
                             machine.status === 'online' 
-                              ? 'bg-gradient-to-br from-green-400 to-green-600' 
-                              : 'bg-gradient-to-br from-red-400 to-red-600'
+                              ? 'bg-[#00bf63] text-white border-white' 
+                              : 'bg-gray-400 text-white border-white'
                           } ${
-                            selectedMachine?.id === machine.id ? 'scale-125 ring-4 ring-white' : ''
+                            selectedMachine?.id === machine.id ? 'ring-2 ring-gray-900' : ''
                           }`}>
-                            <Printer className="h-6 w-6 text-white" />
+                            <Printer className="h-4 w-4" />
                           </div>
-                          {machine.status === 'online' && (
-                            <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-ping"></div>
-                          )}
                           {selectedMachine?.id === machine.id && (
-                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-4 w-64 bg-white rounded-2xl shadow-2xl p-4 z-10 animate-in slide-in-from-bottom">
-                              <p className="font-bold text-base mb-1">{machine.name}</p>
-                              <p className="text-xs text-gray-600 mb-3">{machine.address}</p>
-                              <div className="flex items-center justify-between text-xs">
-                                <div className="flex items-center">
-                                  <Circle className={`h-2 w-2 mr-1 ${
-                                    machine.status === 'online' ? 'fill-green-500 text-green-500' : 'fill-red-500 text-red-500'
+                            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-56 bg-white rounded-lg border border-gray-200 p-3 z-10 shadow-sm">
+                              <p className="font-bold text-xs text-gray-900 mb-0.5">{machine.name}</p>
+                              <p className="text-[11px] text-gray-500 mb-2 leading-tight">{machine.address}</p>
+                              <div className="flex items-center justify-between text-[11px]">
+                                <div className="flex items-center gap-1">
+                                  <Circle className={`h-1.5 w-1.5 ${
+                                    machine.status === 'online' ? 'fill-[#00bf63] text-[#00bf63]' : 'fill-gray-400 text-gray-400'
                                   }`} />
-                                  <span className={machine.status === 'online' ? 'text-green-600 font-medium' : 'text-red-600'}>
+                                  <span className={machine.status === 'online' ? 'text-[#00bf63] font-medium' : 'text-gray-500'}>
                                     {machine.status === 'online' ? 'Online' : 'Offline'}
                                   </span>
                                 </div>
-                                <span className="text-gray-600 font-medium">{machine.distance}</span>
+                                <span className="text-gray-500">{machine.distance}</span>
                               </div>
                             </div>
                           )}
@@ -150,21 +149,20 @@ export default function FindPrinterPage() {
                     ))}
                   </div>
 
-                  {/* Map Controls */}
-                  <div className="absolute bottom-6 right-6 flex flex-col gap-2">
-                    <Button size="sm" className="shadow-2xl w-12 h-12 rounded-xl bg-white text-gray-700 hover:bg-gray-50">
-                      <span className="text-xl">+</span>
-                    </Button>
-                    <Button size="sm" className="shadow-2xl w-12 h-12 rounded-xl bg-white text-gray-700 hover:bg-gray-50">
-                      <span className="text-xl">−</span>
-                    </Button>
+                  {/* Minimal Map Controls */}
+                  <div className="absolute bottom-4 right-4 flex flex-col gap-1.5">
+                    <button className="w-8 h-8 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 flex items-center justify-center text-sm font-bold">
+                      +
+                    </button>
+                    <button className="w-8 h-8 rounded-lg bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 flex items-center justify-center text-sm font-bold">
+                      −
+                    </button>
                   </div>
 
-                  {/* Map Stats */}
-                  <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
-                    <p className="text-sm text-gray-600 mb-1">Found</p>
-                    <p className="text-2xl font-bold text-gray-900">{filteredMachines.length}</p>
-                    <p className="text-xs text-gray-600">Printers</p>
+                  {/* Map Status Badge */}
+                  <div className="absolute top-4 left-4 bg-white border border-gray-200 rounded-lg px-3 py-2">
+                    <p className="text-[10px] uppercase tracking-wider text-gray-500 font-semibold">Found</p>
+                    <p className="text-lg font-bold text-gray-900 leading-none">{filteredMachines.length}</p>
                   </div>
                 </div>
               </CardContent>
@@ -173,25 +171,49 @@ export default function FindPrinterPage() {
 
           {/* Printer List */}
           <div className="lg:col-span-1">
-            <Card className="shadow-2xl border-none sticky top-28">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-2xl font-bold text-gray-900">Nearby Printers</h2>
-                  <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 text-lg px-3 py-1">
+            <Card className="border border-gray-200 bg-white rounded-xl shadow-none sticky top-24">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                  <h2 className="text-base font-bold text-gray-900">Nearby Stations</h2>
+                  <Badge className="bg-gray-100 text-gray-700 border border-gray-200 font-semibold text-xs px-2.5 py-0.5">
                     {filteredMachines.length}
                   </Badge>
                 </div>
-                <div className="space-y-4 max-h-[600px] overflow-y-auto custom-scrollbar">
+                <div className="space-y-3 max-h-[460px] overflow-y-auto custom-scrollbar">
                   {loading ? (
-                    <div className="text-center py-12">
-                      <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                      <p className="text-gray-500">Loading printers...</p>
+                    <div className="text-center py-10">
+                      <div className="w-8 h-8 border-2 border-[#00bf63] border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+                      <p className="text-xs text-gray-500">Locating printers...</p>
                     </div>
+                  ) : filteredMachines.length > 0 ? (
+                    filteredMachines.map((m) => (
+                      <div 
+                        key={m.id}
+                        onClick={() => setSelectedMachine(m)}
+                        className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                          selectedMachine?.id === m.id
+                            ? 'border-[#00bf63] bg-[#00bf63]/5'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                      >
+                        <div className="flex justify-between items-start mb-1">
+                          <h4 className="text-xs font-bold text-gray-900">{m.name}</h4>
+                          <span className="text-[10px] text-gray-500 font-medium">{m.distance || '0.5 km'}</span>
+                        </div>
+                        <p className="text-[11px] text-gray-500 mb-2 leading-tight">{m.address}</p>
+                        <div className="flex items-center gap-1.5 text-[10px]">
+                          <span className={`inline-block w-1.5 h-1.5 rounded-full ${m.status === 'online' ? 'bg-[#00bf63]' : 'bg-gray-400'}`}></span>
+                          <span className={m.status === 'online' ? 'text-[#00bf63] font-medium' : 'text-gray-500'}>
+                            {m.status === 'online' ? 'Online' : 'Offline'}
+                          </span>
+                        </div>
+                      </div>
+                    ))
                   ) : (
-                    <div className="text-center py-12">
-                      <MapPin className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                      <p className="text-gray-700 font-semibold text-lg mb-2">Coming Soon</p>
-                      <p className="text-gray-500 text-sm">Printing vending machines launching soon in your area</p>
+                    <div className="text-center py-10">
+                      <MapPin className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                      <p className="text-gray-700 font-semibold text-sm mb-1">Coming Soon</p>
+                      <p className="text-gray-500 text-xs">Printing vending machines launching soon in your area</p>
                     </div>
                   )}
                 </div>
@@ -202,9 +224,9 @@ export default function FindPrinterPage() {
       </div>
 
       {/* Mobile Sticky Bottom */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-gray-200 p-4 shadow-2xl z-50">
-        <Button className="w-full bg-blue-600 hover:bg-blue-700 h-14">
-          <MapPin className="mr-2 h-5 w-5" />
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 z-50">
+        <Button className="w-full bg-[#00bf63] hover:bg-[#00a656] text-white font-semibold h-11 rounded-lg shadow-none">
+          <MapPin className="mr-2 h-4 w-4" />
           {filteredMachines.length} Printers Found
         </Button>
       </div>

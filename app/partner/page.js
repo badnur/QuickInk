@@ -55,35 +55,31 @@ export default function PartnerPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white py-24 overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="max-w-4xl mx-auto text-center">
-            <Badge className="mb-6 bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm px-4 py-2">
-              <TrendingUp className="h-4 w-4 mr-1.5 inline" />
+      <section className="bg-gray-900 text-white py-20 border-b border-gray-800">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-3xl mx-auto text-center">
+            <Badge className="mb-4 bg-[#00bf63]/15 text-[#00bf63] border border-[#00bf63]/30 font-semibold px-3 py-1">
+              <TrendingUp className="h-3.5 w-3.5 mr-1.5 inline" />
               Partner Program
             </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6 leading-tight">
-              Become a QuickInk Partner
+            <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight mb-4">
+              Become a QuickInk Host Partner
             </h1>
-            <p className="text-2xl text-blue-100 mb-4">
-              Earn extra income from your shop space
+            <p className="text-lg text-gray-300 mb-8">
+              Turn your unused 2×2 ft shop corner into guaranteed passive income. Zero machine cost, zero maintenance, free installation.
             </p>
-            <p className="text-xl text-blue-100 mb-8">
-              Get <span className="font-bold text-white">৳15,000-৳25,000</span> monthly. Free installation. No effort needed.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-6 justify-center">
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-8 py-4">
-                <p className="text-3xl font-bold mb-1">৳18,000</p>
-                <p className="text-blue-100 text-sm">Avg Monthly Income</p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-xl mx-auto">
+              <div className="bg-gray-800/80 border border-gray-700/80 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-[#00bf63]">৳15K - 25K</p>
+                <p className="text-xs text-gray-400 mt-0.5">Monthly Revenue Share</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-8 py-4">
-                <p className="text-3xl font-bold mb-1">40%</p>
-                <p className="text-blue-100 text-sm">Your Commission</p>
+              <div className="bg-gray-800/80 border border-gray-700/80 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-[#00bf63]">40%</p>
+                <p className="text-xs text-gray-400 mt-0.5">Fixed Commission</p>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl px-8 py-4">
-                <p className="text-3xl font-bold mb-1">Free</p>
-                <p className="text-blue-100 text-sm">Installation Cost</p>
+              <div className="bg-gray-800/80 border border-gray-700/80 rounded-xl p-4 text-center">
+                <p className="text-2xl font-bold text-[#00bf63]">৳0</p>
+                <p className="text-xs text-gray-400 mt-0.5">Zero Setup Fee</p>
               </div>
             </div>
           </div>
@@ -91,40 +87,35 @@ export default function PartnerPage() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-green-100 text-green-700 hover:bg-green-100">Why Partner?</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Simple Benefits</h2>
-            <p className="text-xl text-gray-600">Everything you need for extra income</p>
+      <section className="py-16 bg-gray-50/60 border-b border-gray-200">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">Why Partner With Us?</h2>
+            <p className="text-sm text-gray-600">Pure passive revenue without operational headache</p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {[{
               icon: DollarSign,
-              title: 'Earn ৳15K-৳25K/month',
-              description: 'Get 40% commission on every print. Our average partner earns ৳18k monthly with small space.',
-              gradient: 'from-green-500 to-green-600'
+              title: 'Guaranteed Commission',
+              description: 'Earn 40% payout on every black & white, color, and photo print processed at your kiosk.'
             }, {
               icon: Clock,
-              title: 'No Effort Needed',
-              description: 'Machine works automatically. No maintenance, no supervision. We handle technical issues.',
-              gradient: 'from-blue-500 to-blue-600'
+              title: '100% Automated',
+              description: 'Users scan QR and pay on mobile. The kiosk dispenses automatically — zero staff intervention.'
             }, {
               icon: TrendingUp,
-              title: 'More Customers',
-              description: 'Students and office workers visit for printing. They also buy from your shop.',
-              gradient: 'from-purple-500 to-purple-600'
+              title: 'Drive Store Footfall',
+              description: 'University students, job seekers, and locals come to print and browse your store inventory.'
             }].map((benefit, index) => {
               const Icon = benefit.icon
               return (
-                <Card key={index} className="border-none shadow-xl hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 group overflow-hidden">
-                  <div className={`h-2 w-full bg-gradient-to-r ${benefit.gradient}`}></div>
-                  <CardContent className="pt-10 pb-8 px-8 text-center">
-                    <div className={`w-20 h-20 bg-gradient-to-br ${benefit.gradient} rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                      <Icon className="h-10 w-10 text-white" />
+                <Card key={index} className="border border-gray-200 bg-white rounded-xl shadow-none hover:border-gray-300 transition-colors">
+                  <CardContent className="p-6">
+                    <div className="w-10 h-10 bg-[#00bf63]/10 rounded-lg flex items-center justify-center mb-4 text-[#00bf63]">
+                      <Icon className="h-5 w-5" />
                     </div>
-                    <h3 className="text-2xl font-bold mb-4 text-gray-900">{benefit.title}</h3>
-                    <p className="text-gray-600 leading-relaxed">{benefit.description}</p>
+                    <h3 className="text-base font-bold text-gray-900 mb-2">{benefit.title}</h3>
+                    <p className="text-xs text-gray-600 leading-relaxed">{benefit.description}</p>
                   </CardContent>
                 </Card>
               )
@@ -134,92 +125,73 @@ export default function PartnerPage() {
       </section>
 
       {/* How It Works */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">Simple Process</Badge>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">How to Get Started</h2>
-            <p className="text-xl text-gray-600">Four simple steps to start earning</p>
+      <section className="py-16 bg-white border-b border-gray-200">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 mb-2">How It Works</h2>
+            <p className="text-sm text-gray-600">Fast 4-step onboarding to launch your kiosk</p>
           </div>
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="space-y-4">
             {[{
               step: '01',
-              title: 'Apply Online',
-              description: 'Fill the form below. Takes 2 minutes. We review within 24 hours and call you.',
-              icon: Users
+              title: 'Submit Application',
+              description: 'Fill out the simple partner interest form below. Takes less than 1 minute.'
             }, {
               step: '02',
-              title: 'Visit Your Shop',
-              description: 'Our team visits to check space and discuss details. Need only 2x2 feet space.',
-              icon: CheckCircle
+              title: 'Space & Power Feasibility',
+              description: 'Our field technician visits to verify 2×2 ft space and a standard 220V power outlet.'
             }, {
               step: '03',
-              title: 'Free Installation',
-              description: 'We install machine for free. Takes 2 hours. We test everything before leaving.',
-              icon: Shield
+              title: 'Free Machine Setup',
+              description: 'We deliver, install, calibrate, and load high-yield paper & toner within 48 hours.'
             }, {
               step: '04',
-              title: 'Start Earning',
-              description: 'Machine starts working immediately. Check your daily earnings through SMS or app.',
-              icon: Zap
-            }].map((item, index) => {
-              const Icon = item.icon
-              return (
-                <Card key={index} className="border-2 border-gray-200 hover:border-blue-500 hover:shadow-xl transition-all duration-300 group">
-                  <CardContent className="p-8">
-                    <div className="flex gap-6 items-start">
-                      <div className="flex-shrink-0">
-                        <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 text-white rounded-2xl flex items-center justify-center font-bold text-2xl shadow-lg group-hover:scale-110 transition-transform">
-                          {item.step}
-                        </div>
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-3">
-                          <h3 className="text-2xl font-bold text-gray-900">{item.title}</h3>
-                          <Icon className="h-6 w-6 text-blue-600" />
-                        </div>
-                        <p className="text-gray-600 text-lg leading-relaxed">{item.description}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )
-            })}
+              title: 'Direct Bank / bKash Payouts',
+              description: 'Track real-time prints on your partner dashboard and receive automated weekly payouts.'
+            }].map((item, index) => (
+              <div key={index} className="flex gap-4 p-4 rounded-xl border border-gray-200 bg-white items-start">
+                <div className="w-8 h-8 rounded-lg bg-[#00bf63]/10 text-[#00bf63] font-bold text-xs flex items-center justify-center flex-shrink-0">
+                  {item.step}
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900 mb-1">{item.title}</h4>
+                  <p className="text-xs text-gray-600 leading-relaxed">{item.description}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
       {/* Registration Form */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <Card className="max-w-3xl mx-auto shadow-2xl border-none">
-            <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-xl p-8">
-              <CardTitle className="text-3xl font-bold mb-2">Apply to Become Partner</CardTitle>
-              <p className="text-blue-100 text-lg">Join 500+ shop owners earning extra income</p>
+      <section className="py-16 bg-gray-50/60">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-xl">
+          <Card className="border border-gray-200 bg-white rounded-xl shadow-none">
+            <CardHeader className="p-6 border-b border-gray-100">
+              <CardTitle className="text-xl font-bold text-gray-900">Partner Application Form</CardTitle>
+              <p className="text-xs text-gray-500 mt-1">We respond within 24 business hours.</p>
             </CardHeader>
-            <CardContent className="p-8">
+            <CardContent className="p-6">
               {success && (
-                <div className="mb-8 p-6 bg-green-50 border-2 border-green-200 rounded-2xl flex items-start gap-4 animate-in slide-in-from-top">
-                  <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="h-6 w-6 text-white" />
-                  </div>
+                <div className="mb-6 p-4 bg-[#00bf63]/10 border border-[#00bf63]/30 rounded-lg flex items-start gap-3">
+                  <CheckCircle className="h-5 w-5 text-[#00bf63] flex-shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-green-900 font-bold text-lg mb-1">Application Received!</p>
-                    <p className="text-green-700">Thank you! We will call you within 24 hours to discuss next steps.</p>
+                    <p className="text-sm font-bold text-gray-900">Application Received</p>
+                    <p className="text-xs text-gray-700 mt-0.5">Thank you! Our partnership team will contact you shortly.</p>
                   </div>
                 </div>
               )}
 
               {error && (
-                <div className="mb-8 p-6 bg-red-50 border-2 border-red-200 rounded-2xl flex items-start gap-4">
-                  <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
-                  <p className="text-red-800 font-medium">{error}</p>
+                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-700">{error}</p>
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Label htmlFor="name" className="text-base font-semibold text-gray-900">Your Full Name *</Label>
+                  <Label htmlFor="name" className="text-xs font-semibold text-gray-700">Your Full Name *</Label>
                   <Input
                     id="name"
                     name="name"
@@ -227,39 +199,39 @@ export default function PartnerPage() {
                     onChange={handleChange}
                     required
                     placeholder="e.g. Mohammad Rahman"
-                    className="mt-2 h-14 text-lg border-2 focus:border-blue-500 rounded-xl"
+                    className="mt-1 h-10 text-sm border-gray-200 focus:border-[#00bf63] focus:ring-1 focus:ring-[#00bf63] rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="shop_name" className="text-base font-semibold text-gray-900">Shop/Business Name *</Label>
+                  <Label htmlFor="shop_name" className="text-xs font-semibold text-gray-700">Shop / Business Name *</Label>
                   <Input
                     id="shop_name"
                     name="shop_name"
                     value={formData.shop_name}
                     onChange={handleChange}
                     required
-                    placeholder="e.g. Rahman Store / City Pharmacy"
-                    className="mt-2 h-14 text-lg border-2 focus:border-blue-500 rounded-xl"
+                    placeholder="e.g. City Pharmacy / Rahman Stationery"
+                    className="mt-1 h-10 text-sm border-gray-200 focus:border-[#00bf63] focus:ring-1 focus:ring-[#00bf63] rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="location" className="text-base font-semibold text-gray-900">Shop Address *</Label>
+                  <Label htmlFor="location" className="text-xs font-semibold text-gray-700">Shop Address *</Label>
                   <Textarea
                     id="location"
                     name="location"
                     value={formData.location}
                     onChange={handleChange}
                     required
-                    placeholder="e.g. Shop 15, Gulshan Avenue, Dhaka-1212"
-                    className="mt-2 text-lg border-2 focus:border-blue-500 rounded-xl"
-                    rows={4}
+                    placeholder="e.g. Shop 15, Near Central Library, University Campus"
+                    className="mt-1 text-sm border-gray-200 focus:border-[#00bf63] focus:ring-1 focus:ring-[#00bf63] rounded-lg"
+                    rows={3}
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="phone" className="text-base font-semibold text-gray-900">Mobile Number *</Label>
+                  <Label htmlFor="phone" className="text-xs font-semibold text-gray-700">Mobile Number *</Label>
                   <Input
                     id="phone"
                     name="phone"
@@ -267,28 +239,24 @@ export default function PartnerPage() {
                     onChange={handleChange}
                     required
                     placeholder="e.g. 01712-345678"
-                    className="mt-2 h-14 text-lg border-2 focus:border-blue-500 rounded-xl"
+                    className="mt-1 h-10 text-sm border-gray-200 focus:border-[#00bf63] focus:ring-1 focus:ring-[#00bf63] rounded-lg"
                   />
                 </div>
 
                 <Button 
                   type="submit" 
-                  className="w-full h-16 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300" 
+                  className="w-full h-11 text-sm font-semibold bg-[#00bf63] hover:bg-[#00a656] text-white rounded-lg shadow-none transition-colors" 
                   disabled={loading}
                 >
                   {loading ? (
                     <>
-                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                      Submitting...
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Submitting Application...
                     </>
                   ) : (
                     'Submit Application'
                   )}
                 </Button>
-
-                <p className="text-sm text-gray-500 text-center mt-4">
-                  We'll call you within 24 hours after reviewing
-                </p>
               </form>
             </CardContent>
           </Card>

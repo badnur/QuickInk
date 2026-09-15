@@ -56,129 +56,120 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 text-white py-24 overflow-hidden">
-        <div className="absolute inset-0 bg-grid-pattern opacity-10"></div>
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className="max-w-3xl mx-auto text-center">
-            <Badge className="mb-6 bg-white/20 text-white hover:bg-white/30 backdrop-blur-sm px-4 py-2">
-              <MessageSquare className="h-4 w-4 mr-1.5 inline" />
-              We're Here to Help
-            </Badge>
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">Get in Touch</h1>
-            <p className="text-2xl text-blue-100">
-              Have questions? We're here to help.
-            </p>
-          </div>
+      <section className="bg-gray-900 text-white py-16 border-b border-gray-800">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl text-center">
+          <Badge className="mb-3 bg-[#00bf63]/15 text-[#00bf63] border border-[#00bf63]/30 font-semibold px-3 py-1">
+            <MessageSquare className="h-3.5 w-3.5 mr-1.5 inline" />
+            Direct Support
+          </Badge>
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-2">Get in Touch</h1>
+          <p className="text-sm text-gray-300">
+            Have questions about your print job, machine locations, or refunds? We are here to assist.
+          </p>
         </div>
       </section>
 
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
+      <section className="py-14 bg-gray-50/60 border-b border-gray-200">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Contact Info Cards */}
-            <div className="lg:col-span-1 space-y-6">
-              {/* Email Card */}
-              <Card className="border-none shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
-                <div className="h-2 w-full bg-gradient-to-r from-blue-500 to-blue-600"></div>
-                <CardContent className="pt-8 pb-6 px-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                    <Mail className="h-8 w-8 text-white" />
+            <div className="lg:col-span-1 space-y-4">
+              {/* WhatsApp Card */}
+              <div className="border border-gray-200 bg-white rounded-xl p-5 shadow-none">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-10 h-10 rounded-lg bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center">
+                    <MessageSquare className="h-5 w-5" />
                   </div>
-                  <h3 className="font-bold text-xl mb-4 text-gray-900">Email Us</h3>
-                  <div className="space-y-2">
-                    <a href="mailto:support@quickink.online" className="block text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">WhatsApp Support</h3>
+                    <p className="text-xs text-gray-500">Fastest response</p>
+                  </div>
+                </div>
+                <Link href="https://wa.me/8801733398911" target="_blank" className="block">
+                  <Button className="w-full bg-[#00bf63] hover:bg-[#00a656] text-white font-semibold text-xs h-9 rounded-lg shadow-none">
+                    Chat on WhatsApp
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Email Card */}
+              <div className="border border-gray-200 bg-white rounded-xl p-5 shadow-none">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center">
+                    <Mail className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">Email</h3>
+                    <a href="mailto:support@quickink.online" className="text-xs text-[#00bf63] hover:underline font-medium">
                       support@quickink.online
                     </a>
                   </div>
-                  <p className="text-sm text-gray-500 mt-4">We reply within 24 hours</p>
-                </CardContent>
-              </Card>
+                </div>
+                <p className="text-[11px] text-gray-500">Response within 24 business hours</p>
+              </div>
 
               {/* Phone Card */}
-              <Card className="border-none shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
-                <div className="h-2 w-full bg-gradient-to-r from-green-500 to-green-600"></div>
-                <CardContent className="pt-8 pb-6 px-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                    <Phone className="h-8 w-8 text-white" />
+              <div className="border border-gray-200 bg-white rounded-xl p-5 shadow-none">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center">
+                    <Phone className="h-5 w-5" />
                   </div>
-                  <h3 className="font-bold text-xl mb-4 text-gray-900">Call Us</h3>
-                  <a href="tel:+8801733398911" className="block text-gray-700 hover:text-green-600 transition-colors font-medium text-lg mb-2">
-                    +880 1733-398911
-                  </a>
-                  <div className="flex items-center gap-2 text-sm text-gray-600 mt-4">
-                    <Clock className="h-4 w-4" />
-                    <span>Sat-Thu, 9AM-6PM</span>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">Helpline</h3>
+                    <a href="tel:+8801733398911" className="text-xs text-[#00bf63] hover:underline font-medium">
+                      +880 1733-398911
+                    </a>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                  <Clock className="h-3.5 w-3.5" />
+                  <span>Sat - Thu, 9 AM - 6 PM</span>
+                </div>
+              </div>
 
               {/* Office Card */}
-              <Card className="border-none shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 overflow-hidden group">
-                <div className="h-2 w-full bg-gradient-to-r from-purple-500 to-purple-600"></div>
-                <CardContent className="pt-8 pb-6 px-6">
-                  <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:scale-110 transition-transform">
-                    <MapPin className="h-8 w-8 text-white" />
+              <div className="border border-gray-200 bg-white rounded-xl p-5 shadow-none">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-gray-100 text-gray-700 flex items-center justify-center">
+                    <MapPin className="h-5 w-5" />
                   </div>
-                  <h3 className="font-bold text-xl mb-4 text-gray-900">Visit Us</h3>
-                  <p className="text-gray-700 leading-relaxed">
-                    Bagha, Rajshahi<br />
-                    Bangladesh
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* WhatsApp Card */}
-              <Card className="border-none shadow-xl bg-gradient-to-br from-green-500 to-green-600 text-white hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 hover:scale-105">
-                <CardContent className="pt-8 pb-8 px-6">
-                  <div className="flex items-center gap-4 mb-6">
-                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                      <MessageSquare className="h-8 w-8" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-xl">WhatsApp</h3>
-                      <p className="text-green-100 text-sm">Quick help available</p>
-                    </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">HQ Office</h3>
+                    <p className="text-xs text-gray-600">Bagha, Rajshahi, Bangladesh</p>
                   </div>
-                  <Link href="https://wa.me/8801733398911" target="_blank">
-                    <Button variant="secondary" className="w-full h-14 text-lg font-semibold shadow-lg hover:scale-105 transition-transform">
-                      Chat on WhatsApp
-                    </Button>
-                  </Link>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             </div>
 
             {/* Contact Form */}
             <div className="lg:col-span-2">
-              <Card className="shadow-2xl border-none">
-                <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-t-xl p-8">
-                  <CardTitle className="text-3xl font-bold mb-2">Send us a Message</CardTitle>
-                  <p className="text-blue-100 text-lg">We'll reply within 24 hours</p>
+              <Card className="border border-gray-200 bg-white rounded-xl shadow-none">
+                <CardHeader className="p-6 border-b border-gray-100">
+                  <CardTitle className="text-xl font-bold text-gray-900">Send us a Message</CardTitle>
+                  <p className="text-xs text-gray-500 mt-1">Leave your details and we will get back to you promptly.</p>
                 </CardHeader>
-                <CardContent className="p-8">
+                <CardContent className="p-6">
                   {success && (
-                    <div className="mb-8 p-6 bg-green-50 border-2 border-green-200 rounded-2xl flex items-start gap-4 animate-in slide-in-from-top">
-                      <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <CheckCircle className="h-6 w-6 text-white" />
-                      </div>
+                    <div className="mb-6 p-4 bg-[#00bf63]/10 border border-[#00bf63]/30 rounded-lg flex items-start gap-3">
+                      <CheckCircle className="h-5 w-5 text-[#00bf63] flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-green-900 font-bold text-lg mb-1">Message Sent!</p>
-                        <p className="text-green-700">Thank you for contacting us. We'll respond soon.</p>
+                        <p className="text-sm font-bold text-gray-900">Message Sent Successfully</p>
+                        <p className="text-xs text-gray-700 mt-0.5">Thank you for reaching out. We will reply as soon as possible.</p>
                       </div>
                     </div>
                   )}
 
                   {error && (
-                    <div className="mb-8 p-6 bg-red-50 border-2 border-red-200 rounded-2xl flex items-start gap-4">
-                      <AlertCircle className="h-6 w-6 text-red-600 flex-shrink-0 mt-1" />
-                      <p className="text-red-800 font-medium">{error}</p>
+                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-3">
+                      <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-red-700">{error}</p>
                     </div>
                   )}
 
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="name" className="text-base font-semibold text-gray-900">Your Name *</Label>
+                        <Label htmlFor="name" className="text-xs font-semibold text-gray-700">Your Name *</Label>
                         <Input
                           id="name"
                           name="name"
@@ -186,65 +177,64 @@ export default function ContactPage() {
                           onChange={handleChange}
                           required
                           placeholder="e.g. Ahmed Hassan"
-                          className="mt-2 h-14 text-lg border-2 focus:border-blue-500 rounded-xl"
+                          className="mt-1 h-10 text-sm border-gray-200 focus:border-[#00bf63] focus:ring-1 focus:ring-[#00bf63] rounded-lg"
                         />
                       </div>
 
                       <div>
-                        <Label htmlFor="email" className="text-base font-semibold text-gray-900">Email or Mobile *</Label>
+                        <Label htmlFor="email" className="text-xs font-semibold text-gray-700">Email or Mobile *</Label>
                         <Input
                           id="email"
                           name="email"
-                          type="email"
                           value={formData.email}
                           onChange={handleChange}
                           required
-                          placeholder="e.g. ahmed@email.com"
-                          className="mt-2 h-14 text-lg border-2 focus:border-blue-500 rounded-xl"
+                          placeholder="e.g. ahmed@email.com / 017..."
+                          className="mt-1 h-10 text-sm border-gray-200 focus:border-[#00bf63] focus:ring-1 focus:ring-[#00bf63] rounded-lg"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <Label htmlFor="subject" className="text-base font-semibold text-gray-900">Subject *</Label>
+                      <Label htmlFor="subject" className="text-xs font-semibold text-gray-700">Subject *</Label>
                       <Input
                         id="subject"
                         name="subject"
                         value={formData.subject}
                         onChange={handleChange}
                         required
-                        placeholder="How can we help?"
-                        className="mt-2 h-14 text-lg border-2 focus:border-blue-500 rounded-xl"
+                        placeholder="e.g. Print Order Query / Payment Issue"
+                        className="mt-1 h-10 text-sm border-gray-200 focus:border-[#00bf63] focus:ring-1 focus:ring-[#00bf63] rounded-lg"
                       />
                     </div>
 
                     <div>
-                      <Label htmlFor="message" className="text-base font-semibold text-gray-900">Your Message *</Label>
+                      <Label htmlFor="message" className="text-xs font-semibold text-gray-700">Message *</Label>
                       <Textarea
                         id="message"
                         name="message"
                         value={formData.message}
                         onChange={handleChange}
                         required
-                        placeholder="Tell us more about your question..."
-                        className="mt-2 text-lg border-2 focus:border-blue-500 rounded-xl"
-                        rows={8}
+                        placeholder="Please include order code or kiosk location if relevant..."
+                        className="mt-1 text-sm border-gray-200 focus:border-[#00bf63] focus:ring-1 focus:ring-[#00bf63] rounded-lg"
+                        rows={5}
                       />
                     </div>
 
                     <Button 
                       type="submit" 
-                      className="w-full h-16 text-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl transition-all duration-300" 
+                      className="w-full h-11 text-sm font-semibold bg-[#00bf63] hover:bg-[#00a656] text-white rounded-lg shadow-none transition-colors" 
                       disabled={loading}
                     >
                       {loading ? (
                         <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                          Sending...
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                          Sending Message...
                         </>
                       ) : (
                         <>
-                          <Send className="mr-2 h-5 w-5" />
+                          <Send className="mr-2 h-4 w-4" />
                           Send Message
                         </>
                       )}
@@ -258,35 +248,31 @@ export default function ContactPage() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-20 bg-white">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-16">
-              <Badge className="mb-4 bg-blue-100 text-blue-700 hover:bg-blue-100">Common Questions</Badge>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">Frequently Asked</h2>
-            </div>
-            <div className="space-y-4">
-              {[{
-                q: 'What are your kiosk operating hours?',
-                a: 'Most kiosks are available 24/7. Customer support available Sat-Thu, 9AM-6PM.'
-              }, {
-                q: 'How long does installation take for partners?',
-                a: 'Installation takes 2 hours. We handle everything from setup to testing. Free of cost.'
-              }, {
-                q: 'What payment methods do you accept?',
-                a: 'We accept bKash, Nagad, Rocket, cards, and mobile banking. All methods are secure.'
-              }, {
-                q: 'Is my file safe? Do you store documents?',
-                a: 'Your files are automatically deleted after printing. We don\'t store any documents. Safe and private.'
-              }].map((faq, index) => (
-                <Card key={index} className="border-2 border-gray-200 hover:border-blue-500 hover:shadow-lg transition-all duration-300">
-                  <CardContent className="p-6">
-                    <h3 className="font-bold text-lg text-gray-900 mb-2">{faq.q}</h3>
-                    <p className="text-gray-600 leading-relaxed">{faq.a}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+      <section className="py-14 bg-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-3xl">
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-1">Frequently Asked Questions</h2>
+            <p className="text-xs text-gray-500">Quick answers about our self-service kiosks</p>
+          </div>
+          <div className="space-y-3">
+            {[{
+              q: 'What are kiosk operating hours?',
+              a: 'Most campus and market kiosks are operational 24/7 or matching the host store hours.'
+            }, {
+              q: 'What happens if a print jams or ink runs out?',
+              a: 'Our smart kiosks automatically detect print jams. If incomplete, an automatic refund is processed to your original payment method or a retry code is issued.'
+            }, {
+              q: 'What payment methods do you accept?',
+              a: 'We support all major Bangladesh payment channels: bKash, Nagad, Rocket, Upay, Visa, and Mastercard.'
+            }, {
+              q: 'Are my uploaded documents kept confidential?',
+              a: 'All files are encrypted in transit and permanently deleted from RAM right after the physical print is ejected.'
+            }].map((faq, index) => (
+              <div key={index} className="p-4 rounded-xl border border-gray-200 bg-white">
+                <h3 className="font-bold text-sm text-gray-900 mb-1">{faq.q}</h3>
+                <p className="text-xs text-gray-600 leading-relaxed">{faq.a}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

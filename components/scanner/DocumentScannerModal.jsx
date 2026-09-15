@@ -206,22 +206,22 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-2 sm:p-4 overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-gray-900 border border-gray-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-2 sm:p-4 overflow-y-auto">
+      <div className="relative w-full max-w-2xl bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header Bar */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800 bg-gray-950/80">
+        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-800 bg-gray-950">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-blue-600/20 text-blue-400">
+            <div className="p-1.5 rounded-lg bg-[#00bf63]/10 text-[#00bf63]">
               <Camera className="h-5 w-5" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+              <h3 className="text-base font-bold text-white flex items-center gap-2">
                 CamScanner Mode
-                <Badge variant="outline" className="border-blue-500/40 text-blue-400 text-xs">
+                <Badge variant="outline" className="border-[#00bf63]/40 text-[#00bf63] text-xs">
                   {pages.length} {pages.length === 1 ? 'Page' : 'Pages'}
                 </Badge>
               </h3>
-              <p className="text-xs text-gray-400">Scan documents, notes, or IDs with auto-clean</p>
+              <p className="text-[11px] text-gray-400">Scan documents, notes, or IDs with auto-clean</p>
             </div>
           </div>
           <button
@@ -229,21 +229,21 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
               stopCamera()
               onClose()
             }}
-            className="p-2 rounded-xl text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* Camera / Preview Viewport */}
-        <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[360px] sm:min-h-[440px]">
+        <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden min-h-[340px] sm:min-h-[400px]">
           {cameraError ? (
             <div className="p-8 text-center max-w-sm">
-              <Camera className="h-12 w-12 mx-auto text-red-400 mb-3 opacity-80" />
-              <p className="text-white font-medium mb-2">Camera Unavailable</p>
-              <p className="text-sm text-gray-400 mb-6">{cameraError}</p>
-              <Button onClick={startCamera} variant="outline" className="border-gray-700 text-white hover:bg-gray-800">
-                <RefreshCw className="mr-2 h-4 w-4" /> Try Again
+              <Camera className="h-10 w-10 mx-auto text-red-400 mb-2.5 opacity-80" />
+              <p className="text-white font-medium mb-1 text-sm">Camera Unavailable</p>
+              <p className="text-xs text-gray-400 mb-4">{cameraError}</p>
+              <Button onClick={startCamera} variant="outline" className="border-gray-700 text-white hover:bg-gray-800 text-xs py-1.5 h-8">
+                <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Try Again
               </Button>
             </div>
           ) : isCameraActive ? (
@@ -254,23 +254,23 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
                 autoPlay
                 playsInline
                 muted
-                className="w-full h-full object-cover max-h-[460px]"
+                className="w-full h-full object-cover max-h-[440px]"
               />
 
               {/* Document Alignment Frame Guides */}
-              <div className="absolute inset-6 sm:inset-10 border-2 border-dashed border-blue-400/60 rounded-2xl pointer-events-none flex flex-col justify-between p-3">
+              <div className="absolute inset-6 sm:inset-10 border border-dashed border-[#00bf63]/50 rounded-xl pointer-events-none flex flex-col justify-between p-3">
                 <div className="flex justify-between">
-                  <div className="w-5 h-5 border-t-4 border-l-4 border-blue-400 rounded-tl-sm"></div>
-                  <div className="w-5 h-5 border-t-4 border-r-4 border-blue-400 rounded-tr-sm"></div>
+                  <div className="w-4 h-4 border-t-2 border-l-2 border-[#00bf63] rounded-tl-sm"></div>
+                  <div className="w-4 h-4 border-t-2 border-r-2 border-[#00bf63] rounded-tr-sm"></div>
                 </div>
                 <div className="text-center">
-                  <span className="bg-black/60 backdrop-blur-sm text-white/90 text-xs px-3 py-1.5 rounded-full font-medium shadow-md">
+                  <span className="bg-black/70 text-white/90 text-xs px-2.5 py-1 rounded-md font-medium">
                     Align document inside frame
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <div className="w-5 h-5 border-b-4 border-l-4 border-blue-400 rounded-bl-sm"></div>
-                  <div className="w-5 h-5 border-b-4 border-r-4 border-blue-400 rounded-br-sm"></div>
+                  <div className="w-4 h-4 border-b-2 border-l-2 border-[#00bf63] rounded-bl-sm"></div>
+                  <div className="w-4 h-4 border-b-2 border-r-2 border-[#00bf63] rounded-br-sm"></div>
                 </div>
               </div>
 
@@ -281,7 +281,7 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
                   variant="ghost"
                   size="icon"
                   onClick={() => setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))}
-                  className="rounded-full bg-gray-900/60 text-white hover:bg-gray-800 backdrop-blur-md"
+                  className="rounded-full bg-gray-900/80 text-white hover:bg-gray-800"
                   title="Switch Camera"
                 >
                   <RefreshCw className="h-5 w-5" />
@@ -291,9 +291,9 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
                 <button
                   type="button"
                   onClick={capturePhoto}
-                  className="w-18 h-18 sm:w-20 sm:h-20 rounded-full border-4 border-white bg-blue-600 hover:bg-blue-500 active:scale-95 transition-all shadow-xl shadow-blue-500/30 flex items-center justify-center group"
+                  className="w-16 h-16 rounded-full border-2 border-white bg-[#00bf63] hover:bg-[#00a656] active:scale-95 transition-all flex items-center justify-center group"
                 >
-                  <div className="w-14 h-14 rounded-full bg-white group-hover:scale-90 transition-transform"></div>
+                  <div className="w-12 h-12 rounded-full bg-white group-hover:scale-90 transition-transform"></div>
                 </button>
 
                 <div className="w-10"></div>
@@ -302,11 +302,11 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
           ) : (
             /* Processed Scanned Page Preview */
             <div className="relative w-full h-full flex flex-col items-center justify-center p-4">
-              <div className="relative max-h-[380px] sm:max-h-[420px] max-w-full rounded-lg overflow-hidden shadow-2xl border border-gray-700 bg-white">
+              <div className="relative max-h-[360px] sm:max-h-[400px] max-w-full rounded-lg overflow-hidden border border-gray-700 bg-white">
                 <img
                   src={pages[currentPageIndex]?.processedUrl}
                   alt={`Page ${currentPageIndex + 1}`}
-                  className="object-contain max-h-[380px] sm:max-h-[420px]"
+                  className="object-contain max-h-[360px] sm:max-h-[400px]"
                 />
               </div>
 
@@ -316,18 +316,18 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
                   size="sm"
                   variant="secondary"
                   onClick={rotateActivePage}
-                  className="bg-gray-900/80 backdrop-blur-md text-white border border-gray-700 hover:bg-gray-800"
+                  className="bg-gray-900/90 text-white border border-gray-700 hover:bg-gray-800 text-xs h-8"
                   title="Rotate 90°"
                 >
-                  <RotateCw className="h-4 w-4 mr-1.5" /> Rotate
+                  <RotateCw className="h-3.5 w-3.5 mr-1" /> Rotate
                 </Button>
                 <Button
                   size="sm"
                   variant="destructive"
                   onClick={retakeCurrentPage}
-                  className="bg-red-900/80 backdrop-blur-md hover:bg-red-800"
+                  className="bg-red-900/90 hover:bg-red-800 text-xs h-8"
                 >
-                  <RefreshCw className="h-4 w-4 mr-1.5" /> Retake
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" /> Retake
                 </Button>
               </div>
             </div>
@@ -336,8 +336,8 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
 
         {/* Filter Selection Tabs (Visible when previewing a snapped page) */}
         {!isCameraActive && pages[currentPageIndex] && (
-          <div className="bg-gray-950 px-4 py-3 border-t border-gray-800 flex items-center justify-center gap-2 overflow-x-auto">
-            <span className="text-xs text-gray-400 font-medium mr-2 hidden sm:inline">Filter:</span>
+          <div className="bg-gray-950 px-4 py-2.5 border-t border-gray-800 flex items-center justify-center gap-2 overflow-x-auto">
+            <span className="text-xs text-gray-400 font-medium mr-1 hidden sm:inline">Filter:</span>
             {[
               { id: 'clean_bw', label: 'Clean B&W', icon: FileText, desc: 'Best for ৳2 B&W prints' },
               { id: 'magic_color', label: 'Magic Color', icon: Sparkles, desc: 'Vibrant text & white paper' },
@@ -350,13 +350,13 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
                 <button
                   key={f.id}
                   onClick={() => setPageFilter(f.id)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
                     isActive
-                      ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20 scale-105'
+                      ? 'bg-[#00bf63] text-white'
                       : 'bg-gray-900 text-gray-400 hover:text-white hover:bg-gray-800 border border-gray-800'
                   }`}
                 >
-                  <Icon className="h-3.5 w-3.5" />
+                  <Icon className="h-3 w-3" />
                   {f.label}
                 </button>
               )
@@ -365,10 +365,10 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
         )}
 
         {/* Multi-Page Tray & Bottom Controls */}
-        <div className="p-4 bg-gray-950 border-t border-gray-800">
+        <div className="p-3.5 bg-gray-950 border-t border-gray-800">
           {/* Thumbnails Row */}
           {pages.length > 0 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-3 scrollbar-thin scrollbar-thumb-gray-800">
+            <div className="flex items-center gap-2 overflow-x-auto pb-2.5 mb-2.5 custom-scrollbar">
               {pages.map((p, idx) => (
                 <div
                   key={idx}
@@ -376,19 +376,19 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
                     setCurrentPageIndex(idx)
                     setIsCameraActive(false)
                   }}
-                  className={`relative flex-shrink-0 w-16 h-20 rounded-lg overflow-hidden border-2 cursor-pointer transition-all ${
+                  className={`relative flex-shrink-0 w-14 h-18 rounded-lg overflow-hidden border-2 cursor-pointer transition-colors ${
                     !isCameraActive && currentPageIndex === idx
-                      ? 'border-blue-500 scale-105 shadow-md shadow-blue-500/30'
+                      ? 'border-[#00bf63]'
                       : 'border-gray-700 opacity-70 hover:opacity-100'
                   }`}
                 >
                   <img src={p.processedUrl} alt={`Thumb ${idx + 1}`} className="w-full h-full object-cover" />
-                  <span className="absolute bottom-0 inset-x-0 bg-black/75 text-[10px] text-center text-white py-0.5 font-medium">
+                  <span className="absolute bottom-0 inset-x-0 bg-black/80 text-[9px] text-center text-white py-0.5 font-bold">
                     P{idx + 1}
                   </span>
                   <button
                     onClick={(e) => deletePage(idx, e)}
-                    className="absolute top-0.5 right-0.5 p-1 bg-red-600/90 text-white rounded-full hover:bg-red-700"
+                    className="absolute top-0.5 right-0.5 p-0.5 bg-red-600 text-white rounded-full hover:bg-red-700"
                     title="Delete page"
                   >
                     <Trash2 className="h-2.5 w-2.5" />
@@ -403,13 +403,13 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
                   setCurrentPageIndex(null)
                   startCamera()
                 }}
-                className={`flex-shrink-0 w-16 h-20 rounded-lg border-2 border-dashed border-gray-700 hover:border-blue-500 flex flex-col items-center justify-center text-gray-400 hover:text-white transition-colors ${
-                  isCameraActive ? 'border-blue-500 bg-blue-600/10' : ''
+                className={`flex-shrink-0 w-14 h-18 rounded-lg border border-dashed border-gray-700 hover:border-[#00bf63] flex flex-col items-center justify-center text-gray-400 hover:text-white transition-colors ${
+                  isCameraActive ? 'border-[#00bf63] bg-[#00bf63]/10' : ''
                 }`}
                 title="Scan next page"
               >
-                <Plus className="h-5 w-5 mb-1 text-blue-400" />
-                <span className="text-[10px] font-medium">+ Page</span>
+                <Plus className="h-4 w-4 mb-0.5 text-[#00bf63]" />
+                <span className="text-[9px] font-bold">+ Page</span>
               </button>
             </div>
           )}
@@ -437,9 +437,9 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
                     setIsCameraActive(false)
                     setCurrentPageIndex(pages.length - 1)
                   }}
-                  className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                  className="border-gray-700 text-gray-300 hover:bg-gray-800 text-xs h-8"
                 >
-                  Review Pages ({pages.length})
+                  Review ({pages.length})
                 </Button>
               )}
 
@@ -447,15 +447,15 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
                 type="button"
                 disabled={pages.length === 0 || isProcessing}
                 onClick={handleFinish}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-5 shadow-lg shadow-blue-600/30"
+                className="bg-[#00bf63] hover:bg-[#00a656] text-white px-4 h-8 text-xs font-bold shadow-none"
               >
                 {isProcessing ? (
                   <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Compiling PDF...
+                    <RefreshCw className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Compiling...
                   </>
                 ) : (
                   <>
-                    <Check className="mr-2 h-4 w-4" /> Use Document ({pages.length})
+                    <Check className="mr-1.5 h-3.5 w-3.5" /> Use Document ({pages.length})
                   </>
                 )}
               </Button>
