@@ -438,6 +438,136 @@ export async function POST(request) {
       return NextResponse.json({ success: true, message: 'Account rejected in memory store', account: acc })
     }
 
+    // -------------------------------------------------------------------------
+    // 7. PASSWORD RESET — STEP 1: Send OTP after verifying phone exists
+    // -------------------------------------------------------------------------
+    if (action === 'reset-password-send-otp') {
+      const { phone } = body
+      if (!phone || phone.trim().length < 10) {
+        return NextResponse.json({ error: 'Valid 11-digit mobile number is required' }, { status: 400 })
+      }
+
+      const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
+
+      // Verify the phone number belongs to a registered account
+      const memAcc = memoryShopAccounts.find((a) => a.phone === cleanPhone)
+      let foundInDb = false
+
+      if (!memAcc) {
+        try {
+          const { data: dbDevices } = await supabase.from('devices').select('id, location, status')
+          foundInDb = (dbDevices || []).some((d) => {
+            const dPhone = (d.location?.phone || '').replace(/[^0-9]/g, '')
+            return dPhone === cleanPhone
+          })
+        } catch (e) {
+          console.warn('[Reset OTP] DB check note:', e.message)
+        }
+      }
+
+      if (!memAcc && !foundInDb) {
+        return NextResponse.json({ error: 'No registered account found with this phone number.' }, { status: 404 })
+      }
+
+      // Generate & store OTP
+      const code = Math.floor(100000 + Math.random() * 900000).toString()
+      phoneOtpStore.set(`reset:${cleanPhone}`, {
+        code,
+        expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
+      })
+
+      console.log(`[Reset OTP] Password reset code for ${cleanPhone}: ${code}`)
+
+      // Send SMS
+      const smsApiKey = '42fc1e917497409da3d3ffc7622e566e'
+      const smsMessage = encodeURIComponent(`QuickInk Password Reset: Your verification code is ${code}. Valid for 10 minutes. Do NOT share this code.`)
+      const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
+      fetch(smsUrl)
+        .then((r) => r.json())
+        .then((d) => console.log(`[Reset OTP] SMS sent to ${cleanPhone}:`, d))
+        .catch((e) => console.warn('[Reset OTP SMS Warning]:', e.message))
+
+      return NextResponse.json({
+        success: true,
+        message: `Password reset code sent to ${cleanPhone}. Check your SMS.`,
+        phone: cleanPhone,
+      })
+    }
+
+    // -------------------------------------------------------------------------
+    // 8. PASSWORD RESET — STEP 2: Verify OTP
+    // -------------------------------------------------------------------------
+    if (action === 'reset-verify-otp') {
+      const { phone, otp } = body
+      if (!phone || !otp) {
+        return NextResponse.json({ error: 'Phone and OTP are required' }, { status: 400 })
+      }
+
+      const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
+      const stored = phoneOtpStore.get(`reset:${cleanPhone}`)
+      const isValid = stored && stored.code === otp.trim() && stored.expiresAt > Date.now()
+
+      if (!isValid) {
+        return NextResponse.json({ error: 'Invalid or expired code. Please request a new one.' }, { status: 400 })
+      }
+
+      // Mark OTP as verified (keep it so reset-password step can confirm)
+      phoneOtpStore.set(`reset-verified:${cleanPhone}`, { verified: true, expiresAt: stored.expiresAt })
+
+      return NextResponse.json({ success: true, verified: true, phone: cleanPhone, message: 'OTP verified! You can now set a new password.' })
+    }
+
+    // -------------------------------------------------------------------------
+    // 9. PASSWORD RESET — STEP 3: Set new password
+    // -------------------------------------------------------------------------
+    if (action === 'reset-password') {
+      const { phone, newPassword } = body
+      if (!phone || !newPassword) {
+        return NextResponse.json({ error: 'Phone and new password are required' }, { status: 400 })
+      }
+      if (newPassword.length < 6) {
+        return NextResponse.json({ error: 'Password must be at least 6 characters long' }, { status: 400 })
+      }
+
+      const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
+
+      // Ensure OTP was verified
+      const verifiedEntry = phoneOtpStore.get(`reset-verified:${cleanPhone}`)
+      if (!verifiedEntry || verifiedEntry.expiresAt < Date.now()) {
+        return NextResponse.json({ error: 'OTP verification expired. Please start over.' }, { status: 400 })
+      }
+
+      // Update password in memory store
+      const memAcc = memoryShopAccounts.find((a) => a.phone === cleanPhone)
+      if (memAcc) {
+        memAcc.password = newPassword
+      }
+
+      // Update password in devices table (stored in location JSONB)
+      try {
+        const { data: dbDevices } = await supabase.from('devices').select('id, location')
+        const matchDev = (dbDevices || []).find((d) => {
+          const dPhone = (d.location?.phone || '').replace(/[^0-9]/g, '')
+          return dPhone === cleanPhone
+        })
+        if (matchDev) {
+          const updatedLoc = { ...(matchDev.location || {}), password: newPassword }
+          await supabase.from('devices').update({ location: updatedLoc }).eq('id', matchDev.id)
+        }
+
+        // Also update partners table if it has a password column
+        await supabase.from('partners').update({ password: newPassword }).eq('phone', cleanPhone)
+      } catch (e) {
+        console.warn('[Reset Password] DB update note:', e.message)
+      }
+
+      // Clear OTP tokens
+      phoneOtpStore.delete(`reset:${cleanPhone}`)
+      phoneOtpStore.delete(`reset-verified:${cleanPhone}`)
+
+      return NextResponse.json({ success: true, message: 'Password updated successfully! You can now sign in with your new password.' })
+    }
+
     return NextResponse.json({ error: 'Unknown action specified' }, { status: 400 })
   } catch (err) {
     console.error('Desktop auth error:', err)

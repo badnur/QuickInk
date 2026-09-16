@@ -172,6 +172,34 @@ const el = {
   linkToRegister: document.getElementById('link-to-register'),
   linkToLogin: document.getElementById('link-to-login'),
 
+  // Forgot Password Screen
+  screenForgotPassword: document.getElementById('screen-forgot-password'),
+  fpStep1: document.getElementById('fp-step-1'),
+  fpStep2: document.getElementById('fp-step-2'),
+  fpStep3: document.getElementById('fp-step-3'),
+  fpStepSuccess: document.getElementById('fp-step-success'),
+  fpPhone: document.getElementById('fp-phone'),
+  fpStep1Status: document.getElementById('fp-step1-status'),
+  fpStep2Status: document.getElementById('fp-step2-status'),
+  fpStep3Status: document.getElementById('fp-step3-status'),
+  btnFpSendOtp: document.getElementById('btn-fp-send-otp'),
+  fpSendOtpText: document.getElementById('fp-send-otp-text'),
+  fpOtpBoxes: Array.from(document.querySelectorAll('#fp-otp-boxes .otp-box')),
+  btnFpVerifyOtp: document.getElementById('btn-fp-verify-otp'),
+  fpVerifyOtpText: document.getElementById('fp-verify-otp-text'),
+  btnFpResend: document.getElementById('btn-fp-resend'),
+  fpOtpBack: document.getElementById('fp-otp-back'),
+  fpOtpHint: document.getElementById('fp-otp-hint'),
+  fpNewPassword: document.getElementById('fp-new-password'),
+  fpConfirmPassword: document.getElementById('fp-confirm-password'),
+  btnFpTogglePw: document.getElementById('btn-fp-toggle-pw'),
+  fpEyeOpen: document.getElementById('fp-eye-open'),
+  fpEyeClosed: document.getElementById('fp-eye-closed'),
+  btnFpReset: document.getElementById('btn-fp-reset'),
+  fpResetText: document.getElementById('fp-reset-text'),
+  fpBackToLogin: document.getElementById('fp-back-to-login'),
+  fpGoLogin: document.getElementById('fp-go-login'),
+
   // Administrative Lockdown Screen
   lockdownShopName: document.getElementById('lockdown-shop-name'),
   lockdownDeviceId: document.getElementById('lockdown-device-id'),
@@ -923,10 +951,12 @@ function setupAuthSystem() {
     if (el.eyeIconClosed) el.eyeIconClosed.classList.toggle('hidden', !isPass)
   })
 
-  // Forgot password
+  // Forgot password → launch the proper reset flow
   el.btnForgotPassword?.addEventListener('click', () => {
-    alert('🔑 Password Reset / Account Assistance:\n\nPlease contact Quick Ink Admin:\nEmergency Phone: 01733398911\nEmail: help@quickink.net')
+    showScreen('forgot-password')
+    fpShowStep(1)
   })
+  setupForgotPassword()
 
   // Switch between Login and Register screens
   el.linkToRegister?.addEventListener('click', () => {
@@ -989,6 +1019,7 @@ function setupAuthSystem() {
 function showScreen(screen) {
   if (el.screenLogin) el.screenLogin.classList.toggle('hidden', screen !== 'login')
   if (el.screenRegister) el.screenRegister.classList.toggle('hidden', screen !== 'register')
+  if (el.screenForgotPassword) el.screenForgotPassword.classList.toggle('hidden', screen !== 'forgot-password')
   if (el.screenLockdown) el.screenLockdown.classList.toggle('hidden', screen !== 'lockdown')
   if (el.screenPending) el.screenPending.classList.toggle('hidden', screen !== 'pending')
   if (el.screenRejected) el.screenRejected.classList.toggle('hidden', screen !== 'rejected')
@@ -998,7 +1029,202 @@ function showScreen(screen) {
     setTimeout(() => el.loginPhone?.focus(), 80)
   } else if (screen === 'workspace') {
     setTimeout(() => el.otpBoxes[0]?.focus(), 80)
+  } else if (screen === 'forgot-password') {
+    setTimeout(() => el.fpPhone?.focus(), 80)
   }
+}
+
+// =============================================================================
+// FORGOT PASSWORD — 3-STEP OTP FLOW
+// =============================================================================
+let fpPhoneVerified = ''
+
+function fpShowStep(step) {
+  el.fpStep1?.classList.toggle('hidden', step !== 1)
+  el.fpStep2?.classList.toggle('hidden', step !== 2)
+  el.fpStep3?.classList.toggle('hidden', step !== 3)
+  el.fpStepSuccess?.classList.toggle('hidden', step !== 4)
+}
+
+function fpSetStatus(el_, msg, isError = false) {
+  if (!el_) return
+  el_.textContent = msg
+  el_.className = 'auth-status-alert ' + (isError ? 'error' : 'success')
+  el_.classList.remove('hidden')
+}
+function fpClearStatus(el_) {
+  if (!el_) return
+  el_.classList.add('hidden')
+  el_.textContent = ''
+}
+
+function setupForgotPassword() {
+  // Back to login
+  el.fpBackToLogin?.addEventListener('click', () => showScreen('login'))
+  el.fpGoLogin?.addEventListener('click', () => {
+    showScreen('login')
+    fpPhoneVerified = ''
+    if (el.fpPhone) el.fpPhone.value = ''
+    if (el.fpNewPassword) el.fpNewPassword.value = ''
+    if (el.fpConfirmPassword) el.fpConfirmPassword.value = ''
+    el.fpOtpBoxes?.forEach(b => { b.value = '' })
+    fpShowStep(1)
+  })
+
+  // STEP 1: Send OTP
+  el.btnFpSendOtp?.addEventListener('click', async () => {
+    const phone = el.fpPhone?.value?.trim()
+    if (!phone || phone.replace(/[^0-9]/g, '').length < 10) {
+      fpSetStatus(el.fpStep1Status, 'Please enter a valid 11-digit mobile number.', true)
+      return
+    }
+    fpClearStatus(el.fpStep1Status)
+    if (el.fpSendOtpText) el.fpSendOtpText.textContent = 'Sending Code...'
+    if (el.btnFpSendOtp) el.btnFpSendOtp.disabled = true
+
+    try {
+      const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset-password-send-otp', phone }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to send code')
+
+      fpPhoneVerified = data.phone
+      if (el.fpOtpHint) el.fpOtpHint.textContent = `A 6-digit code was sent to ${fpPhoneVerified}`
+      el.fpOtpBoxes?.forEach(b => { b.value = '' })
+      fpShowStep(2)
+      setTimeout(() => el.fpOtpBoxes?.[0]?.focus(), 100)
+    } catch (err) {
+      fpSetStatus(el.fpStep1Status, err.message, true)
+    } finally {
+      if (el.fpSendOtpText) el.fpSendOtpText.textContent = 'Send Verification Code →'
+      if (el.btnFpSendOtp) el.btnFpSendOtp.disabled = false
+    }
+  })
+
+  // STEP 2: OTP box keyboard navigation
+  el.fpOtpBoxes?.forEach((box, i) => {
+    box.addEventListener('input', () => {
+      box.value = box.value.replace(/[^0-9]/g, '').slice(-1)
+      if (box.value && i < el.fpOtpBoxes.length - 1) el.fpOtpBoxes[i + 1].focus()
+    })
+    box.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !box.value && i > 0) el.fpOtpBoxes[i - 1].focus()
+    })
+    box.addEventListener('paste', (e) => {
+      e.preventDefault()
+      const digits = (e.clipboardData.getData('text') || '').replace(/[^0-9]/g, '')
+      digits.split('').forEach((d, j) => { if (el.fpOtpBoxes[j]) el.fpOtpBoxes[j].value = d })
+      const lastFilled = Math.min(digits.length, el.fpOtpBoxes.length - 1)
+      el.fpOtpBoxes[lastFilled]?.focus()
+    })
+  })
+
+  // Resend code
+  el.btnFpResend?.addEventListener('click', async () => {
+    fpClearStatus(el.fpStep2Status)
+    el.btnFpResend.textContent = 'Sending...'
+    el.btnFpResend.disabled = true
+    try {
+      const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset-password-send-otp', phone: fpPhoneVerified }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to resend')
+      fpSetStatus(el.fpStep2Status, 'New code sent! Check your SMS.', false)
+      el.fpOtpBoxes?.forEach(b => { b.value = '' })
+      el.fpOtpBoxes?.[0]?.focus()
+    } catch (err) {
+      fpSetStatus(el.fpStep2Status, err.message, true)
+    } finally {
+      el.btnFpResend.textContent = 'Resend Code'
+      el.btnFpResend.disabled = false
+    }
+  })
+
+  // Go back to step 1
+  el.fpOtpBack?.addEventListener('click', () => {
+    fpClearStatus(el.fpStep2Status)
+    fpShowStep(1)
+    setTimeout(() => el.fpPhone?.focus(), 80)
+  })
+
+  // Verify OTP
+  el.btnFpVerifyOtp?.addEventListener('click', async () => {
+    const otp = el.fpOtpBoxes?.map(b => b.value).join('')
+    if (!otp || otp.length < 6) {
+      fpSetStatus(el.fpStep2Status, 'Please enter the full 6-digit code.', true)
+      return
+    }
+    fpClearStatus(el.fpStep2Status)
+    if (el.fpVerifyOtpText) el.fpVerifyOtpText.textContent = 'Verifying...'
+    if (el.btnFpVerifyOtp) el.btnFpVerifyOtp.disabled = true
+
+    try {
+      const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset-verify-otp', phone: fpPhoneVerified, otp }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Invalid or expired code')
+
+      fpShowStep(3)
+      setTimeout(() => el.fpNewPassword?.focus(), 80)
+    } catch (err) {
+      fpSetStatus(el.fpStep2Status, err.message, true)
+    } finally {
+      if (el.fpVerifyOtpText) el.fpVerifyOtpText.textContent = 'Verify Code →'
+      if (el.btnFpVerifyOtp) el.btnFpVerifyOtp.disabled = false
+    }
+  })
+
+  // STEP 3: Toggle password visibility
+  el.btnFpTogglePw?.addEventListener('click', () => {
+    if (!el.fpNewPassword) return
+    const isPass = el.fpNewPassword.type === 'password'
+    el.fpNewPassword.type = isPass ? 'text' : 'password'
+    el.fpEyeOpen?.classList.toggle('hidden', isPass)
+    el.fpEyeClosed?.classList.toggle('hidden', !isPass)
+  })
+
+  // Set new password
+  el.btnFpReset?.addEventListener('click', async () => {
+    const newPw = el.fpNewPassword?.value || ''
+    const confirmPw = el.fpConfirmPassword?.value || ''
+    if (newPw.length < 6) {
+      fpSetStatus(el.fpStep3Status, 'Password must be at least 6 characters.', true)
+      return
+    }
+    if (newPw !== confirmPw) {
+      fpSetStatus(el.fpStep3Status, 'Passwords do not match.', true)
+      return
+    }
+    fpClearStatus(el.fpStep3Status)
+    if (el.fpResetText) el.fpResetText.textContent = 'Updating Password...'
+    if (el.btnFpReset) el.btnFpReset.disabled = true
+
+    try {
+      const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reset-password', phone: fpPhoneVerified, newPassword: newPw }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to update password')
+
+      fpShowStep(4) // Show success
+    } catch (err) {
+      fpSetStatus(el.fpStep3Status, err.message, true)
+    } finally {
+      if (el.fpResetText) el.fpResetText.textContent = 'Update Password →'
+      if (el.btnFpReset) el.btnFpReset.disabled = false
+    }
+  })
 }
 
 // Display Pending Approval Screen

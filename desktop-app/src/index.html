@@ -110,6 +110,142 @@
     </div>
 
     <!-- ========================================================================= -->
+    <!-- SCREEN 1B: FORGOT PASSWORD SCREEN (3 STEPS)                               -->
+    <!-- ========================================================================= -->
+    <div id="screen-forgot-password" class="app-screen hidden">
+      <div class="auth-center-wrap">
+        <!-- Brand Badge -->
+        <div class="brand-pill-badge">
+          <svg class="pill-sparkle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+          </svg>
+          <span>Quick Ink</span>
+        </div>
+
+        <!-- STEP 1: Enter Phone Number -->
+        <div id="fp-step-1">
+          <div class="auth-heading-block">
+            <h1 class="auth-title">Reset Password</h1>
+            <p class="auth-subtitle">Enter your registered mobile number to receive a verification code</p>
+          </div>
+
+          <div class="auth-form-inner">
+            <div class="auth-input-group">
+              <label for="fp-phone" class="auth-label">Registered Mobile Number</label>
+              <div class="input-with-icon">
+                <svg class="input-icon-left" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                </svg>
+                <input type="tel" id="fp-phone" class="auth-field" placeholder="01234567890" maxlength="15" autocomplete="tel" />
+              </div>
+            </div>
+
+            <div id="fp-step1-status" class="auth-status-alert hidden"></div>
+
+            <button type="button" id="btn-fp-send-otp" class="btn-signin-white">
+              <span id="fp-send-otp-text">Send Verification Code →</span>
+            </button>
+
+            <div class="auth-bottom-switch" style="margin-top:12px">
+              <button type="button" id="fp-back-to-login" class="auth-switch-link">← Back to Sign In</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Verify OTP -->
+        <div id="fp-step-2" class="hidden">
+          <div class="auth-heading-block">
+            <h1 class="auth-title">Enter Code</h1>
+            <p class="auth-subtitle" id="fp-otp-hint">A 6-digit code was sent to your mobile</p>
+          </div>
+
+          <div class="auth-form-inner">
+            <!-- OTP Boxes -->
+            <div class="otp-boxes-row" id="fp-otp-boxes">
+              <input type="text" maxlength="1" class="otp-box" data-idx="0" inputmode="numeric" />
+              <input type="text" maxlength="1" class="otp-box" data-idx="1" inputmode="numeric" />
+              <input type="text" maxlength="1" class="otp-box" data-idx="2" inputmode="numeric" />
+              <input type="text" maxlength="1" class="otp-box" data-idx="3" inputmode="numeric" />
+              <input type="text" maxlength="1" class="otp-box" data-idx="4" inputmode="numeric" />
+              <input type="text" maxlength="1" class="otp-box" data-idx="5" inputmode="numeric" />
+            </div>
+
+            <div id="fp-step2-status" class="auth-status-alert hidden"></div>
+
+            <button type="button" id="btn-fp-verify-otp" class="btn-signin-white">
+              <span id="fp-verify-otp-text">Verify Code →</span>
+            </button>
+
+            <div style="display:flex;justify-content:space-between;margin-top:10px">
+              <button type="button" id="fp-otp-back" class="auth-switch-link">← Change Number</button>
+              <button type="button" id="btn-fp-resend" class="auth-switch-link">Resend Code</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- STEP 3: Set New Password -->
+        <div id="fp-step-3" class="hidden">
+          <div class="auth-heading-block">
+            <h1 class="auth-title">New Password</h1>
+            <p class="auth-subtitle">Choose a strong new password for your account</p>
+          </div>
+
+          <div class="auth-form-inner">
+            <div class="auth-input-group">
+              <label for="fp-new-password" class="auth-label">New Password</label>
+              <div class="input-with-icon">
+                <svg class="input-icon-left" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <input type="password" id="fp-new-password" class="auth-field pr-eye" placeholder="Minimum 6 characters" autocomplete="new-password" />
+                <button type="button" id="btn-fp-toggle-pw" class="input-eye-btn" title="Toggle visibility">
+                  <svg id="fp-eye-open" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  <svg id="fp-eye-closed" class="hidden" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"/><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"/>
+                    <path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"/><line x1="2" x2="22" y1="2" y2="22"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div class="auth-input-group">
+              <label for="fp-confirm-password" class="auth-label">Confirm New Password</label>
+              <div class="input-with-icon">
+                <svg class="input-icon-left" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>
+                <input type="password" id="fp-confirm-password" class="auth-field" placeholder="Repeat your password" autocomplete="new-password" />
+              </div>
+            </div>
+
+            <div id="fp-step3-status" class="auth-status-alert hidden"></div>
+
+            <button type="button" id="btn-fp-reset" class="btn-signin-white">
+              <span id="fp-reset-text">Update Password →</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- STEP 4: Success -->
+        <div id="fp-step-success" class="hidden" style="text-align:center;padding:20px 0">
+          <div style="width:64px;height:64px;background:rgba(0,191,99,0.15);border:2px solid #00bf63;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00bf63" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 6 9 17l-5-5"/>
+            </svg>
+          </div>
+          <h2 style="color:#fff;font-size:1.3rem;font-weight:800;margin-bottom:8px">Password Updated!</h2>
+          <p style="color:#94a3b8;font-size:0.85rem;margin-bottom:24px">Your password has been reset successfully. You can now sign in with your new password.</p>
+          <button type="button" id="fp-go-login" class="btn-signin-white">Sign In Now →</button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
     <!-- SCREEN 2: REGISTRATION SCREEN (3 STEPS: SHOP DETAILS, OTP, PASSWORD)      -->
     <!-- ========================================================================= -->
     <div id="screen-register" class="app-screen hidden">
