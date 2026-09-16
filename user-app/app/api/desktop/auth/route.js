@@ -12,6 +12,24 @@ export const ADMIN_CONTACT = {
   email: 'help@quickink.net'
 }
 
+export function normalizePhone(p) {
+  if (!p) return ''
+  const digits = String(p).replace(/[^0-9]/g, '')
+  if (digits.startsWith('880') && digits.length >= 13) {
+    return '0' + digits.slice(3)
+  }
+  return digits
+}
+
+export function phonesMatch(p1, p2) {
+  if (!p1 || !p2) return false
+  const c1 = String(p1).replace(/[^0-9]/g, '')
+  const c2 = String(p2).replace(/[^0-9]/g, '')
+  if (c1 === c2) return true
+  if (c1.length >= 10 && c2.length >= 10 && c1.slice(-10) === c2.slice(-10)) return true
+  return false
+}
+
 export async function POST(request) {
   try {
     const body = await request.json()
@@ -121,6 +139,7 @@ export async function POST(request) {
         shop_name: shop_name,
         type: type === 'kiosk' ? 'kiosk' : 'shop',
         operating_hours: resolvedHours,
+        password: password,
         logo_url: logo_url || '',
         shop_photo_url: shop_photo_url || '',
         payout_rate: 100.0,
@@ -138,7 +157,7 @@ export async function POST(request) {
         // Check if device with this phone already exists in public.devices
         const { data: existingDevs } = await supabase.from('devices').select('*')
         const match = (existingDevs || []).find(
-          (d) => d.location && (d.location.phone === cleanPhone || d.location.phone === phone)
+          (d) => d.location && phonesMatch(d.location.phone, cleanPhone)
         )
 
         if (match) {
@@ -252,7 +271,7 @@ export async function POST(request) {
     }
 
     // -------------------------------------------------------------------------
-    // 4. LOGIN (MOBILE NUMBER + PASSWORD) — BLOCKS PENDING & REJECTED
+    // 4. LOGIN (MOBILE NUMBER + PASSWORD) — PERSISTENT DB FALLBACK
     // -------------------------------------------------------------------------
     if (action === 'login') {
       const { phone, password } = body
@@ -261,43 +280,103 @@ export async function POST(request) {
       }
 
       const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
-      let account = memoryShopAccounts.find(
-        (acc) => acc.phone === cleanPhone && acc.password === password
-      )
 
-      // Query database devices & partners table to sync real-time admin decisions
+      // 1. Fetch Supabase devices & partners to authenticate persistently & check approvals
+      let dbDevices = []
+      let dbPartners = []
       try {
-        const [{ data: dbPartners }, { data: dbDevices }] = await Promise.all([
-          supabase.from('partners').select('*').eq('phone', cleanPhone).order('created_at', { ascending: false }).limit(1),
+        const [{ data: pData }, { data: dData }] = await Promise.all([
+          supabase.from('partners').select('*'),
           supabase.from('devices').select('*'),
         ])
+        dbPartners = pData || []
+        dbDevices = dData || []
+      } catch (dbErr) {
+        console.warn('DB fetch in login error:', dbErr.message)
+      }
 
-        const dbPartner = dbPartners?.[0]
-        const matchingDev = (dbDevices || []).find(
-          (d) => (account?.deviceId && d.id === account.deviceId) ||
-                 (d.location && (d.location.phone === cleanPhone || d.location.phone === phone))
-        )
+      // 2. Check in-memory store
+      let account = memoryShopAccounts.find(
+        (acc) => phonesMatch(acc.phone, cleanPhone) && acc.password === password
+      )
 
-        const devPartnerStatus = matchingDev?.location?.partner_status
-        const isOnlineApproved = matchingDev?.status === 'online' && devPartnerStatus !== 'pending' && devPartnerStatus !== 'rejected'
+      // 3. Persistent Supabase devices fallback (survives dev server restarts)
+      if (!account) {
+        const matchingPhoneDevs = dbDevices.filter((d) => phonesMatch(d.location?.phone, cleanPhone))
+        // Prioritize online / approved devices
+        matchingPhoneDevs.sort((a, b) => {
+          const aScore = (a.status === 'online' ? 2 : 0) + (a.location?.partner_status === 'approved' ? 2 : 0)
+          const bScore = (b.status === 'online' ? 2 : 0) + (b.location?.partner_status === 'approved' ? 2 : 0)
+          return bScore - aScore
+        })
 
-        if (account) {
-          if (devPartnerStatus === 'approved' || isOnlineApproved || dbPartner?.status === 'approved') {
-            account.status = 'approved'
-            if (matchingDev?.id) account.deviceId = matchingDev.id
-          } else if (devPartnerStatus === 'rejected' || dbPartner?.status === 'rejected') {
-            account.status = 'rejected'
-            account.rejection_reason = matchingDev?.location?.rejection_reason || dbPartner?.rejection_reason || 'Storefront requirements not met.'
-          } else if (devPartnerStatus === 'pending' || dbPartner?.status === 'pending') {
-            account.status = 'pending'
+        // Find device that has this password
+        let candidateDev = matchingPhoneDevs.find((d) => d.location?.password === password)
+
+        // Fallback for legacy registered devices where password was only in memory:
+        // If device has no password yet but user enters password >= 6 chars, assign & persist
+        if (!candidateDev && matchingPhoneDevs.length > 0) {
+          const legacyDev = matchingPhoneDevs.find((d) => !d.location?.password)
+          if (legacyDev && password.length >= 6) {
+            candidateDev = legacyDev
+            const updLoc = { ...(candidateDev.location || {}), password }
+            supabase.from('devices').update({ location: updLoc }).eq('id', candidateDev.id).then(() => {})
           }
         }
-      } catch (dbErr) {
-        console.warn('Sync partner DB check note:', dbErr.message)
+
+        if (candidateDev) {
+          const loc = candidateDev.location || {}
+          const isOnline = candidateDev.status === 'online'
+          const partnerStatus = loc.partner_status || (isOnline ? 'approved' : 'pending')
+
+          account = {
+            id: candidateDev.id,
+            deviceId: candidateDev.id,
+            name: loc.owner_name || candidateDev.name,
+            shop_name: loc.shop_name || candidateDev.name,
+            phone: cleanPhone,
+            location: loc.address || '',
+            type: candidateDev.type || loc.type || 'shop',
+            operating_hours: loc.operating_hours || '09:00 AM - 10:00 PM',
+            status: partnerStatus,
+            rejection_reason: loc.rejection_reason || null,
+            password: password,
+            logo_url: loc.logo_url || '',
+            shop_photo_url: loc.shop_photo_url || '',
+            created_at: loc.created_at || new Date().toISOString(),
+          }
+          memoryShopAccounts.unshift(account)
+        }
       }
 
       if (!account) {
         return NextResponse.json({ error: 'Invalid mobile number or password.' }, { status: 401 })
+      }
+
+      // Sync status from DB
+      const matchingPhoneDevs = dbDevices.filter(
+        (d) => (account.deviceId && d.id === account.deviceId) || phonesMatch(d.location?.phone, cleanPhone)
+      )
+      // Pick online/approved device if available
+      matchingPhoneDevs.sort((a, b) => {
+        const aScore = (a.status === 'online' ? 2 : 0) + (a.location?.partner_status === 'approved' ? 2 : 0)
+        const bScore = (b.status === 'online' ? 2 : 0) + (b.location?.partner_status === 'approved' ? 2 : 0)
+        return bScore - aScore
+      })
+      const matchingDev = matchingPhoneDevs[0]
+      const dbPartner = dbPartners.find((p) => phonesMatch(p.phone, cleanPhone))
+
+      const devPartnerStatus = matchingDev?.location?.partner_status
+      const isOnlineApproved = matchingDev?.status === 'online' && devPartnerStatus !== 'pending' && devPartnerStatus !== 'rejected'
+
+      if (devPartnerStatus === 'approved' || isOnlineApproved || dbPartner?.status === 'approved') {
+        account.status = 'approved'
+        if (matchingDev?.id) account.deviceId = matchingDev.id
+      } else if (devPartnerStatus === 'rejected' || dbPartner?.status === 'rejected') {
+        account.status = 'rejected'
+        account.rejection_reason = matchingDev?.location?.rejection_reason || dbPartner?.rejection_reason || 'Storefront requirements not met.'
+      } else if (devPartnerStatus === 'pending' || dbPartner?.status === 'pending') {
+        account.status = 'pending'
       }
 
       // 4A: PENDING APPROVAL CHECK
@@ -450,16 +529,13 @@ export async function POST(request) {
       const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
 
       // Verify the phone number belongs to a registered account
-      const memAcc = memoryShopAccounts.find((a) => a.phone === cleanPhone)
+      const memAcc = memoryShopAccounts.find((a) => phonesMatch(a.phone, cleanPhone))
       let foundInDb = false
 
       if (!memAcc) {
         try {
           const { data: dbDevices } = await supabase.from('devices').select('id, location, status')
-          foundInDb = (dbDevices || []).some((d) => {
-            const dPhone = (d.location?.phone || '').replace(/[^0-9]/g, '')
-            return dPhone === cleanPhone
-          })
+          foundInDb = (dbDevices || []).some((d) => phonesMatch(d.location?.phone, cleanPhone))
         } catch (e) {
           console.warn('[Reset OTP] DB check note:', e.message)
         }
@@ -538,19 +614,16 @@ export async function POST(request) {
       }
 
       // Update password in memory store
-      const memAcc = memoryShopAccounts.find((a) => a.phone === cleanPhone)
+      const memAcc = memoryShopAccounts.find((a) => phonesMatch(a.phone, cleanPhone))
       if (memAcc) {
         memAcc.password = newPassword
       }
 
-      // Update password in devices table (stored in location JSONB)
+      // Update password in devices table (stored in location JSONB for ALL matching devices)
       try {
         const { data: dbDevices } = await supabase.from('devices').select('id, location')
-        const matchDev = (dbDevices || []).find((d) => {
-          const dPhone = (d.location?.phone || '').replace(/[^0-9]/g, '')
-          return dPhone === cleanPhone
-        })
-        if (matchDev) {
+        const matchingDevs = (dbDevices || []).filter((d) => phonesMatch(d.location?.phone, cleanPhone))
+        for (const matchDev of matchingDevs) {
           const updatedLoc = { ...(matchDev.location || {}), password: newPassword }
           await supabase.from('devices').update({ location: updatedLoc }).eq('id', matchDev.id)
         }
@@ -593,13 +666,11 @@ async function resolveAccountStatus(phone, deviceId) {
     ])
 
     const partner = (dbPartners || []).find((p) => {
-      const pClean = (p.phone || '').trim().replace(/[^0-9]/g, '')
-      return (cleanPhone && pClean === cleanPhone) || (deviceId && p.id === deviceId)
+      return (cleanPhone && phonesMatch(p.phone, cleanPhone)) || (deviceId && p.id === deviceId)
     })
 
     const dev = (dbDevices || []).find((d) => {
-      const dPhone = (d.location?.phone || '').trim().replace(/[^0-9]/g, '')
-      return (cleanPhone && dPhone === cleanPhone) || (deviceId && d.id === deviceId)
+      return (cleanPhone && phonesMatch(d.location?.phone, cleanPhone)) || (deviceId && d.id === deviceId)
     })
 
     if (dev) {
@@ -636,7 +707,7 @@ async function resolveAccountStatus(phone, deviceId) {
 
   // Memory store fallback/sync
   if (cleanPhone) {
-    const memAcc = memoryShopAccounts.find((a) => a.phone === cleanPhone)
+    const memAcc = memoryShopAccounts.find((a) => phonesMatch(a.phone, cleanPhone))
     if (memAcc) {
       if (currentStatus !== 'pending') {
         memAcc.status = currentStatus
