@@ -16,6 +16,21 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Please enter a valid 6-digit OTP code' }, { status: 400 })
     }
 
+    // Check if device is suspended by admin
+    const { data: devCheck } = await supabase
+      .from('devices')
+      .select('status, location')
+      .eq('id', device_id)
+      .maybeSingle()
+
+    if (devCheck && (devCheck.status === 'suspended' || devCheck.status === 'cancelled')) {
+      return NextResponse.json({
+        error: 'Partnership Suspended. Printing and job redemption are locked by administration.',
+        suspended: true,
+        reason: devCheck.location?.suspension_reason || 'Administrative partnership suspension'
+      }, { status: 403 })
+    }
+
     // Call Supabase atomic redemption RPC
     let { data, error } = await supabase.rpc('redeem_otp', {
       p_code: cleanCode,

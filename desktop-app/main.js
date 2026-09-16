@@ -72,8 +72,8 @@ function createWindow() {
     height: 820,
     minWidth: 1024,
     minHeight: 680,
-    title: 'QuickInk — Partner Shop & Kiosk Terminal',
-    backgroundColor: '#090d16',
+    title: 'Quick Ink',
+    backgroundColor: '#09090b',
     autoHideMenuBar: true,
     show: true,
     webPreferences: {

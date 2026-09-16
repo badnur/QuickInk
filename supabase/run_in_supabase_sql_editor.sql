@@ -294,3 +294,57 @@ BEGIN
   END IF;
 END;
 $$;
+
+-- ----------------------------------------------------------------------------
+-- 6. PARTNER SHOP & KIOSK REGISTRATION TABLE & RLS POLICIES
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS public.partners (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    reference_id TEXT UNIQUE,
+    type TEXT NOT NULL DEFAULT 'shop', -- 'shop' or 'kiosk'
+    name TEXT NOT NULL,                -- Applicant / Contact person name
+    shop_name TEXT NOT NULL,           -- Business / Venue name
+    phone TEXT NOT NULL,
+    email TEXT,
+    location TEXT NOT NULL,            -- Detailed address
+    city TEXT DEFAULT 'Dhaka',
+    operating_hours TEXT DEFAULT '09:00 AM - 10:00 PM',
+    printer_model TEXT,                -- For shops: existing printers (e.g. Epson L130, Canon, HP)
+    space_type TEXT,                   -- For kiosks: 'Mall', 'University / Campus', 'Hospital', 'Commercial Hub'
+    daily_footfall TEXT,
+    power_backup BOOLEAN DEFAULT true,
+    status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'approved', 'rejected', 'onboarded'
+    rejection_reason TEXT,
+    provisioned_device_id UUID REFERENCES public.devices(id) ON DELETE SET NULL,
+    commission_rate NUMERIC DEFAULT 40.0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE public.partners ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Allow public insert of partner applications" ON public.partners;
+CREATE POLICY "Allow public insert of partner applications"
+ON public.partners FOR INSERT
+TO anon, authenticated, public
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read of partner applications" ON public.partners;
+CREATE POLICY "Allow public read of partner applications"
+ON public.partners FOR SELECT
+TO anon, authenticated, public
+USING (true);
+
+DROP POLICY IF EXISTS "Allow update of partner applications" ON public.partners;
+CREATE POLICY "Allow update of partner applications"
+ON public.partners FOR UPDATE
+TO anon, authenticated, public
+USING (true)
+WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow delete of partner applications" ON public.partners;
+CREATE POLICY "Allow delete of partner applications"
+ON public.partners FOR DELETE
+TO anon, authenticated, public
+USING (true);
+
