@@ -393,13 +393,15 @@ async function loadAppConfig() {
     }
   }
 
-  el.stationSelect.addEventListener('change', async () => {
-    state.config.deviceId = el.stationSelect.value
-    if (isElectron) {
-      await window.quickinkDesktop.saveConfig({ deviceId: state.config.deviceId })
-    }
-    fetchRecentJobs()
-  })
+  if (el.stationSelect) {
+    el.stationSelect.addEventListener('change', async () => {
+      state.config.deviceId = el.stationSelect.value
+      if (isElectron) {
+        await window.quickinkDesktop.saveConfig({ deviceId: state.config.deviceId })
+      }
+      fetchRecentJobs()
+    })
+  }
 }
 
 // Scan Installed System Printers via Electron IPC
@@ -832,6 +834,7 @@ function computeStats(jobs) {
 
 // Fetch devices list for Station Selector
 async function fetchDevices() {
+  if (!el.stationSelect) return
   try {
     const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/devices`)
     const data = await res.json()
@@ -1405,6 +1408,10 @@ async function loadSavedAccount() {
         if (acc.status === 'rejected') {
           showRejectedScreen(acc, acc.rejection_reason)
           return
+        }
+
+        if (acc.deviceId) {
+          state.config.deviceId = acc.deviceId
         }
 
         updateHeaderProfile(acc)
