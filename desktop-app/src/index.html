@@ -193,9 +193,14 @@
                 <input type="tel" id="reg-phone" class="auth-field" placeholder="e.g. 01712345678" required />
               </div>
               <div class="auth-input-group">
-                <label for="reg-location" class="auth-label">Physical Location / Address *</label>
-                <input type="text" id="reg-location" class="auth-field" placeholder="e.g. Shop 12, Nilkhet Market, Dhaka" required />
+                <label for="reg-operating-hours" class="auth-label">Operating Hours *</label>
+                <input type="text" id="reg-operating-hours" class="auth-field" placeholder="e.g. 09:00 AM - 10:00 PM" value="09:00 AM - 10:00 PM" required />
               </div>
+            </div>
+
+            <div class="auth-input-group">
+              <label for="reg-location" class="auth-label">Physical Location / Address *</label>
+              <input type="text" id="reg-location" class="auth-field" placeholder="e.g. Shop 12, Nilkhet Market, Dhaka" required />
             </div>
 
             <!-- Media Upload: Shop Logo & Storefront Photo -->
@@ -406,6 +411,10 @@
             <div class="pending-meta-item">
               <span class="meta-label">Terminal Modality:</span>
               <span class="meta-val" id="pending-type">Partner Print Shop</span>
+            </div>
+            <div class="pending-meta-item">
+              <span class="meta-label">Operating Hours:</span>
+              <span class="meta-val text-white" id="pending-hours">09:00 AM - 10:00 PM</span>
             </div>
             <div class="pending-meta-item full-col">
               <span class="meta-label">Physical Location:</span>

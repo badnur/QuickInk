@@ -90,6 +90,7 @@ export async function POST(request) {
         shop_name,
         phone,
         location,
+        operating_hours,
         password,
         type = 'shop',
         logo_url = '',
@@ -109,6 +110,7 @@ export async function POST(request) {
 
       const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
       const reference_id = `QIK-REG-${Math.floor(100000 + Math.random() * 900000)}`
+      const resolvedHours = operating_hours || (type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM')
 
       // 1. Create or register Device in public.devices with 'offline' status (valid device_status enum)
       let provisionedDevice = null
@@ -118,7 +120,7 @@ export async function POST(request) {
         owner_name: name,
         shop_name: shop_name,
         type: type === 'kiosk' ? 'kiosk' : 'shop',
-        operating_hours: type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM',
+        operating_hours: resolvedHours,
         logo_url: logo_url || '',
         shop_photo_url: shop_photo_url || '',
         commission_rate: 40.0,
@@ -192,6 +194,7 @@ export async function POST(request) {
         phone: cleanPhone,
         location,
         type,
+        operating_hours: resolvedHours,
         status: 'pending', // Requires admin approval
         rejection_reason: null,
         password,
@@ -235,6 +238,7 @@ export async function POST(request) {
           phone: newAccount.phone,
           location: newAccount.location,
           type: newAccount.type,
+          operating_hours: newAccount.operating_hours,
           status: 'pending',
           logo_url: newAccount.logo_url,
           shop_photo_url: newAccount.shop_photo_url,

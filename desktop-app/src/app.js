@@ -19,6 +19,7 @@ const state = {
     shop_name: '',
     phone: '',
     location: '',
+    operating_hours: '09:00 AM - 10:00 PM',
     logo_url: '',
     shop_photo_url: '',
   },
@@ -185,6 +186,7 @@ const el = {
   pendingOwnerName: document.getElementById('pending-owner-name'),
   pendingPhone: document.getElementById('pending-phone'),
   pendingType: document.getElementById('pending-type'),
+  pendingHours: document.getElementById('pending-hours'),
   pendingLocation: document.getElementById('pending-location'),
   btnPendingCheckStatus: document.getElementById('btn-pending-check-status'),
   btnPendingLogout: document.getElementById('btn-pending-logout'),
@@ -211,6 +213,7 @@ const el = {
   regOwnerName: document.getElementById('reg-owner-name'),
   regShopName: document.getElementById('reg-shop-name'),
   regPhone: document.getElementById('reg-phone'),
+  regOperatingHours: document.getElementById('reg-operating-hours'),
   regLocation: document.getElementById('reg-location'),
   regLogoInput: document.getElementById('reg-logo-input'),
   btnBrowseLogo: document.getElementById('btn-browse-logo'),
@@ -851,11 +854,17 @@ function setupAuthSystem() {
     el.labelModShop.classList.add('active')
     el.labelModKiosk.classList.remove('active')
     state.regDraft.type = 'shop'
+    if (el.regOperatingHours && (el.regOperatingHours.value === '24/7 Automated' || !el.regOperatingHours.value)) {
+      el.regOperatingHours.value = '09:00 AM - 10:00 PM'
+    }
   })
   el.labelModKiosk?.addEventListener('click', () => {
     el.labelModKiosk.classList.add('active')
     el.labelModShop.classList.remove('active')
     state.regDraft.type = 'kiosk'
+    if (el.regOperatingHours && (el.regOperatingHours.value === '09:00 AM - 10:00 PM' || !el.regOperatingHours.value)) {
+      el.regOperatingHours.value = '24/7 Automated'
+    }
   })
 
   // 6. Media Pickers (Logo & Storefront Photo)
@@ -1000,6 +1009,7 @@ function showPendingScreen(acc) {
     if (el.pendingOwnerName) el.pendingOwnerName.textContent = acc.name || 'Partner Owner'
     if (el.pendingPhone) el.pendingPhone.textContent = acc.phone || '017XXXXXXXX'
     if (el.pendingType) el.pendingType.textContent = acc.type === 'kiosk' ? 'Automated Kiosk' : 'Partner Print Shop'
+    if (el.pendingHours) el.pendingHours.textContent = acc.operating_hours || (acc.type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM')
     if (el.pendingLocation) el.pendingLocation.textContent = acc.location || 'Location Address'
   }
   showScreen('pending')
@@ -1028,12 +1038,14 @@ function handleReRegister() {
     shop_name: '',
     phone: '',
     location: '',
+    operating_hours: '09:00 AM - 10:00 PM',
     logo_url: '',
     shop_photo_url: '',
   }
   if (el.regOwnerName) el.regOwnerName.value = ''
   if (el.regShopName) el.regShopName.value = ''
   if (el.regPhone) el.regPhone.value = ''
+  if (el.regOperatingHours) el.regOperatingHours.value = '09:00 AM - 10:00 PM'
   if (el.regLocation) el.regLocation.value = ''
   if (el.regNewPassword) el.regNewPassword.value = ''
   if (el.regConfirmPassword) el.regConfirmPassword.value = ''
@@ -1256,6 +1268,7 @@ async function handleSendMobileOtp() {
   const shop_name = el.regShopName.value.trim()
   const phone = el.regPhone.value.trim()
   const location = el.regLocation.value.trim()
+  const operating_hours = el.regOperatingHours?.value.trim() || (state.regDraft.type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM')
 
   if (!name || !shop_name || !phone || !location) {
     showRegMsg(el.regStep1StatusMsg, 'Please fill in all required fields (Owner Name, Shop Name, Phone, Location).', true)
@@ -1276,6 +1289,7 @@ async function handleSendMobileOtp() {
   state.regDraft.shop_name = shop_name
   state.regDraft.phone = cleanPhone
   state.regDraft.location = location
+  state.regDraft.operating_hours = operating_hours
 
   try {
     const controller = new AbortController()
@@ -1403,6 +1417,7 @@ async function handleFinishRegistration() {
     shop_name: state.regDraft.shop_name,
     phone: state.regDraft.phone,
     location: state.regDraft.location,
+    operating_hours: state.regDraft.operating_hours,
     password: pass,
     type: state.regDraft.type,
     logo_url: state.regDraft.logo_url,
