@@ -73,7 +73,8 @@ export default function AdminDevicesPage() {
   const [editAddress, setEditAddress] = useState('')
   const [editHours, setEditHours] = useState('')
   const [editPhone, setEditPhone] = useState('')
-  const [editCommission, setEditCommission] = useState(40)
+  const [editSubPlan, setEditSubPlan] = useState('Pro SaaS')
+  const [editSubStatus, setEditSubStatus] = useState('active')
   const [editSubmitting, setEditSubmitting] = useState(false)
 
   const fetchDevices = async () => {
@@ -154,7 +155,8 @@ export default function AdminDevicesPage() {
     setEditAddress(loc.address || '')
     setEditHours(loc.operating_hours || '')
     setEditPhone(loc.phone || '')
-    setEditCommission(loc.commission_rate || 40)
+    setEditSubPlan(loc.subscription_plan || 'Pro SaaS')
+    setEditSubStatus(loc.subscription_status || 'active')
   }
 
   // Save device updates
@@ -168,7 +170,9 @@ export default function AdminDevicesPage() {
         address: editAddress,
         operating_hours: editHours,
         phone: editPhone,
-        commission_rate: Number(editCommission) || 40,
+        subscription_plan: editSubPlan,
+        subscription_status: editSubStatus,
+        payout_rate: 100.0,
       }
 
       await fetch('/api/admin/devices', {
@@ -410,6 +414,21 @@ export default function AdminDevicesPage() {
                     )}
                   </div>
 
+                  {/* SaaS Subscription Info */}
+                  <div className="bg-emerald-950/20 border border-emerald-800/30 rounded-xl p-2.5 mb-3 flex items-center justify-between text-xs">
+                    <div>
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">SaaS Subscription</div>
+                      <div className="font-bold text-emerald-400 text-xs mt-0.5">{loc.subscription_plan || 'Pro SaaS'} · 100% Retained</div>
+                    </div>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
+                      (loc.subscription_status || 'active') === 'active'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                    }`}>
+                      {loc.subscription_status || 'active'}
+                    </span>
+                  </div>
+
                   {/* Desktop Pairing Key Box */}
                   <div className="bg-slate-900/90 border border-slate-800 rounded-xl p-2.5 mb-4">
                     <div className="flex items-center justify-between text-[10px] text-slate-500 mb-1">
@@ -604,23 +623,41 @@ export default function AdminDevicesPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-bold text-slate-300 block mb-1">Partner Commission (%)</label>
-                  <Input
-                    type="number"
-                    value={editCommission}
-                    onChange={(e) => setEditCommission(e.target.value)}
-                    className="text-xs bg-slate-900 border-slate-800 text-white h-9 rounded-xl"
-                  />
+                  <label className="text-xs font-bold text-slate-300 block mb-1">SaaS Plan (100% Payout)</label>
+                  <select
+                    value={editSubPlan}
+                    onChange={(e) => setEditSubPlan(e.target.value)}
+                    className="w-full text-xs h-9 bg-slate-900 border border-slate-800 rounded-xl text-white px-2.5 outline-none"
+                  >
+                    <option value="Pro SaaS">Pro SaaS (100% Retained)</option>
+                    <option value="Standard SaaS">Standard SaaS</option>
+                    <option value="Trial">14-Day Free Trial</option>
+                  </select>
                 </div>
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1">Contact Phone</label>
-                <Input
-                  value={editPhone}
-                  onChange={(e) => setEditPhone(e.target.value)}
-                  className="text-xs bg-slate-900 border-slate-800 text-white h-9 rounded-xl"
-                />
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">Contact Phone</label>
+                  <Input
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    className="text-xs bg-slate-900 border-slate-800 text-white h-9 rounded-xl"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-300 block mb-1">Subscription Status</label>
+                  <select
+                    value={editSubStatus}
+                    onChange={(e) => setEditSubStatus(e.target.value)}
+                    className="w-full text-xs h-9 bg-slate-900 border border-slate-800 rounded-xl text-white px-2.5 outline-none"
+                  >
+                    <option value="active">Active (Full Access)</option>
+                    <option value="trialing">Trial Period</option>
+                    <option value="past_due">Past Due (Unpaid)</option>
+                    <option value="canceled">Canceled</option>
+                  </select>
+                </div>
               </div>
 
               <div className="pt-2 flex justify-end gap-2">

@@ -148,9 +148,10 @@ export async function GET(request, { params }) {
       }
     })
 
-    const commissionRate = (device.location?.commission_rate || 40.0) / 100
-    const partnerCommission = totalRevenue * commissionRate
-    const platformNet = totalRevenue - partnerCommission
+    // SaaS Model: Shop retains 100% of all print revenue
+    const shopEarnings = totalRevenue
+    const subscriptionStatus = device.location?.subscription_status || 'active'
+    const subscriptionPlan = device.location?.subscription_plan || 'Pro SaaS'
 
     return NextResponse.json({
       success: true,
@@ -161,11 +162,13 @@ export async function GET(request, { params }) {
         bwSheets,
         colorSheets,
         totalRevenue: Math.round(totalRevenue * 100) / 100,
-        partnerCommission: Math.round(partnerCommission * 100) / 100,
-        platformNet: Math.round(platformNet * 100) / 100,
+        shopEarnings: Math.round(shopEarnings * 100) / 100,
+        partnerCommission: Math.round(shopEarnings * 100) / 100, // backward compat
+        subscriptionStatus,
+        subscriptionPlan,
         cashCollected: Math.round(cashCollected * 100) / 100,
         digitalCollected: Math.round(digitalCollected * 100) / 100,
-        commissionRatePercent: Math.round(commissionRate * 100),
+        payoutRatePercent: 100,
       },
       jobs: jobs.slice(0, 20),
     })

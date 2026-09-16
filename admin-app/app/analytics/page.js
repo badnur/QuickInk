@@ -11,16 +11,23 @@ import {
   Download,
   FileCheck,
   CreditCard,
-  DollarSign
+  DollarSign,
+  Store,
+  HardDrive,
+  ExternalLink,
+  Award
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import AdminHeader from '@/components/admin/AdminHeader'
 import StatCard from '@/components/admin/StatCard'
+import DevicePerformanceModal from '@/components/admin/DevicePerformanceModal'
 
 export default function AdminAnalyticsPage() {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [selectedDeviceForModal, setSelectedDeviceForModal] = useState(null)
 
   const fetchStats = async () => {
     setRefreshing(true)
@@ -212,8 +219,148 @@ export default function AdminAnalyticsPage() {
               </div>
             </div>
           </div>
+        {/* Shop Print Volumes & Earnings Leaderboard (SaaS Subscription Model) */}
+        <div className="bg-[#0d131f] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+          <div className="p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <Award className="w-4 h-4 text-[#00bf63]" /> Shop Print Volumes & Earnings Leaderboard
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                SaaS model: Shop partners keep 100% of their print customer revenue. Track copies printed and shop payouts.
+              </p>
+            </div>
+            <div className="text-xs text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl font-medium self-start sm:self-auto">
+              {(data?.shopLeaderboard || []).length} Active Hardware Stations
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#090d16] text-slate-400 border-b border-slate-800">
+                <tr>
+                  <th className="py-3 px-4 font-semibold">Rank / Station</th>
+                  <th className="py-3 px-4 font-semibold">Hardware Type</th>
+                  <th className="py-3 px-4 font-semibold">SaaS Subscription</th>
+                  <th className="py-3 px-4 font-semibold text-center">Jobs</th>
+                  <th className="py-3 px-4 font-semibold">Copies / Sheets</th>
+                  <th className="py-3 px-4 font-semibold text-right">Shop Earnings (100%)</th>
+                  <th className="py-3 px-4 font-semibold text-right">Telemetry</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                {(data?.shopLeaderboard || []).length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-slate-500 text-xs">
+                      No active stations or print history found.
+                    </td>
+                  </tr>
+                ) : (
+                  (data?.shopLeaderboard || []).map((shop, index) => {
+                    const isKiosk = shop.type === 'kiosk'
+                    return (
+                      <tr key={shop.id} className="hover:bg-slate-800/20 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                              index === 0
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                : index === 1
+                                ? 'bg-slate-400/20 text-slate-300 border border-slate-400/40'
+                                : index === 2
+                                ? 'bg-orange-500/20 text-orange-300 border border-orange-500/40'
+                                : 'bg-slate-900 text-slate-500 border border-slate-800'
+                            }`}>
+                              {index + 1}
+                            </span>
+                            <div>
+                              <div className="font-bold text-white text-xs flex items-center gap-1.5">
+                                {shop.name}
+                                {shop.status === 'online' && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-[#00bf63]" title="Online" />
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-400 truncate max-w-[220px]">
+                                {shop.address}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-4">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                            isKiosk
+                              ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
+                              : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                          }`}>
+                            {isKiosk ? <HardDrive className="w-2.5 h-2.5" /> : <Store className="w-2.5 h-2.5" />}
+                            {shop.type}
+                          </span>
+                        </td>
+
+                        <td className="py-3 px-4">
+                          <div className="flex flex-col">
+                            <span className="font-medium text-emerald-400 text-xs">
+                              {shop.subscriptionPlan || 'Pro SaaS'}
+                            </span>
+                            <span className="text-[10px] text-slate-400">
+                              Status: <span className="capitalize text-slate-300 font-semibold">{shop.subscriptionStatus || 'Active'}</span> (0% fee)
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-4 text-center font-mono font-bold text-white">
+                          {shop.totalJobs}
+                        </td>
+
+                        <td className="py-3 px-4">
+                          <div className="font-bold text-white text-sm font-mono">
+                            {shop.totalSheets.toLocaleString()}{' '}
+                            <span className="text-[10px] font-normal text-slate-400 font-sans">copies</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400">
+                            <span>{shop.bwSheets} B&W</span> · <span className="text-[#00bf63]">{shop.colorSheets} Color</span>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-4 text-right">
+                          <div className="font-extrabold text-base text-[#00bf63] font-mono">
+                            ৳{(shop.shopEarnings || 0).toLocaleString()}
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-medium">
+                            100% full payout
+                          </span>
+                        </td>
+
+                        <td className="py-3 px-4 text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setSelectedDeviceForModal(shop)}
+                            className="h-7 px-2.5 text-[11px] bg-slate-900 border-slate-800 text-slate-300 hover:text-white hover:border-slate-700"
+                          >
+                            <ExternalLink className="w-3 h-3 mr-1 text-[#00bf63]" />
+                            View Ledger
+                          </Button>
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </main>
+
+      {/* Station Performance Telemetry Modal */}
+      {selectedDeviceForModal && (
+        <DevicePerformanceModal
+          isOpen={Boolean(selectedDeviceForModal)}
+          onClose={() => setSelectedDeviceForModal(null)}
+          device={selectedDeviceForModal}
+        />
+      )}
     </div>
   )
 }

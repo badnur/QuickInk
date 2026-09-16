@@ -772,7 +772,7 @@ function renderJobsTable(jobs) {
 
 el.queueSearch?.addEventListener('input', () => renderJobsTable(state.recentJobs))
 
-// Compute daily revenue & 40% commission
+// Compute daily revenue & 100% shop earnings (SaaS subscription model)
 function computeStats(jobs) {
   let bwSheets = 0
   let colorSheets = 0
@@ -789,16 +789,17 @@ function computeStats(jobs) {
     }
   })
 
-  const commission = totalRevenue * 0.4
+  // Under SaaS subscription model, shop owner keeps 100% of print revenue
+  const shopEarnings = totalRevenue
 
   if (el.metricTotalJobs) el.metricTotalJobs.textContent = jobs.length
   if (el.metricBwSheets) el.metricBwSheets.textContent = bwSheets
   if (el.metricColorSheets) el.metricColorSheets.textContent = colorSheets
-  if (el.metricPartnerCommission) el.metricPartnerCommission.textContent = `৳${commission.toFixed(2)}`
+  if (el.metricPartnerCommission) el.metricPartnerCommission.textContent = `৳${shopEarnings.toFixed(2)}`
 
   if (el.miniStatJobs) el.miniStatJobs.textContent = jobs.length
   if (el.miniStatPages) el.miniStatPages.textContent = bwSheets + colorSheets
-  if (el.miniStatCommission) el.miniStatCommission.textContent = `৳${commission.toFixed(2)}`
+  if (el.miniStatCommission) el.miniStatCommission.textContent = `৳${shopEarnings.toFixed(2)}`
 }
 
 // Fetch devices list for Station Selector

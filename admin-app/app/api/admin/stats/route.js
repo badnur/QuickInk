@@ -103,6 +103,47 @@ export async function GET(request) {
       device_name: allDevices.find((d) => d.id === j.redeemed_by_device_id)?.name || 'Not yet redeemed',
     }))
 
+    // Per-shop copies, earnings, and SaaS subscription breakdown
+    const shopLeaderboard = allDevices.map((d) => {
+      const loc = typeof d.location === 'object' && d.location !== null ? d.location : {}
+      const shopJobs = allJobs.filter((j) => j.redeemed_by_device_id === d.id)
+
+      let shopSheets = 0
+      let shopRevenue = 0
+      let bwSheets = 0
+      let colorSheets = 0
+
+      shopJobs.forEach((j) => {
+        const pages = (j.page_count || 1) * (j.copies || 1)
+        shopSheets += pages
+        if (j.color_mode === 'color') {
+          colorSheets += pages
+        } else {
+          bwSheets += pages
+        }
+        const amt = parseFloat(j.amount) || (pages * (j.color_mode === 'color' ? 8 : 2))
+        shopRevenue += amt
+      })
+
+      return {
+        id: d.id,
+        name: d.name,
+        type: d.type,
+        status: d.status,
+        address: loc.address || 'Configured Address',
+        phone: loc.phone || 'N/A',
+        operating_hours: loc.operating_hours || '24/7',
+        subscriptionPlan: loc.subscription_plan || 'Pro SaaS',
+        subscriptionStatus: loc.subscription_status || 'active',
+        payoutRate: loc.payout_rate ?? 100,
+        totalJobs: shopJobs.length,
+        totalSheets: shopSheets,
+        bwSheets,
+        colorSheets,
+        shopEarnings: shopRevenue,
+      }
+    }).sort((a, b) => b.totalSheets - a.totalSheets)
+
     return NextResponse.json({
       success: true,
       stats: {
@@ -123,6 +164,7 @@ export async function GET(request) {
       chartData,
       recentJobs,
       devices: allDevices,
+      shopLeaderboard,
     })
   } catch (err) {
     console.error('Admin stats error:', err)

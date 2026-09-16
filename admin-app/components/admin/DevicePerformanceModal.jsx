@@ -145,14 +145,15 @@ export default function DevicePerformanceModal({ device, isOpen, onClose }) {
 
               <div className="bg-[#111827] border border-emerald-900/40 bg-emerald-950/20 rounded-xl p-3.5">
                 <div className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider flex items-center justify-between">
-                  <span>Partner Commission</span>
-                  <span className="text-[10px] bg-emerald-900/60 px-1.5 py-0.2 rounded font-bold">
-                    {kpis?.commissionRatePercent || 40}%
+                  <span>Shop Earnings</span>
+                  <span className="text-[10px] bg-emerald-900/60 px-1.5 py-0.5 rounded font-bold">
+                    100% Retained
                   </span>
                 </div>
-                <div className="text-2xl font-black text-[#00bf63] mt-1">৳{kpis?.partnerCommission?.toFixed(2) || '0.00'}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">
-                  QuickInk Net: ৳{kpis?.platformNet?.toFixed(2) || '0.00'}
+                <div className="text-2xl font-black text-[#00bf63] mt-1">৳{(kpis?.shopEarnings ?? kpis?.totalRevenue ?? 0).toFixed(2)}</div>
+                <div className="text-[10px] text-slate-400 mt-0.5 flex items-center justify-between">
+                  <span>Plan: {kpis?.subscriptionPlan || 'Pro SaaS'}</span>
+                  <span className="capitalize text-emerald-400 font-medium">({kpis?.subscriptionStatus || 'Active'})</span>
                 </div>
               </div>
             </div>
