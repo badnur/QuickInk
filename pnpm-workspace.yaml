@@ -1,5 +1,6 @@
 packages:
-  - '.'
+  - 'user-app'
+  - 'admin-app'
   - 'desktop-app'
 
 allowBuilds:

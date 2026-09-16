@@ -6,7 +6,86 @@ settings:
 
 importers:
 
-  .:
+  .: {}
+
+  admin-app:
+    dependencies:
+      '@radix-ui/react-dialog':
+        specifier: ^1.1.15
+        version: 1.1.15(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@radix-ui/react-slot':
+        specifier: ^1.2.4
+        version: 1.2.4(@types/react@19.2.14)(react@19.2.4)
+      '@supabase/supabase-js':
+        specifier: ^2.116.0
+        version: 2.116.0
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      lucide-react:
+        specifier: ^1.6.0
+        version: 1.6.0(react@19.2.4)
+      next:
+        specifier: 16.2.1
+        version: 16.2.1(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      qrcode:
+        specifier: ^1.5.4
+        version: 1.5.4
+      react:
+        specifier: ^19.2.4
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.2.4
+        version: 19.2.4(react@19.2.4)
+      recharts:
+        specifier: ^3.8.0
+        version: 3.8.0(@types/react@19.2.14)(react-dom@19.2.4(react@19.2.4))(react-is@18.3.1)(react@19.2.4)(redux@5.0.1)
+      tailwind-merge:
+        specifier: ^3.5.0
+        version: 3.5.0
+    devDependencies:
+      '@tailwindcss/postcss':
+        specifier: ^4.2.2
+        version: 4.2.2
+      '@types/qrcode':
+        specifier: ^1.5.6
+        version: 1.5.6
+      '@types/react':
+        specifier: 19.2.14
+        version: 19.2.14
+      autoprefixer:
+        specifier: ^10.4.27
+        version: 10.4.27(postcss@8.5.8)
+      postcss:
+        specifier: ^8.5.8
+        version: 8.5.8
+      tailwindcss:
+        specifier: ^4.2.2
+        version: 4.2.2
+      typescript:
+        specifier: 6.0.2
+        version: 6.0.2
+
+  desktop-app:
+    dependencies:
+      jimp:
+        specifier: ^1.6.1
+        version: 1.6.1
+      pdf-lib:
+        specifier: ^1.17.1
+        version: 1.17.1
+      pdf-to-printer:
+        specifier: ^5.8.1
+        version: 5.8.1
+    devDependencies:
+      electron:
+        specifier: ^34.0.0
+        version: 34.5.8
+
+  user-app:
     dependencies:
       '@hookform/resolvers':
         specifier: ^5.2.2
@@ -189,22 +268,6 @@ importers:
       typescript:
         specifier: 6.0.2
         version: 6.0.2
-
-  desktop-app:
-    dependencies:
-      jimp:
-        specifier: ^1.6.1
-        version: 1.6.1
-      pdf-lib:
-        specifier: ^1.17.1
-        version: 1.17.1
-      pdf-to-printer:
-        specifier: ^5.8.1
-        version: 5.8.1
-    devDependencies:
-      electron:
-        specifier: ^34.0.0
-        version: 34.5.8
 
 packages:
 
@@ -2357,7 +2420,6 @@ packages:
 
   tailwindcss@4.2.2:
     resolution: {integrity: sha512-KWBIxs1Xb6NoLdMVqhbhgwZf2PGBpPEiwOqgI4pFIYbNTfBXiKYyWoTsXgBQ9WFg/OlhnvHaY+AEpW7wSmFo2Q==}
-    hasBin: true
 
   tapable@2.3.2:
     resolution: {integrity: sha512-1MOpMXuhGzGL5TTCZFItxCc0AARf1EZFQkGqMm7ERKj8+Hgr5oLvJOVFcC+lRmR8hCe2S3jC4T5D7Vg/d7/fhA==}
