@@ -292,9 +292,12 @@ async function init() {
     }
   }, 10000)
 
-  // Auto-scan printers when window regains focus
+  // Auto-scan printers when window regains focus (only on workspace, not on login/register)
   window.addEventListener('focus', () => {
-    scanSystemPrinters()
+    const workspaceActive = el.screenWorkspace && !el.screenWorkspace.classList.contains('hidden')
+    if (workspaceActive) {
+      scanSystemPrinters()
+    }
   })
 }
 
@@ -370,6 +373,11 @@ async function loadAppConfig() {
 
 // Scan Installed System Printers via Electron IPC
 async function scanSystemPrinters() {
+  // Don't disrupt the user while they are typing in login or registration screens
+  const activeEl = document.activeElement
+  const isTypingInInput = activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')
+  if (isTypingInInput) return
+
   el.selectBwPrinter.innerHTML = '<option value="">Scanning installed printers...</option>'
   el.selectColorPrinter.innerHTML = '<option value="">Scanning installed printers...</option>'
 
