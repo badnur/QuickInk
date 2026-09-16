@@ -322,10 +322,10 @@ function setupClock() {
 // Window Controls (Electron IPC)
 function setupWindowControls() {
   if (isElectron) {
-    el.btnWinMin.addEventListener('click', () => window.quickinkDesktop.minimize())
-    el.btnWinMax.addEventListener('click', () => window.quickinkDesktop.maximize())
-    el.btnWinClose.addEventListener('click', () => window.quickinkDesktop.close())
-    el.btnToggleKiosk.addEventListener('click', () => window.quickinkDesktop.toggleKiosk())
+    el.btnWinMin?.addEventListener('click', () => window.quickinkDesktop.minimize())
+    el.btnWinMax?.addEventListener('click', () => window.quickinkDesktop.maximize())
+    el.btnWinClose?.addEventListener('click', () => window.quickinkDesktop.close())
+    el.btnToggleKiosk?.addEventListener('click', () => window.quickinkDesktop.toggleKiosk())
   }
 }
 
