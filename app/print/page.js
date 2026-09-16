@@ -8,6 +8,7 @@ import DocumentScannerModal from '@/components/scanner/DocumentScannerModal'
 import PassportPhotoModal from '@/components/print/PassportPhotoModal'
 import IdCardScannerModal from '@/components/print/IdCardScannerModal'
 import { playCompletionChime } from '@/lib/audio-chime'
+import { loadPdfDocument, renderPdfPageToDataUrl } from '@/lib/pdf-utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -104,6 +105,10 @@ function PrintOrderPageContent({ initialDeviceId }) {
   const [filePreviewUrl, setFilePreviewUrl] = useState(null)
   const [showChoiceScreen, setShowChoiceScreen] = useState(false)
   const [previewPageIndex, setPreviewPageIndex] = useState(1)
+  const [pdfDoc, setPdfDoc] = useState(null)
+  const [pagePreviewUrls, setPagePreviewUrls] = useState({})
+  const [isAnalyzingPdf, setIsAnalyzingPdf] = useState(false)
+  const [isRenderingPage, setIsRenderingPage] = useState(false)
 
   // Adjustment state
   const [rotation, setRotation] = useState(0) // 0, 90, 180, 270
@@ -233,27 +238,89 @@ function PrintOrderPageContent({ initialDeviceId }) {
   }, [ticketOrder?.id])
 
   // Handle standard file selection
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     setSelectedFile(file)
     setSubmitError(null)
-    setTotalPages(1)
     setPreviewPageIndex(1)
     setRotation(0)
     setBrightness(0)
     setContrast(0)
+    setPdfDoc(null)
+    setPagePreviewUrls({})
+
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
 
     if (file.type.startsWith('image/')) {
       const url = URL.createObjectURL(file)
       setFilePreviewUrl(url)
+      setTotalPages(1)
+      setFromPage(1)
+      setToPage(1)
+      setShowChoiceScreen(true)
+    } else if (isPdf) {
+      setFilePreviewUrl(null)
+      setIsAnalyzingPdf(true)
+      setTotalPages(1)
+      setFromPage(1)
+      setToPage(1)
+      setShowChoiceScreen(true)
+
+      try {
+        const { pdfDoc: loadedDoc, pageCount } = await loadPdfDocument(file)
+        setPdfDoc(loadedDoc)
+        const pages = Math.max(1, pageCount || 1)
+        setTotalPages(pages)
+        setFromPage(1)
+        setToPage(pages)
+
+        if (loadedDoc) {
+          const firstPagePreview = await renderPdfPageToDataUrl(loadedDoc, 1)
+          if (firstPagePreview) {
+            setPagePreviewUrls({ 1: firstPagePreview })
+            setFilePreviewUrl(firstPagePreview)
+          }
+        }
+      } catch (err) {
+        console.warn('PDF load notice:', err)
+      } finally {
+        setIsAnalyzingPdf(false)
+      }
     } else {
       setFilePreviewUrl(null)
+      setTotalPages(1)
+      setFromPage(1)
+      setToPage(1)
+      setShowChoiceScreen(true)
+    }
+  }
+
+  // Handle switching pages in preview for multipage PDF
+  const handlePdfPageChange = async (targetPage) => {
+    const pageNum = Math.max(1, Math.min(targetPage, totalPages))
+    setPreviewPageIndex(pageNum)
+
+    if (pagePreviewUrls[pageNum]) {
+      setFilePreviewUrl(pagePreviewUrls[pageNum])
+      return
     }
 
-    // Show Choice Screen
-    setShowChoiceScreen(true)
+    if (pdfDoc) {
+      setIsRenderingPage(true)
+      try {
+        const dataUrl = await renderPdfPageToDataUrl(pdfDoc, pageNum)
+        if (dataUrl) {
+          setPagePreviewUrls((prev) => ({ ...prev, [pageNum]: dataUrl }))
+          setFilePreviewUrl(dataUrl)
+        }
+      } catch (err) {
+        console.warn(`Failed to render page ${pageNum}:`, err)
+      } finally {
+        setIsRenderingPage(false)
+      }
+    }
   }
 
   // Handle scanner completion
@@ -445,12 +512,22 @@ function PrintOrderPageContent({ initialDeviceId }) {
               <div className="text-3xl mb-1">👀</div>
               <h3 className="text-lg font-bold text-gray-900 mb-1">File Loaded</h3>
               <p className="text-xs text-gray-500 max-w-sm mx-auto mb-4">
-                <strong>{selectedFile.name}</strong> • {(selectedFile.size / 1024).toFixed(1)} KB
+                <strong>{selectedFile.name}</strong> • {(selectedFile.size / 1024).toFixed(1)} KB •{' '}
+                {isAnalyzingPdf ? (
+                  <span className="text-[#00bf63] font-semibold animate-pulse">Analyzing pages...</span>
+                ) : (
+                  <span>{totalPages} {totalPages === 1 ? 'Page' : 'Pages'}</span>
+                )}
               </p>
 
               {/* Quick Thumbnail Preview */}
               <div className="bg-slate-50 border border-gray-200 rounded-xl p-3 flex items-center justify-center max-h-44 mb-5 overflow-hidden">
-                {filePreviewUrl ? (
+                {isAnalyzingPdf ? (
+                  <div className="py-6 flex flex-col items-center">
+                    <RefreshCw className="w-8 h-8 text-[#00bf63] animate-spin mb-2" />
+                    <span className="text-xs font-semibold text-gray-600">Analyzing PDF...</span>
+                  </div>
+                ) : filePreviewUrl ? (
                   <img
                     src={filePreviewUrl}
                     alt="Quick preview"
@@ -654,6 +731,11 @@ function PrintOrderPageContent({ initialDeviceId }) {
                     size="sm"
                     onClick={() => {
                       setSelectedFile(null)
+                      setFilePreviewUrl(null)
+                      setPdfDoc(null)
+                      setPagePreviewUrls({})
+                      setTotalPages(1)
+                      setPreviewPageIndex(1)
                       setShowChoiceScreen(false)
                       setStep(1)
                     }}
@@ -664,26 +746,82 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 </div>
 
                 {/* Visual Preview Box with Rotation & Filter Adjustments */}
-                <div className="bg-slate-50 border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center min-h-[200px] mb-3 overflow-hidden">
-                  {filePreviewUrl ? (
-                    <img
-                      src={filePreviewUrl}
-                      alt="Document Preview"
-                      style={{
-                        transform: `rotate(${rotation}deg)`,
-                        filter: `brightness(${100 + brightness}%) contrast(${100 + contrast}%)`,
-                        transition: 'transform 0.15s ease, filter 0.15s ease'
-                      }}
-                      className="max-h-52 max-w-full rounded border object-contain bg-white"
-                    />
+                <div className="bg-slate-50 border border-gray-200 rounded-xl p-3 flex flex-col items-center justify-center min-h-[220px] mb-3 overflow-hidden relative">
+                  {isAnalyzingPdf ? (
+                    <div className="text-center py-8">
+                      <RefreshCw className="h-8 w-8 text-[#00bf63] animate-spin mx-auto mb-2" />
+                      <p className="text-xs font-bold text-gray-700">Analyzing Document Pages...</p>
+                      <span className="text-[10px] text-gray-400">Reading PDF structure</span>
+                    </div>
+                  ) : filePreviewUrl ? (
+                    <div className="relative flex flex-col items-center justify-center">
+                      {isRenderingPage && (
+                        <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center z-10 rounded">
+                          <RefreshCw className="h-6 w-6 text-[#00bf63] animate-spin" />
+                        </div>
+                      )}
+                      <img
+                        src={filePreviewUrl}
+                        alt="Document Preview"
+                        style={{
+                          transform: `rotate(${rotation}deg)`,
+                          filter: `brightness(${100 + brightness}%) contrast(${100 + contrast}%)`,
+                          transition: 'transform 0.15s ease, filter 0.15s ease'
+                        }}
+                        className="max-h-56 max-w-full rounded border object-contain bg-white shadow-sm"
+                      />
+                    </div>
                   ) : (
                     <div className="text-center py-6">
                       <FileText className="h-12 w-12 text-[#00bf63] mx-auto mb-1.5" />
                       <p className="text-xs font-bold text-gray-700">PDF Document Loaded</p>
-                      <span className="text-[10px] text-gray-400">Standard A4 page format</span>
+                      <span className="text-[10px] text-gray-400">{totalPages} {totalPages === 1 ? 'page' : 'pages'} ready</span>
                     </div>
                   )}
                 </div>
+
+                {/* Multipage PDF Page Navigation */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between bg-slate-100/90 border border-gray-200 rounded-xl px-3 py-1.5 mb-3">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={previewPageIndex <= 1 || isRenderingPage}
+                      onClick={() => handlePdfPageChange(previewPageIndex - 1)}
+                      className="h-7 px-2 text-xs font-bold text-gray-700 hover:text-[#00bf63] hover:bg-white"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5 mr-0.5" /> Prev
+                    </Button>
+
+                    <div className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
+                      <span>Previewing Page</span>
+                      <input
+                        type="number"
+                        min={1}
+                        max={totalPages}
+                        value={previewPageIndex}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value)
+                          if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                            handlePdfPageChange(val)
+                          }
+                        }}
+                        className="w-12 text-center font-bold text-gray-900 border border-gray-300 rounded py-0.5 text-xs bg-white focus:outline-none focus:border-[#00bf63]"
+                      />
+                      <span className="text-gray-400">of {totalPages}</span>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      disabled={previewPageIndex >= totalPages || isRenderingPage}
+                      onClick={() => handlePdfPageChange(previewPageIndex + 1)}
+                      className="h-7 px-2 text-xs font-bold text-gray-700 hover:text-[#00bf63] hover:bg-white"
+                    >
+                      Next <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                    </Button>
+                  </div>
+                )}
 
                 {/* Quick Toolbar for Adjustments */}
                 <div className="flex items-center justify-between gap-2 mb-3">
