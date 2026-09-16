@@ -89,12 +89,55 @@ export async function GET(request) {
 
     const { data, error } = await query
 
+    let results = []
     if (!error && data && data.length > 0) {
-      return NextResponse.json({ success: true, partners: data })
+      results = data
+    } else {
+      results = [...memoryPartners]
     }
 
-    // Return memory partners filtered
-    let filtered = [...memoryPartners]
+    // Attempt to merge any live desktop accounts from user-app (e.g. newly registered in memory)
+    try {
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), 1200)
+      const resp = await fetch('http://localhost:3000/api/desktop/auth?action=list-accounts', {
+        signal: controller.signal
+      }).catch(() => null)
+      clearTimeout(timer)
+
+      if (resp && resp.ok) {
+        const accData = await resp.json()
+        if (accData?.accounts) {
+          accData.accounts.forEach((acc) => {
+            const alreadyInResults = results.some((p) => p.phone === acc.phone)
+            if (!alreadyInResults) {
+              const syntheticPartner = {
+                id: acc.id || `partner-${acc.phone}`,
+                reference_id: acc.reference_id || `QIK-REG-${Math.floor(100000 + Math.random() * 900000)}`,
+                type: acc.type || 'shop',
+                name: acc.name,
+                shop_name: acc.shop_name,
+                phone: acc.phone,
+                location: acc.location,
+                logo_url: acc.logo_url || '',
+                shop_photo_url: acc.shop_photo_url || '',
+                status: acc.status || 'pending',
+                created_at: acc.created_at || new Date().toISOString(),
+              }
+              results.unshift(syntheticPartner)
+              if (!memoryPartners.some((p) => p.phone === acc.phone)) {
+                memoryPartners.unshift(syntheticPartner)
+              }
+            }
+          })
+        }
+      }
+    } catch (syncErr) {
+      // Safe to ignore
+    }
+
+    // Return filtered
+    let filtered = results
     if (status && status !== 'all') {
       filtered = filtered.filter((p) => p.status === status)
     }
@@ -153,6 +196,8 @@ export async function POST(request) {
       city: partner.city || 'Dhaka',
       commission_rate: partner.commission_rate || 40.0,
       printer_model: partner.printer_model || 'Auto-Detected',
+      logo_url: partner.logo_url || '',
+      shop_photo_url: partner.shop_photo_url || '',
     }
 
     // 3. Provision the device in public.devices
@@ -200,6 +245,22 @@ export async function POST(request) {
       memoryPartners[memIndex].provisioned_device_id = provisionedDevice.id
     }
 
+    // 5. Notify Desktop Auth API (user-app) to unlock dashboard immediately
+    try {
+      fetch('http://localhost:3000/api/desktop/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'admin-approve',
+          phone: partner.phone,
+          deviceId: provisionedDevice.id,
+          partnerId: partner.id,
+        })
+      }).catch(() => {})
+    } catch (syncErr) {
+      // safe
+    }
+
     return NextResponse.json({
       success: true,
       message: `Station successfully provisioned for ${partner.shop_name}`,
@@ -245,9 +306,29 @@ export async function PATCH(request) {
       memoryPartners[memIdx] = { ...memoryPartners[memIdx], ...updates }
     }
 
+    const targetPartner = data || memoryPartners.find((p) => p.id === id)
+
+    // Notify Desktop Auth API (user-app) of rejection
+    if (targetPartner?.phone) {
+      try {
+        fetch('http://localhost:3000/api/desktop/auth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'admin-reject',
+            phone: targetPartner.phone,
+            reason: rejection_reason,
+            partnerId: id,
+          })
+        }).catch(() => {})
+      } catch (notifyErr) {
+        // safe
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      partner: data || memoryPartners.find((p) => p.id === id),
+      partner: targetPartner,
     })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })

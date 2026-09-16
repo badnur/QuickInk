@@ -294,8 +294,19 @@ export default function AdminPartnersPage() {
 
                         {/* Business Name */}
                         <td className="py-3.5 px-4">
-                          <div className="font-bold text-white text-sm">{partner.shop_name}</div>
-                          <div className="text-[11px] text-slate-400 mt-0.5">{partner.space_type || 'Print Shop'}</div>
+                          <div className="flex items-center gap-2.5">
+                            {partner.logo_url ? (
+                              <img src={partner.logo_url} alt="Logo" className="w-7 h-7 rounded-lg object-cover border border-slate-700 flex-shrink-0" />
+                            ) : (
+                              <div className="w-7 h-7 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-300 flex-shrink-0">
+                                {partner.shop_name?.slice(0, 2).toUpperCase() || 'QI'}
+                              </div>
+                            )}
+                            <div>
+                              <div className="font-bold text-white text-sm">{partner.shop_name}</div>
+                              <div className="text-[11px] text-slate-400 mt-0.5">{partner.space_type || (partner.type === 'kiosk' ? 'Automated Kiosk' : 'Print Shop')}</div>
+                            </div>
+                          </div>
                         </td>
 
                         {/* Contact */}
@@ -443,6 +454,34 @@ export default function AdminPartnersPage() {
                 </div>
               </div>
 
+              {/* Uploaded Verification Media: Logo & Storefront Photo */}
+              <div className="grid grid-cols-2 gap-3 bg-[#111827] border border-slate-800 p-3.5 rounded-xl">
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Shop Logo</span>
+                  {selectedPartner.logo_url ? (
+                    <div className="w-20 h-20 rounded-xl border border-slate-700 overflow-hidden bg-slate-900 shadow-inner">
+                      <img src={selectedPartner.logo_url} alt="Shop Logo" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-20 h-20 rounded-xl border border-dashed border-slate-800 flex items-center justify-center text-[10px] text-slate-500">
+                      No Logo
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Storefront / Kiosk Photo</span>
+                  {selectedPartner.shop_photo_url ? (
+                    <div className="w-full h-20 rounded-xl border border-slate-700 overflow-hidden bg-slate-900 shadow-inner">
+                      <img src={selectedPartner.shop_photo_url} alt="Storefront" className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <div className="w-full h-20 rounded-xl border border-dashed border-slate-800 flex items-center justify-center text-[10px] text-slate-500">
+                      No Storefront Photo
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {selectedPartner.status === 'pending' && (
                 <div className="pt-2 flex justify-end gap-2 border-t border-slate-800">
                   <Button
@@ -539,15 +578,36 @@ export default function AdminPartnersPage() {
             <DialogHeader>
               <DialogTitle className="text-base font-bold text-white">Reject Application</DialogTitle>
               <DialogDescription className="text-xs text-slate-400">
-                Rejecting application for &ldquo;{rejectingPartner.shop_name}&rdquo;.
+                Rejecting application for &ldquo;{rejectingPartner.shop_name}&rdquo;. The shop owner will be required to re-register.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3 my-3 text-xs">
-              <label className="text-slate-300 font-semibold block">Reason for Rejection (Optional)</label>
+              <div>
+                <label className="text-slate-300 font-semibold block mb-1.5">Quick Reason Presets</label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {[
+                    'Storefront / kiosk photo unverifiable',
+                    'Physical address incomplete or inaccessible',
+                    'Location does not meet minimum clearance',
+                    'Duplicate application submitted',
+                  ].map((preset) => (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setRejectionReason(preset)}
+                      className="text-[10px] bg-slate-900 border border-slate-700 hover:border-red-500/60 text-slate-300 hover:text-white px-2 py-1 rounded-md transition-colors"
+                    >
+                      {preset}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <label className="text-slate-300 font-semibold block">Reason for Rejection (Displayed to Shop Owner)</label>
               <textarea
                 rows={3}
-                placeholder="e.g. Location too close to existing station, space feasibility not met..."
+                placeholder="e.g. Storefront photo was unclear, please provide a clear street-facing photo..."
                 value={rejectionReason}
                 onChange={(e) => setRejectionReason(e.target.value)}
                 className="w-full bg-slate-900 border border-slate-800 rounded-xl p-2.5 text-xs text-white outline-none focus:border-red-500"

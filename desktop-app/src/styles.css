@@ -833,6 +833,257 @@ body, html {
 }
 
 /* ==========================================================================
+   APPLICATION PENDING & REJECTED SCREENS
+   ========================================================================== */
+.pending-wrap,
+.rejected-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.pending-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #271c0d;
+  border: 1px solid #78350f;
+  color: #fbbf24;
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 18px;
+}
+
+.rejected-pill-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  color: var(--danger-text);
+  border-radius: 9999px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 18px;
+}
+
+.pending-title,
+.rejected-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 6px;
+  text-align: center;
+}
+
+.pending-subtitle,
+.rejected-subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+  text-align: center;
+  max-width: 520px;
+}
+
+.pending-card,
+.rejected-card {
+  width: 100%;
+  max-width: 540px;
+  background: var(--surface-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-card);
+  padding: 28px;
+}
+
+.pending-icon-circle {
+  width: 56px;
+  height: 56px;
+  background: #271c0d;
+  border: 1px solid #78350f;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.rejected-icon-circle {
+  width: 56px;
+  height: 56px;
+  background: var(--danger-bg);
+  border: 1px solid var(--danger-border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 20px;
+}
+
+.pending-meta-grid,
+.rejected-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  background: var(--surface-subtle);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 18px;
+}
+
+.pending-meta-item,
+.rejected-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pending-meta-item.full-col,
+.rejected-meta-item.full-col {
+  grid-column: span 2;
+}
+
+.pending-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #271c0d;
+  border: 1px solid #92400e;
+  color: #fbbf24;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.pulse-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  animation: pulse-orange 2s infinite;
+}
+
+@keyframes pulse-orange {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 7px rgba(245, 158, 11, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+}
+
+.rejected-reason-quote {
+  background: #1e1315;
+  border-left: 3px solid #ef4444;
+  padding: 10px 12px;
+  font-size: 12px;
+  color: #fca5a5;
+  border-radius: 0 6px 6px 0;
+  margin-top: 4px;
+  line-height: 1.45;
+}
+
+/* Emergency Admin Support Box */
+.emergency-contact-box {
+  background: #0d121c;
+  border: 1px solid #1e293b;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+}
+
+.emergency-box-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.emergency-box-text {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+
+.emergency-contacts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.contact-card {
+  background: #141b29;
+  border: 1px solid #23304a;
+  border-radius: 8px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.contact-lbl {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #94a3b8;
+}
+
+.contact-val {
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.contact-val.phone {
+  color: #00bf63;
+}
+
+.contact-val.phone:hover {
+  text-decoration: underline;
+  color: #4ade80;
+}
+
+.contact-val.email {
+  color: #38bdf8;
+}
+
+.contact-val.email:hover {
+  text-decoration: underline;
+  color: #7dd3fc;
+}
+
+.pending-actions-row,
+.rejected-actions-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+/* ==========================================================================
    WORKSPACE STYLES (HEADER, TABS, KEYPAD, PRINTERS, QUEUE, EARNINGS)
    ========================================================================== */
 #top-bar {

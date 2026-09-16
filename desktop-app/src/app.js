@@ -180,6 +180,24 @@ const el = {
   btnLockdownCheckStatus: document.getElementById('btn-lockdown-check-status'),
   btnLockdownLogout: document.getElementById('btn-lockdown-logout'),
 
+  // Application Pending Review Screen
+  screenPending: document.getElementById('screen-pending'),
+  pendingShopName: document.getElementById('pending-shop-name'),
+  pendingOwnerName: document.getElementById('pending-owner-name'),
+  pendingPhone: document.getElementById('pending-phone'),
+  pendingType: document.getElementById('pending-type'),
+  pendingLocation: document.getElementById('pending-location'),
+  btnPendingCheckStatus: document.getElementById('btn-pending-check-status'),
+  btnPendingLogout: document.getElementById('btn-pending-logout'),
+
+  // Application Rejected Screen
+  screenRejected: document.getElementById('screen-rejected'),
+  rejectedShopName: document.getElementById('rejected-shop-name'),
+  rejectedPhone: document.getElementById('rejected-phone'),
+  rejectedReasonText: document.getElementById('rejected-reason-text'),
+  btnReRegister: document.getElementById('btn-re-register'),
+  btnRejectedLogout: document.getElementById('btn-rejected-logout'),
+
   // Stepper
   stepInd1: document.getElementById('step-ind-1'),
   stepInd2: document.getElementById('step-ind-2'),
@@ -268,8 +286,14 @@ async function init() {
   // Load account and show correct screen (login, workspace, or lockdown)
   await loadSavedAccount()
 
-  // Periodic heartbeat: check if admin suspended/cancelled the partnership
-  setInterval(checkStationStatus, 15000)
+  // Periodic heartbeat: check if admin approved, rejected, or suspended
+  setInterval(() => {
+    if (el.screenPending && !el.screenPending.classList.contains('hidden')) {
+      checkApprovalStatus(false)
+    } else if (el.screenWorkspace && !el.screenWorkspace.classList.contains('hidden')) {
+      checkStationStatus()
+    }
+  }, 10000)
 
   // Auto-scan printers when window regains focus
   window.addEventListener('focus', () => {
@@ -886,7 +910,7 @@ function setupAuthSystem() {
 
   // Forgot password
   el.btnForgotPassword?.addEventListener('click', () => {
-    alert('🔑 Password Reset:\n\nPlease contact Quick Ink Partner Operations at support@quickink.net or call +880 1700-000000 with your registered phone number.')
+    alert('🔑 Password Reset / Account Assistance:\n\nPlease contact Quick Ink Admin:\nEmergency Phone: 01733398911\nEmail: help@quickink.net')
   })
 
   // Switch between Login and Register screens
@@ -923,7 +947,7 @@ function setupAuthSystem() {
         alert('🎉 Partnership Reinstated!\n\nYour Quick Ink partnership is active. You may now sign in.')
         showScreen('login')
       } else {
-        alert(`⚠️ Station is still suspended by administration.\n\nReason: ${data.reason || 'Pending operational review'}`)
+        alert(`⚠️ Station is still suspended by administration.\n\nReason: ${data.reason || 'Pending operational review'}\n\nEmergency Phone: 01733398911\nEmail: help@quickink.net`)
       }
     } catch (e) {
       alert('Could not verify status with Quick Ink server. Please check your network connection.')
@@ -936,19 +960,140 @@ function setupAuthSystem() {
   el.btnLockdownLogout?.addEventListener('click', () => {
     showScreen('login')
   })
+
+  // 14. Pending Approval Screen buttons
+  el.btnPendingCheckStatus?.addEventListener('click', () => checkApprovalStatus(true))
+  el.btnPendingLogout?.addEventListener('click', () => showScreen('login'))
+
+  // 15. Rejected Screen buttons
+  el.btnReRegister?.addEventListener('click', handleReRegister)
+  el.btnRejectedLogout?.addEventListener('click', () => showScreen('login'))
 }
 
-// Show target screen (login, register, lockdown, workspace)
+// Show target screen (login, register, lockdown, pending, rejected, workspace)
 function showScreen(screen) {
   if (el.screenLogin) el.screenLogin.classList.toggle('hidden', screen !== 'login')
   if (el.screenRegister) el.screenRegister.classList.toggle('hidden', screen !== 'register')
   if (el.screenLockdown) el.screenLockdown.classList.toggle('hidden', screen !== 'lockdown')
+  if (el.screenPending) el.screenPending.classList.toggle('hidden', screen !== 'pending')
+  if (el.screenRejected) el.screenRejected.classList.toggle('hidden', screen !== 'rejected')
   if (el.screenWorkspace) el.screenWorkspace.classList.toggle('hidden', screen !== 'workspace')
 
   if (screen === 'login') {
     setTimeout(() => el.loginPhone?.focus(), 80)
   } else if (screen === 'workspace') {
     setTimeout(() => el.otpBoxes[0]?.focus(), 80)
+  }
+}
+
+// Display Pending Approval Screen
+function showPendingScreen(acc) {
+  if (acc) {
+    state.account = acc
+    localStorage.setItem('quickink_shop_account', JSON.stringify(acc))
+    if (el.pendingShopName) el.pendingShopName.textContent = acc.shop_name || 'Quick Ink Station'
+    if (el.pendingOwnerName) el.pendingOwnerName.textContent = acc.name || 'Partner Owner'
+    if (el.pendingPhone) el.pendingPhone.textContent = acc.phone || '017XXXXXXXX'
+    if (el.pendingType) el.pendingType.textContent = acc.type === 'kiosk' ? 'Automated Kiosk' : 'Partner Print Shop'
+    if (el.pendingLocation) el.pendingLocation.textContent = acc.location || 'Location Address'
+  }
+  showScreen('pending')
+}
+
+// Display Rejected Application Screen
+function showRejectedScreen(acc, reason) {
+  const updated = { ...(acc || {}), status: 'rejected', rejection_reason: reason }
+  state.account = updated
+  localStorage.setItem('quickink_shop_account', JSON.stringify(updated))
+  if (el.rejectedShopName) el.rejectedShopName.textContent = acc?.shop_name || 'Quick Ink Station'
+  if (el.rejectedPhone) el.rejectedPhone.textContent = acc?.phone || '017XXXXXXXX'
+  if (el.rejectedReasonText) {
+    el.rejectedReasonText.textContent = reason || 'Your application could not be verified by administration. Please re-register with accurate details.'
+  }
+  showScreen('rejected')
+}
+
+// Re-Register Workflow: Clears Draft & Resets Form to Step 1
+function handleReRegister() {
+  state.account = null
+  localStorage.removeItem('quickink_shop_account')
+  state.regDraft = {
+    type: 'shop',
+    name: '',
+    shop_name: '',
+    phone: '',
+    location: '',
+    logo_url: '',
+    shop_photo_url: '',
+    testOtp: '123456',
+  }
+  if (el.regOwnerName) el.regOwnerName.value = ''
+  if (el.regShopName) el.regShopName.value = ''
+  if (el.regPhone) el.regPhone.value = ''
+  if (el.regLocation) el.regLocation.value = ''
+  if (el.regNewPassword) el.regNewPassword.value = ''
+  if (el.regConfirmPassword) el.regConfirmPassword.value = ''
+  if (el.logoPreviewImg) {
+    el.logoPreviewImg.src = ''
+    el.logoPreviewImg.classList.add('hidden')
+  }
+  if (el.logoPreviewPlaceholder) el.logoPreviewPlaceholder.classList.remove('hidden')
+  if (el.photoPreviewImg) {
+    el.photoPreviewImg.src = ''
+    el.photoPreviewImg.classList.add('hidden')
+  }
+  if (el.photoPreviewPlaceholder) el.photoPreviewPlaceholder.classList.remove('hidden')
+  setRegStep(1)
+  showScreen('register')
+}
+
+// Check Real-Time Approval / Rejection Status
+async function checkApprovalStatus(isManual = false) {
+  const phone = state.account?.phone || state.regDraft?.phone
+  const devId = state.account?.deviceId || state.config.deviceId
+
+  if (!phone && !devId) return
+
+  if (isManual && el.btnPendingCheckStatus) {
+    el.btnPendingCheckStatus.disabled = true
+    el.btnPendingCheckStatus.textContent = 'Checking Status...'
+  }
+
+  try {
+    const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth?action=check-status&phone=${phone || ''}&deviceId=${devId || ''}`)
+    if (!res.ok) throw new Error('Status query failed')
+    const data = await res.json()
+
+    if (data.approved) {
+      if (state.account) {
+        state.account.status = 'approved'
+        if (data.deviceId) state.account.deviceId = data.deviceId
+        localStorage.setItem('quickink_shop_account', JSON.stringify(state.account))
+        updateHeaderProfile(state.account)
+      }
+      playSuccessChime()
+      showScreen('workspace')
+      alert('🎉 Application Approved!\n\nQuick Ink administration has verified your registration. Welcome to your terminal dashboard!')
+      return
+    }
+
+    if (data.rejected) {
+      showRejectedScreen(state.account, data.reason)
+      return
+    }
+
+    if (isManual) {
+      alert('⏳ Application Still Under Review\n\nYour application is being reviewed by Quick Ink administrators.\n\nFor emergency assistance or expedited verification, contact admin directly:\nEmergency Phone: 01733398911\nEmail: help@quickink.net')
+    }
+  } catch (err) {
+    if (isManual) {
+      alert('Could not verify status with Quick Ink server. Please check your network connection.')
+    }
+  } finally {
+    if (isManual && el.btnPendingCheckStatus) {
+      el.btnPendingCheckStatus.disabled = false
+      el.btnPendingCheckStatus.textContent = 'Check Approval Status ⟳'
+    }
   }
 }
 
@@ -1007,6 +1152,18 @@ async function loadSavedAccount() {
       const acc = JSON.parse(stored)
       if (acc && acc.name && acc.phone) {
         state.account = acc
+
+        if (acc.status === 'pending') {
+          showPendingScreen(acc)
+          await checkApprovalStatus(false)
+          return
+        }
+
+        if (acc.status === 'rejected') {
+          showRejectedScreen(acc, acc.rejection_reason)
+          return
+        }
+
         updateHeaderProfile(acc)
 
         // Check if admin suspended this account
@@ -1286,10 +1443,6 @@ async function handleFinishRegistration() {
       const account = data.account
       const device = data.device
 
-      // Save active session
-      state.account = account
-      localStorage.setItem('quickink_shop_account', JSON.stringify(account))
-
       if (device?.id) {
         state.config.deviceId = device.id
         if (isElectron) {
@@ -1297,16 +1450,14 @@ async function handleFinishRegistration() {
         }
       }
 
-      updateHeaderProfile(account)
-      fetchDevices()
-      fetchRecentJobs()
-      showScreen('workspace')
+      // Save state with status 'pending'
+      showPendingScreen(account)
       playSuccessChime()
-      alert(`🎉 Registration Successful!\n\nWelcome "${account.shop_name}". Your terminal is now active!`)
+      alert(`📋 Registration Submitted!\n\nWelcome "${account.shop_name}". Your account has been submitted for administrator review.\n\nEmergency Contact: 01733398911\nSupport Email: help@quickink.net`)
       return
     }
 
-    // Offline fallback registration
+    // Offline fallback registration - also set pending!
     const fallbackAcc = {
       id: `acc-${Date.now()}`,
       deviceId: state.config.deviceId,
@@ -1315,21 +1466,19 @@ async function handleFinishRegistration() {
       phone: state.regDraft.phone,
       location: state.regDraft.location,
       type: state.regDraft.type,
+      status: 'pending',
       logo_url: state.regDraft.logo_url,
       shop_photo_url: state.regDraft.shop_photo_url,
       verified: true
     }
-    state.account = fallbackAcc
-    localStorage.setItem('quickink_shop_account', JSON.stringify(fallbackAcc))
-    updateHeaderProfile(fallbackAcc)
-    showScreen('workspace')
+    showPendingScreen(fallbackAcc)
     playSuccessChime()
-    alert(`🎉 Registration Complete!\n\nWelcome to QuickInk, ${fallbackAcc.shop_name}!`)
+    alert(`📋 Registration Submitted!\n\nYour application has been submitted and is pending administrator review.\n\nEmergency Contact: 01733398911\nSupport Email: help@quickink.net`)
   } catch (err) {
     console.warn('Registration note:', err)
   } finally {
     el.btnFinishRegistration.disabled = false
-    el.btnFinishRegistration.textContent = 'Complete Registration & Activate Terminal'
+    el.btnFinishRegistration.textContent = 'Complete Registration & Submit for Approval'
   }
 }
 
@@ -1361,7 +1510,19 @@ async function handleLoginSubmit(e) {
 
     const data = await res.json()
 
-    // Administrative Suspension / Partnership Revocation Check
+    // 1. Pending Approval Check
+    if (res.status === 403 && data.pending) {
+      showPendingScreen(data.account)
+      return
+    }
+
+    // 2. Rejected Application Check
+    if (res.status === 403 && data.rejected) {
+      showRejectedScreen(data.account, data.reason)
+      return
+    }
+
+    // 3. Administrative Suspension / Partnership Revocation Check
     if (res.status === 403 && data.suspended) {
       triggerSuspensionLockdown(
         data.shop_name || 'Station',
