@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --port 3000",
+    "dev": "cross-env NEXT_TURBOPACK=0 next dev --port 3000",
     "build": "next build",
     "start": "next start --port 3000"
   },
@@ -66,6 +66,7 @@
     "@types/qrcode": "^1.5.6",
     "@types/react": "19.2.14",
     "autoprefixer": "^10.4.27",
+    "cross-env": "^10.1.0",
     "globals": "^17.4.0",
     "postcss": "^8.5.8",
     "tailwindcss": "^4.2.2",
