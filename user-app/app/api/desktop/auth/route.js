@@ -5,38 +5,7 @@ export const dynamic = 'force-dynamic'
 
 // In-memory store for phone OTPs and fallback shop accounts
 const phoneOtpStore = new Map() // phone -> { code, expiresAt }
-let memoryShopAccounts = [
-  {
-    id: 'shop-demo-1',
-    deviceId: '11111111-1111-1111-1111-111111111111',
-    name: 'Rafiqul Islam',
-    shop_name: 'QuickInk Partner Shop — Dhanmondi',
-    phone: '01733398911',
-    location: 'House 23, Road 5, Dhanmondi, Dhaka-1205',
-    type: 'shop',
-    status: 'approved',
-    password: 'password123',
-    logo_url: '',
-    shop_photo_url: '',
-    verified: true,
-    created_at: new Date().toISOString(),
-  },
-  {
-    id: 'shop-demo-2',
-    deviceId: '22222222-2222-2222-2222-222222222222',
-    name: 'Tanvir Ahmed',
-    shop_name: 'QuickInk Kiosk — Central Mall',
-    phone: '01811223344',
-    location: 'Level 1, Central Shopping Mall, Dhanmondi, Dhaka',
-    type: 'kiosk',
-    status: 'approved',
-    password: 'password123',
-    logo_url: '',
-    shop_photo_url: '',
-    verified: true,
-    created_at: new Date().toISOString(),
-  }
-]
+let memoryShopAccounts = []
 
 export const ADMIN_CONTACT = {
   phone: '01733398911',
@@ -84,7 +53,6 @@ export async function POST(request) {
         success: true,
         message: `Verification code sent to ${cleanPhone}`,
         phone: cleanPhone,
-        testOtp: code,
       })
     }
 
@@ -101,11 +69,10 @@ export async function POST(request) {
       const cleanOtp = otp.trim()
       const stored = phoneOtpStore.get(cleanPhone)
 
-      // Allow master code 123456 or exact stored code
-      const isValid = cleanOtp === '123456' || (stored && stored.code === cleanOtp && stored.expiresAt > Date.now())
+      const isValid = stored && stored.code === cleanOtp && stored.expiresAt > Date.now()
 
       if (!isValid) {
-        return NextResponse.json({ error: 'Invalid or expired verification code. Please check or request a new code.' }, { status: 400 })
+        return NextResponse.json({ error: 'Invalid or expired verification code. Please check your SMS or request a new code.' }, { status: 400 })
       }
 
       return NextResponse.json({
@@ -269,7 +236,7 @@ export async function POST(request) {
 
       const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
       let account = memoryShopAccounts.find(
-        (acc) => acc.phone === cleanPhone && (acc.password === password || password === 'admin123' || password === 'password123')
+        (acc) => acc.phone === cleanPhone && acc.password === password
       )
 
       // Query database partners table to sync real-time admin decisions
@@ -282,28 +249,10 @@ export async function POST(request) {
           .limit(1)
           .maybeSingle()
 
-        if (dbPartner) {
-          if (!account && (password === 'password123' || password === 'admin123')) {
-            account = {
-              id: dbPartner.id,
-              deviceId: dbPartner.provisioned_device_id || `dev-${Date.now()}`,
-              name: dbPartner.name,
-              shop_name: dbPartner.shop_name,
-              phone: dbPartner.phone,
-              location: dbPartner.location,
-              type: dbPartner.type || 'shop',
-              status: dbPartner.status || 'pending',
-              rejection_reason: dbPartner.rejection_reason,
-              logo_url: dbPartner.logo_url || '',
-              shop_photo_url: dbPartner.shop_photo_url || '',
-              verified: true,
-            }
-            memoryShopAccounts.unshift(account)
-          } else if (account) {
-            account.status = dbPartner.status
-            if (dbPartner.rejection_reason) account.rejection_reason = dbPartner.rejection_reason
-            if (dbPartner.provisioned_device_id) account.deviceId = dbPartner.provisioned_device_id
-          }
+        if (dbPartner && account) {
+          account.status = dbPartner.status
+          if (dbPartner.rejection_reason) account.rejection_reason = dbPartner.rejection_reason
+          if (dbPartner.provisioned_device_id) account.deviceId = dbPartner.provisioned_device_id
         }
       } catch (dbErr) {
         console.warn('Sync partner DB check note:', dbErr.message)

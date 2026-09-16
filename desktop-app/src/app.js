@@ -6,7 +6,7 @@
 // Default Fallback Config & Session State
 const state = {
   config: {
-    deviceId: '11111111-1111-1111-1111-111111111111',
+    deviceId: '',
     apiBaseUrl: 'http://localhost:3000',
     bwPrinterName: '',
     colorPrinterName: '',
@@ -21,7 +21,6 @@ const state = {
     location: '',
     logo_url: '',
     shop_photo_url: '',
-    testOtp: '123456',
   },
   systemPrinters: [],
   activeJob: null,
@@ -227,8 +226,6 @@ const el = {
   // Step 2: OTP
   regStep2: document.getElementById('reg-step-2'),
   regTargetPhoneDisplay: document.getElementById('reg-target-phone-display'),
-  regDevOtpChip: document.getElementById('reg-dev-otp-chip'),
-  regDevOtpCode: document.getElementById('reg-dev-otp-code'),
   authOtpBoxes: [
     document.getElementById('auth-otp-0'),
     document.getElementById('auth-otp-1'),
@@ -1025,7 +1022,6 @@ function handleReRegister() {
     location: '',
     logo_url: '',
     shop_photo_url: '',
-    testOtp: '123456',
   }
   if (el.regOwnerName) el.regOwnerName.value = ''
   if (el.regShopName) el.regShopName.value = ''
@@ -1273,55 +1269,35 @@ async function handleSendMobileOtp() {
   state.regDraft.phone = cleanPhone
   state.regDraft.location = location
 
-  // Generate 6-digit real OTP
-  const otpCode = Math.floor(100000 + Math.random() * 900000).toString()
-  state.regDraft.testOtp = otpCode
-
-  // Send real-time SMS to the phone via fraudchecker.link API
   try {
-    const smsApiKey = '42fc1e917497409da3d3ffc7622e566e'
-    const smsMessage = encodeURIComponent(`Your QuickInk Station verification code is: ${otpCode}. Valid for 10 minutes.`)
-    const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
-
-    fetch(smsUrl)
-      .then((res) => res.json())
-      .then((data) => {
-        console.log('[SMS Provider Result]:', data)
-      })
-      .catch((err) => {
-        console.warn('[SMS Provider Note]:', err.message)
-      })
-  } catch (smsErr) {
-    console.warn('SMS dispatch error:', smsErr)
-  }
-
-  // Also notify backend auth if running (non-blocking)
-  try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 1200)
-    fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
+    const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'send-otp',
         phone: cleanPhone,
       }),
-      signal: controller.signal
-    }).catch(() => {}).finally(() => clearTimeout(timer))
+    })
+
+    const data = await res.json().catch(() => null)
+
+    if (!res.ok || !data?.success) {
+      showRegMsg(el.regStep1StatusMsg, data?.error || 'Failed to dispatch verification SMS. Please verify your phone number.', true)
+      return
+    }
+
+    // Update Step 2 UI
+    el.regTargetPhoneDisplay.textContent = `+880 ${cleanPhone.slice(-10)}`
+
+    // Clear boxes & advance to Step 2
+    el.authOtpBoxes.forEach((b) => (b.value = ''))
+    setRegStep(2)
   } catch (e) {
-    // ignore
+    showRegMsg(el.regStep1StatusMsg, 'Unable to connect to QuickInk server. Please check your internet connection.', true)
+  } finally {
+    el.btnToStep2.disabled = false
+    el.btnToStep2.textContent = 'Verify Mobile via OTP →'
   }
-
-  // Update Step 2 UI immediately
-  el.regTargetPhoneDisplay.textContent = `+880 ${cleanPhone.slice(-10)}`
-  el.regDevOtpCode.textContent = otpCode
-
-  // Clear boxes & advance to Step 2
-  el.authOtpBoxes.forEach((b) => (b.value = ''))
-  setRegStep(2)
-
-  el.btnToStep2.disabled = false
-  el.btnToStep2.textContent = 'Verify Mobile via OTP →'
 }
 
 function setupAuthOtpInputs() {
@@ -1355,12 +1331,9 @@ async function handleVerifyMobileOtp() {
 
   el.btnVerifyMobileOtp.disabled = true
   el.btnVerifyMobileOtp.textContent = 'Verifying...'
-
-  const matchesCode = code === state.regDraft.testOtp || code === '123456'
+  hideRegMsg(el.regStep2StatusMsg)
 
   try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 1800)
     const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1369,30 +1342,22 @@ async function handleVerifyMobileOtp() {
         phone: state.regDraft.phone,
         otp: code,
       }),
-      signal: controller.signal
-    }).catch(() => null)
-    clearTimeout(timer)
+    })
 
-    if (res && res.ok) {
-      const data = await res.json()
-      if (data.verified) {
-        el.regVerifiedPhoneTxt.textContent = `+880 ${state.regDraft.phone.slice(-10)} (Verified)`
-        setRegStep(3)
-        return
-      }
+    const data = await res.json().catch(() => null)
+
+    if (res.ok && data?.verified) {
+      el.regVerifiedPhoneTxt.textContent = `+880 ${state.regDraft.phone.slice(-10)} (Verified)`
+      setRegStep(3)
+      return
+    } else {
+      showRegMsg(el.regStep2StatusMsg, data?.error || 'Invalid or expired verification code. Please check your SMS or request a new code.', true)
     }
   } catch (err) {
-    // ignore
+    showRegMsg(el.regStep2StatusMsg, 'Unable to connect to verification server. Please check your internet connection.', true)
   } finally {
     el.btnVerifyMobileOtp.disabled = false
     el.btnVerifyMobileOtp.textContent = 'Verify & Proceed →'
-  }
-
-  if (matchesCode) {
-    el.regVerifiedPhoneTxt.textContent = `+880 ${state.regDraft.phone.slice(-10)} (Verified)`
-    setRegStep(3)
-  } else {
-    showRegMsg(el.regStep2StatusMsg, 'Invalid verification code. Please check your SMS or enter ' + state.regDraft.testOtp, true)
   }
 }
 
@@ -1428,18 +1393,15 @@ async function handleFinishRegistration() {
   }
 
   try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 2500)
     const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
-      signal: controller.signal
-    }).catch(() => null)
-    clearTimeout(timer)
+    })
 
-    if (res && res.ok) {
-      const data = await res.json()
+    const data = await res.json().catch(() => null)
+
+    if (res.ok && data?.account) {
       const account = data.account
       const device = data.device
 
@@ -1457,25 +1419,9 @@ async function handleFinishRegistration() {
       return
     }
 
-    // Offline fallback registration - also set pending!
-    const fallbackAcc = {
-      id: `acc-${Date.now()}`,
-      deviceId: state.config.deviceId,
-      name: state.regDraft.name,
-      shop_name: state.regDraft.shop_name,
-      phone: state.regDraft.phone,
-      location: state.regDraft.location,
-      type: state.regDraft.type,
-      status: 'pending',
-      logo_url: state.regDraft.logo_url,
-      shop_photo_url: state.regDraft.shop_photo_url,
-      verified: true
-    }
-    showPendingScreen(fallbackAcc)
-    playSuccessChime()
-    alert(`📋 Registration Submitted!\n\nYour application has been submitted and is pending administrator review.\n\nEmergency Contact: 01733398911\nSupport Email: help@quickink.net`)
+    showRegMsg(el.regStep3StatusMsg, data?.error || 'Registration failed. Please check your information and try again.', true)
   } catch (err) {
-    console.warn('Registration note:', err)
+    showRegMsg(el.regStep3StatusMsg, 'Network error. Could not connect to QuickInk registration service.', true)
   } finally {
     el.btnFinishRegistration.disabled = false
     el.btnFinishRegistration.textContent = 'Complete Registration & Submit for Approval'

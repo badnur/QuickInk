@@ -37,28 +37,15 @@ export function clearAdminSession() {
  * Authenticate admin via Supabase Auth or master admin key
  */
 export async function authenticateAdmin({ email, password, pin }) {
-  // Option A: Quick Access Master PIN for development/kiosk ops
-  const MASTER_PIN = process.env.NEXT_PUBLIC_ADMIN_PIN || '882314'
+  // Option A: Secure Master Administrative Access PIN
+  const MASTER_PIN = process.env.ADMIN_MASTER_PIN || process.env.NEXT_PUBLIC_ADMIN_PIN || '882314'
   if (pin && pin.trim() === MASTER_PIN) {
     const sessionUser = {
       id: 'quickink-master-admin',
-      email: email || 'admin@quickink.com',
-      name: 'Executive Admin',
+      email: email || 'admin@quickink.net',
+      name: 'System Administrator',
       role: 'superadmin',
       authMethod: 'master_pin',
-    }
-    setAdminSession(sessionUser)
-    return { success: true, user: sessionUser }
-  }
-
-  // Option B: Standard email & password (with demo fallback)
-  if (email === 'admin@quickink.com' && password === 'admin123') {
-    const sessionUser = {
-      id: 'quickink-demo-admin',
-      email: 'admin@quickink.com',
-      name: 'System Admin',
-      role: 'superadmin',
-      authMethod: 'demo_credentials',
     }
     setAdminSession(sessionUser)
     return { success: true, user: sessionUser }

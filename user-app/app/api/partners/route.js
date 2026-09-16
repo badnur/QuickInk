@@ -3,47 +3,8 @@ import { supabase } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-// Shared fallback store in case Supabase table is unreachable
-let fallbackPartners = [
-  {
-    id: 'partner-demo-1',
-    reference_id: 'QIK-REG-849201',
-    type: 'shop',
-    name: 'Kabir Hossain',
-    shop_name: 'Nilkhet Book & Print Corner',
-    phone: '01711223344',
-    email: 'nilkhet.print@gmail.com',
-    location: 'Shop 12, Market 3, Nilkhet, Dhaka',
-    city: 'Dhaka',
-    operating_hours: '08:00 AM - 10:00 PM',
-    printer_model: 'Epson L130 & Canon i-SENSYS',
-    space_type: 'Stationery & Print Shop',
-    daily_footfall: '200+ students',
-    power_backup: true,
-    status: 'pending',
-    commission_rate: 40.0,
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-  },
-  {
-    id: 'partner-demo-2',
-    reference_id: 'QIK-REG-910482',
-    type: 'kiosk',
-    name: 'Dr. Shahriar Alam',
-    shop_name: 'United International University Hub',
-    phone: '01899887766',
-    email: 'admin.support@uiu.ac.bd',
-    location: 'Ground Floor Cafeteria Lobby, UIU Campus, Madani Avenue, Dhaka',
-    city: 'Dhaka',
-    operating_hours: '24/7 Automated',
-    space_type: 'University / Campus',
-    daily_footfall: '1500+ daily campus footfall',
-    power_backup: true,
-    status: 'approved',
-    provisioned_device_id: '22222222-2222-2222-2222-222222222222',
-    commission_rate: 40.0,
-    created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
-  },
-]
+// Fallback store in case Supabase table is unreachable
+let fallbackPartners = []
 
 function generateReferenceId() {
   const num = Math.floor(100000 + Math.random() * 900000)

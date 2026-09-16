@@ -3,67 +3,8 @@ import { supabase } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-// Shared fallback partner state if Supabase table is unreachable
-let memoryPartners = [
-  {
-    id: 'partner-demo-1',
-    reference_id: 'QIK-REG-849201',
-    type: 'shop',
-    name: 'Kabir Hossain',
-    shop_name: 'Nilkhet Book & Print Corner',
-    phone: '01711223344',
-    email: 'nilkhet.print@gmail.com',
-    location: 'Shop 12, Market 3, Nilkhet, Dhaka',
-    city: 'Dhaka',
-    operating_hours: '08:00 AM - 10:00 PM',
-    printer_model: 'Epson L130 & Canon i-SENSYS',
-    space_type: 'Stationery & Print Shop',
-    daily_footfall: '200+ students',
-    power_backup: true,
-    status: 'pending',
-    commission_rate: 40.0,
-    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
-  },
-  {
-    id: 'partner-demo-2',
-    reference_id: 'QIK-REG-910482',
-    type: 'kiosk',
-    name: 'Dr. Shahriar Alam',
-    shop_name: 'United International University Hub',
-    phone: '01899887766',
-    email: 'admin.support@uiu.ac.bd',
-    location: 'Ground Floor Cafeteria Lobby, UIU Campus, Madani Avenue, Dhaka',
-    city: 'Dhaka',
-    operating_hours: '24/7 Automated',
-    space_type: 'University / Campus',
-    daily_footfall: '1500+ daily campus footfall',
-    power_backup: true,
-    status: 'approved',
-    provisioned_device_id: '22222222-2222-2222-2222-222222222222',
-    commission_rate: 40.0,
-    created_at: new Date(Date.now() - 3600000 * 24).toISOString(),
-  },
-  {
-    id: 'partner-demo-3',
-    reference_id: 'QIK-REG-305819',
-    type: 'shop',
-    name: 'Tanvir Hossain',
-    shop_name: 'Dhanmondi Students Xerox',
-    phone: '01733398911',
-    email: 'tanvir.dhanmondi@gmail.com',
-    location: 'House 23, Road 5, Dhanmondi, Dhaka-1205',
-    city: 'Dhaka',
-    operating_hours: '09:00 AM - 10:00 PM',
-    printer_model: 'HP LaserJet Pro & Epson L3250',
-    space_type: 'Stationery & Print Shop',
-    daily_footfall: '150+ students',
-    power_backup: true,
-    status: 'approved',
-    provisioned_device_id: '11111111-1111-1111-1111-111111111111',
-    commission_rate: 40.0,
-    created_at: new Date(Date.now() - 3600000 * 48).toISOString(),
-  }
-]
+// Fallback partner state if Supabase table is unreachable
+let memoryPartners = []
 
 /**
  * GET /api/admin/partners
