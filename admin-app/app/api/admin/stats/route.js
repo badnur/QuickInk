@@ -9,17 +9,27 @@ export const dynamic = 'force-dynamic'
  */
 export async function GET(request) {
   try {
-    // 1. Fetch Print Jobs summary
-    const { data: jobs, error: jobsError } = await supabase
-      .from('print_jobs')
-      .select('*')
-      .order('created_at', { ascending: false })
+    // 1. Fetch Print Jobs, Payments, Devices, and Partners in parallel for maximum speed
+    const [
+      { data: jobs, error: jobsError },
+      { data: payments, error: paymentsError },
+      { data: devices, error: devicesError },
+      { data: partners, error: partnersError },
+    ] = await Promise.all([
+      supabase.from('print_jobs').select('*').order('created_at', { ascending: false }),
+      supabase.from('payments').select('*'),
+      supabase.from('devices').select('*').order('created_at', { ascending: false }),
+      supabase.from('partners').select('id, status'),
+    ])
 
-    if (jobsError) {
-      console.warn('Jobs fetch notice in admin stats:', jobsError.message)
-    }
+    if (jobsError) console.warn('Jobs fetch notice in admin stats:', jobsError.message)
+    if (paymentsError) console.warn('Payments fetch notice:', paymentsError.message)
+    if (devicesError) console.warn('Devices fetch notice:', devicesError.message)
 
     const allJobs = jobs || []
+    const allPayments = payments || []
+    const allDevices = devices || []
+    const pendingPartners = (partners || []).filter((p) => p.status === 'pending').length
 
     // Calculate job stats
     const totalJobs = allJobs.length
@@ -27,16 +37,7 @@ export async function GET(request) {
     const printedJobs = allJobs.filter((j) => j.status === 'printed').length
     const expiredJobs = allJobs.filter((j) => j.status === 'expired').length
 
-    // 2. Fetch Payments summary for revenue calculation
-    const { data: payments, error: paymentsError } = await supabase
-      .from('payments')
-      .select('*')
-
-    if (paymentsError) {
-      console.warn('Payments fetch notice:', paymentsError.message)
-    }
-
-    const allPayments = payments || []
+    // 2. Revenue calculation
     let totalRevenue = 0
     let onlineRevenue = 0
     let cashRevenue = 0
@@ -67,28 +68,11 @@ export async function GET(request) {
     // Total sheets printed
     const totalSheets = allJobs.reduce((acc, j) => acc + ((j.page_count || 1) * (j.copies || 1)), 0)
 
-    // 3. Fetch Devices summary
-    const { data: devices, error: devicesError } = await supabase
-      .from('devices')
-      .select('*')
-      .order('created_at', { ascending: false })
-
-    if (devicesError) {
-      console.warn('Devices fetch notice:', devicesError.message)
-    }
-
-    const allDevices = devices || []
+    // 3. Device stats
     const totalDevices = allDevices.length
     const onlineDevices = allDevices.filter((d) => d.status === 'online').length
     const kioskCount = allDevices.filter((d) => d.type === 'kiosk').length
     const shopCount = allDevices.filter((d) => d.type === 'shop').length
-
-    // 4. Fetch Partner Leads count
-    const { data: partners } = await supabase
-      .from('partners')
-      .select('id, status')
-
-    const pendingPartners = (partners || []).filter((p) => p.status === 'pending').length
 
     // 5. Build 7-day revenue & print trends
     const daysMap = {}

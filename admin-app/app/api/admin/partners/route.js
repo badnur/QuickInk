@@ -3,12 +3,9 @@ import { supabase } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 
-// Fallback partner state if Supabase table is unreachable
-let memoryPartners = []
-
 /**
  * GET /api/admin/partners
- * List all partner registration applications
+ * List all partner registration applications from Supabase instantly (no slow localhost calls)
  */
 export async function GET(request) {
   try {
@@ -16,85 +13,96 @@ export async function GET(request) {
     const status = searchParams.get('status')
     const type = searchParams.get('type')
 
-    let query = supabase
-      .from('partners')
-      .select('*')
-      .order('created_at', { ascending: false })
+    // Fetch both partners and devices in parallel for instant data availability
+    const [{ data: partnersData }, { data: devicesData }] = await Promise.all([
+      supabase.from('partners').select('*').order('created_at', { ascending: false }),
+      supabase.from('devices').select('*').order('created_at', { ascending: false }),
+    ])
 
-    if (status && status !== 'all') {
-      query = query.eq('status', status)
+    const dbPartners = partnersData || []
+    const dbDevices = devicesData || []
+
+    // Build unified partner applications list
+    const partnerMap = new Map() // key: clean phone or id
+
+    // 1. Ingest partner entries from 'partners' table
+    for (const p of dbPartners) {
+      const cleanPhone = (p.phone || '').trim().replace(/[^0-9]/g, '')
+      const key = cleanPhone || p.id
+
+      // Check if there is a corresponding device record in devices table
+      const matchingDev = dbDevices.find(
+        (d) => d.location && (d.location.phone === cleanPhone || d.location.phone === p.phone)
+      )
+
+      const derivedStatus = matchingDev?.location?.partner_status || (matchingDev?.status === 'online' ? 'approved' : p.status) || 'pending'
+
+      partnerMap.set(key, {
+        id: p.id,
+        reference_id: matchingDev?.location?.reference_id || `QIK-REG-${(cleanPhone || '').slice(-6) || '729410'}`,
+        type: matchingDev?.type || matchingDev?.location?.type || 'shop',
+        name: matchingDev?.location?.owner_name || p.name?.replace(/\s*Duplicate\s*/gi, '').trim() || 'Partner Owner',
+        shop_name: p.shop_name || matchingDev?.location?.shop_name || 'Partner Shop',
+        phone: p.phone,
+        location: p.location || matchingDev?.location?.address || 'Bangladesh',
+        status: derivedStatus,
+        rejection_reason: matchingDev?.location?.rejection_reason || null,
+        logo_url: matchingDev?.location?.logo_url || '',
+        shop_photo_url: matchingDev?.location?.shop_photo_url || '',
+        provisioned_device_id: matchingDev?.id || null,
+        created_at: p.created_at || matchingDev?.created_at || new Date().toISOString(),
+      })
     }
-    if (type && type !== 'all') {
-      query = query.eq('type', type)
-    }
 
-    const { data, error } = await query
+    // 2. Ingest any partner applications recorded directly into devices table
+    for (const d of dbDevices) {
+      if (d.location && (d.location.is_partner_application || d.location.partner_status)) {
+        const cleanPhone = (d.location.phone || '').trim().replace(/[^0-9]/g, '')
+        const key = cleanPhone || d.id
 
-    let results = []
-    if (!error && data && data.length > 0) {
-      results = data
-    } else {
-      results = [...memoryPartners]
-    }
-
-    // Attempt to merge any live desktop accounts from user-app (e.g. newly registered in memory)
-    try {
-      const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), 1200)
-      const resp = await fetch('http://localhost:3000/api/desktop/auth?action=list-accounts', {
-        signal: controller.signal
-      }).catch(() => null)
-      clearTimeout(timer)
-
-      if (resp && resp.ok) {
-        const accData = await resp.json()
-        if (accData?.accounts) {
-          accData.accounts.forEach((acc) => {
-            const alreadyInResults = results.some((p) => p.phone === acc.phone)
-            if (!alreadyInResults) {
-              const syntheticPartner = {
-                id: acc.id || `partner-${acc.phone}`,
-                reference_id: acc.reference_id || `QIK-REG-${Math.floor(100000 + Math.random() * 900000)}`,
-                type: acc.type || 'shop',
-                name: acc.name,
-                shop_name: acc.shop_name,
-                phone: acc.phone,
-                location: acc.location,
-                logo_url: acc.logo_url || '',
-                shop_photo_url: acc.shop_photo_url || '',
-                status: acc.status || 'pending',
-                created_at: acc.created_at || new Date().toISOString(),
-              }
-              results.unshift(syntheticPartner)
-              if (!memoryPartners.some((p) => p.phone === acc.phone)) {
-                memoryPartners.unshift(syntheticPartner)
-              }
-            }
+        if (!partnerMap.has(key)) {
+          partnerMap.set(key, {
+            id: d.id,
+            reference_id: d.location.reference_id || d.location.registration_reference || `QIK-REG-${(cleanPhone || '').slice(-6) || '729410'}`,
+            type: d.type || d.location.type || 'shop',
+            name: d.location.owner_name || d.location.contact_person || 'Partner Owner',
+            shop_name: d.location.shop_name || d.name?.replace(/^QuickInk (Shop|Kiosk) — /, '') || 'Partner Shop',
+            phone: d.location.phone || '',
+            location: d.location.address || 'Bangladesh',
+            status: d.location.partner_status || (d.status === 'online' ? 'approved' : 'pending'),
+            rejection_reason: d.location.rejection_reason || null,
+            logo_url: d.location.logo_url || '',
+            shop_photo_url: d.location.shop_photo_url || '',
+            provisioned_device_id: d.id,
+            created_at: d.created_at,
           })
         }
       }
-    } catch (syncErr) {
-      // Safe to ignore
     }
 
-    // Return filtered
-    let filtered = results
+    let results = Array.from(partnerMap.values())
+
+    // Apply filtering
     if (status && status !== 'all') {
-      filtered = filtered.filter((p) => p.status === status)
+      results = results.filter((p) => p.status === status)
     }
     if (type && type !== 'all') {
-      filtered = filtered.filter((p) => p.type === type)
+      results = results.filter((p) => p.type === type)
     }
 
-    return NextResponse.json({ success: true, partners: filtered })
+    // Sort by created_at descending
+    results.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+
+    return NextResponse.json({ success: true, partners: results })
   } catch (err) {
+    console.error('Error fetching admin partners:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
 
 /**
- * POST /api/admin/partners/approve
- * Approve application AND provision a brand new Device in public.devices
+ * POST /api/admin/partners
+ * Approve partner application AND provision / activate device in public.devices
  */
 export async function POST(request) {
   try {
@@ -105,122 +113,108 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Partner ID is required' }, { status: 400 })
     }
 
-    // 1. Fetch the application
-    let partner = null
-    const { data: dbPartner } = await supabase
-      .from('partners')
-      .select('*')
-      .eq('id', partnerId)
-      .single()
+    // 1. Fetch the application from partners or devices
+    const [{ data: dbPartners }, { data: dbDevices }] = await Promise.all([
+      supabase.from('partners').select('*'),
+      supabase.from('devices').select('*'),
+    ])
 
-    if (dbPartner) {
-      partner = dbPartner
-    } else {
-      partner = memoryPartners.find((p) => p.id === partnerId)
-    }
+    const partner = (dbPartners || []).find((p) => p.id === partnerId)
+    const existingDev = (dbDevices || []).find(
+      (d) => d.id === partnerId || (partner && d.location && d.location.phone === partner.phone)
+    )
 
-    if (!partner) {
-      return NextResponse.json({ error: 'Partner application not found' }, { status: 404 })
-    }
-
-    // 2. Prepare location object and device attributes
-    const deviceName = partner.type === 'kiosk'
-      ? `QuickInk Kiosk — ${partner.shop_name}`
-      : `QuickInk Shop — ${partner.shop_name}`
+    const cleanPhone = (partner?.phone || existingDev?.location?.phone || '').trim().replace(/[^0-9]/g, '')
+    const shopName = partner?.shop_name || existingDev?.location?.shop_name || 'Partner Shop'
+    const ownerName = partner?.name || existingDev?.location?.owner_name || 'Partner Owner'
+    const address = partner?.location || existingDev?.location?.address || 'Bangladesh'
+    const type = existingDev?.type || 'shop'
+    const refId = existingDev?.location?.reference_id || `QIK-REG-${cleanPhone.slice(-6) || '729410'}`
 
     const locationObj = {
-      address: partner.location,
-      phone: partner.phone,
-      operating_hours: partner.operating_hours || (partner.type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM'),
-      contact_person: partner.name,
-      partner_reference_id: partner.reference_id,
-      city: partner.city || 'Dhaka',
-      commission_rate: partner.commission_rate || 40.0,
-      printer_model: partner.printer_model || 'Auto-Detected',
-      logo_url: partner.logo_url || '',
-      shop_photo_url: partner.shop_photo_url || '',
+      ...(existingDev?.location || {}),
+      address,
+      phone: partner?.phone || existingDev?.location?.phone || cleanPhone,
+      owner_name: ownerName,
+      shop_name: shopName,
+      operating_hours: existingDev?.location?.operating_hours || (type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM'),
+      commission_rate: 40.0,
+      partner_status: 'approved',
+      rejection_reason: null,
+      is_partner_application: true,
+      reference_id: refId,
+      approved_at: new Date().toISOString(),
     }
 
-    // 3. Provision the device in public.devices
     let provisionedDevice = null
-    const { data: newDevice, error: devError } = await supabase
-      .from('devices')
-      .insert([
-        {
-          name: deviceName,
-          type: partner.type === 'kiosk' ? 'kiosk' : 'shop',
-          location: locationObj,
-          status: 'online',
-        },
-      ])
-      .select()
-      .single()
 
-    if (!devError && newDevice) {
-      provisionedDevice = newDevice
+    if (existingDev) {
+      // Update existing device to online & approved
+      const { data: updatedDev, error: upErr } = await supabase
+        .from('devices')
+        .update({
+          status: 'online',
+          location: locationObj,
+        })
+        .eq('id', existingDev.id)
+        .select()
+        .single()
+
+      provisionedDevice = updatedDev || { ...existingDev, status: 'online', location: locationObj }
     } else {
-      // Fallback pseudo device id
-      provisionedDevice = {
+      // Insert brand new device with status 'online'
+      const { data: newDev, error: devErr } = await supabase
+        .from('devices')
+        .insert([
+          {
+            name: type === 'kiosk' ? `QuickInk Kiosk — ${shopName}` : `QuickInk Shop — ${shopName}`,
+            type: type === 'kiosk' ? 'kiosk' : 'shop',
+            location: locationObj,
+            status: 'online',
+          },
+        ])
+        .select()
+        .single()
+
+      provisionedDevice = newDev || {
         id: `dev-${Date.now()}`,
-        name: deviceName,
-        type: partner.type === 'kiosk' ? 'kiosk' : 'shop',
+        name: `QuickInk Shop — ${shopName}`,
+        type,
         location: locationObj,
         status: 'online',
-        created_at: new Date().toISOString(),
       }
     }
 
-    // 4. Update the partner status in DB
-    await supabase
-      .from('partners')
-      .update({
-        status: 'approved',
-        provisioned_device_id: provisionedDevice.id,
-      })
-      .eq('id', partnerId)
-
-    // Update in memory too
-    const memIndex = memoryPartners.findIndex((p) => p.id === partnerId)
-    if (memIndex !== -1) {
-      memoryPartners[memIndex].status = 'approved'
-      memoryPartners[memIndex].provisioned_device_id = provisionedDevice.id
-    }
-
-    // 5. Notify Desktop Auth API (user-app) to unlock dashboard immediately
-    try {
-      fetch('http://localhost:3000/api/desktop/auth', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'admin-approve',
-          phone: partner.phone,
-          deviceId: provisionedDevice.id,
-          partnerId: partner.id,
-        })
-      }).catch(() => {})
-    } catch (syncErr) {
-      // safe
+    // Also update partners table if row exists (ignoring RLS errors if restricted)
+    if (partner) {
+      try {
+        await supabase.from('partners').update({ status: 'approved' }).eq('id', partner.id)
+      } catch (e) {
+        // Safe to ignore since devices table is authoritatively updated
+      }
     }
 
     return NextResponse.json({
       success: true,
-      message: `Station successfully provisioned for ${partner.shop_name}`,
+      message: `Station successfully provisioned & approved for ${shopName}`,
       device: provisionedDevice,
       partner: {
-        ...partner,
+        id: partnerId,
+        shop_name: shopName,
+        phone: cleanPhone,
         status: 'approved',
-        provisioned_device_id: provisionedDevice.id,
+        provisioned_device_id: provisionedDevice?.id,
       },
     })
   } catch (err) {
-    console.error('Approval & provisioning error:', err)
+    console.error('Approval error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
 
 /**
  * PATCH /api/admin/partners
- * Update status (e.g. reject with reason)
+ * Reject partner application with reason
  */
 export async function PATCH(request) {
   try {
@@ -231,47 +225,53 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'ID and status required' }, { status: 400 })
     }
 
-    const updates = { status }
-    if (rejection_reason !== undefined) updates.rejection_reason = rejection_reason
+    const reason = rejection_reason || 'Storefront verification requirements not met.'
 
-    const { data, error } = await supabase
-      .from('partners')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single()
+    const [{ data: dbPartners }, { data: dbDevices }] = await Promise.all([
+      supabase.from('partners').select('*'),
+      supabase.from('devices').select('*'),
+    ])
 
-    // Update memory
-    const memIdx = memoryPartners.findIndex((p) => p.id === id)
-    if (memIdx !== -1) {
-      memoryPartners[memIdx] = { ...memoryPartners[memIdx], ...updates }
+    const partner = (dbPartners || []).find((p) => p.id === id)
+    const existingDev = (dbDevices || []).find(
+      (d) => d.id === id || (partner && d.location && d.location.phone === partner.phone)
+    )
+
+    if (existingDev) {
+      const updatedLoc = {
+        ...(existingDev.location || {}),
+        partner_status: status,
+        rejection_reason: reason,
+        rejected_at: new Date().toISOString(),
+      }
+
+      await supabase
+        .from('devices')
+        .update({
+          status: 'offline',
+          location: updatedLoc,
+        })
+        .eq('id', existingDev.id)
     }
 
-    const targetPartner = data || memoryPartners.find((p) => p.id === id)
-
-    // Notify Desktop Auth API (user-app) of rejection
-    if (targetPartner?.phone) {
+    if (partner) {
       try {
-        fetch('http://localhost:3000/api/desktop/auth', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'admin-reject',
-            phone: targetPartner.phone,
-            reason: rejection_reason,
-            partnerId: id,
-          })
-        }).catch(() => {})
-      } catch (notifyErr) {
-        // safe
+        await supabase.from('partners').update({ status }).eq('id', partner.id)
+      } catch (e) {
+        // Safe fallback
       }
     }
 
     return NextResponse.json({
       success: true,
-      partner: targetPartner,
+      partner: {
+        id,
+        status,
+        rejection_reason: reason,
+      },
     })
   } catch (err) {
+    console.error('Reject error:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
@@ -288,10 +288,12 @@ export async function DELETE(request) {
       return NextResponse.json({ error: 'ID required' }, { status: 400 })
     }
 
-    await supabase.from('partners').delete().eq('id', id)
-    memoryPartners = memoryPartners.filter((p) => p.id !== id)
+    await Promise.all([
+      supabase.from('devices').delete().eq('id', id),
+      supabase.from('partners').delete().eq('id', id),
+    ])
 
-    return NextResponse.json({ success: true, message: 'Application deleted' })
+    return NextResponse.json({ success: true, message: 'Application deleted successfully' })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

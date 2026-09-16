@@ -110,35 +110,62 @@ export async function POST(request) {
       const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
       const reference_id = `QIK-REG-${Math.floor(100000 + Math.random() * 900000)}`
 
-      // 1. Create or register Device in public.devices with 'pending' status
+      // 1. Create or register Device in public.devices with 'offline' status (valid device_status enum)
       let provisionedDevice = null
       const locationObj = {
         address: location,
         phone: cleanPhone,
         owner_name: name,
+        shop_name: shop_name,
+        type: type === 'kiosk' ? 'kiosk' : 'shop',
         operating_hours: type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM',
-        logo_url,
-        shop_photo_url,
+        logo_url: logo_url || '',
+        shop_photo_url: shop_photo_url || '',
         commission_rate: 40.0,
         registration_reference: reference_id,
+        reference_id,
+        partner_status: 'pending',
+        rejection_reason: null,
+        is_partner_application: true,
+        created_at: new Date().toISOString(),
       }
 
       try {
-        const { data: dbDev, error: devErr } = await supabase
-          .from('devices')
-          .insert([
-            {
+        // Check if device with this phone already exists in public.devices
+        const { data: existingDevs } = await supabase.from('devices').select('*')
+        const match = (existingDevs || []).find(
+          (d) => d.location && (d.location.phone === cleanPhone || d.location.phone === phone)
+        )
+
+        if (match) {
+          const { data: upDev, error: upErr } = await supabase
+            .from('devices')
+            .update({
               name: type === 'kiosk' ? `QuickInk Kiosk — ${shop_name}` : `QuickInk Shop — ${shop_name}`,
               type: type === 'kiosk' ? 'kiosk' : 'shop',
               location: locationObj,
-              status: 'pending',
-            }
-          ])
-          .select()
-          .single()
+              status: 'offline',
+            })
+            .eq('id', match.id)
+            .select()
+            .single()
 
-        if (!devErr && dbDev) {
-          provisionedDevice = dbDev
+          if (!upErr && upDev) provisionedDevice = upDev
+        } else {
+          const { data: dbDev, error: devErr } = await supabase
+            .from('devices')
+            .insert([
+              {
+                name: type === 'kiosk' ? `QuickInk Kiosk — ${shop_name}` : `QuickInk Shop — ${shop_name}`,
+                type: type === 'kiosk' ? 'kiosk' : 'shop',
+                location: locationObj,
+                status: 'offline', // Valid enum value
+              }
+            ])
+            .select()
+            .single()
+
+          if (!devErr && dbDev) provisionedDevice = dbDev
         }
       } catch (e) {
         console.warn('Supabase device provision note:', e.message)
@@ -150,7 +177,7 @@ export async function POST(request) {
           name: type === 'kiosk' ? `QuickInk Kiosk — ${shop_name}` : `QuickInk Shop — ${shop_name}`,
           type: type === 'kiosk' ? 'kiosk' : 'shop',
           location: locationObj,
-          status: 'pending',
+          status: 'offline',
           created_at: new Date().toISOString(),
         }
       }
@@ -167,7 +194,7 @@ export async function POST(request) {
         type,
         status: 'pending', // Requires admin approval
         rejection_reason: null,
-        password, // In production, hash via bcrypt/argon2
+        password,
         logo_url,
         shop_photo_url,
         verified: true,
@@ -178,25 +205,20 @@ export async function POST(request) {
       memoryShopAccounts = memoryShopAccounts.filter((acc) => acc.phone !== cleanPhone)
       memoryShopAccounts.unshift(newAccount)
 
-      // Also record in partners table for Admin review
+      // 3. Record in partners table using existing database columns only
       try {
-        await supabase.from('partners').insert([
+        const { error: partErr } = await supabase.from('partners').insert([
           {
-            reference_id,
-            type,
             name,
             shop_name,
             phone: cleanPhone,
             location,
             status: 'pending',
-            logo_url,
-            shop_photo_url,
-            provisioned_device_id: provisionedDevice.id,
-            created_at: new Date().toISOString(),
           }
         ])
+        if (partErr) console.warn('Supabase partner insert note:', partErr.message)
       } catch (e) {
-        console.warn('Supabase partner insert note:', e.message)
+        console.warn('Supabase partner insert exception:', e.message)
       }
 
       return NextResponse.json({
@@ -237,20 +259,32 @@ export async function POST(request) {
         (acc) => acc.phone === cleanPhone && acc.password === password
       )
 
-      // Query database partners table to sync real-time admin decisions
+      // Query database devices & partners table to sync real-time admin decisions
       try {
-        const { data: dbPartner } = await supabase
-          .from('partners')
-          .select('*')
-          .eq('phone', cleanPhone)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle()
+        const [{ data: dbPartners }, { data: dbDevices }] = await Promise.all([
+          supabase.from('partners').select('*').eq('phone', cleanPhone).order('created_at', { ascending: false }).limit(1),
+          supabase.from('devices').select('*'),
+        ])
 
-        if (dbPartner && account) {
-          account.status = dbPartner.status
-          if (dbPartner.rejection_reason) account.rejection_reason = dbPartner.rejection_reason
-          if (dbPartner.provisioned_device_id) account.deviceId = dbPartner.provisioned_device_id
+        const dbPartner = dbPartners?.[0]
+        const matchingDev = (dbDevices || []).find(
+          (d) => (account?.deviceId && d.id === account.deviceId) ||
+                 (d.location && (d.location.phone === cleanPhone || d.location.phone === phone))
+        )
+
+        const devPartnerStatus = matchingDev?.location?.partner_status
+        const isOnlineApproved = matchingDev?.status === 'online' && devPartnerStatus !== 'pending' && devPartnerStatus !== 'rejected'
+
+        if (account) {
+          if (devPartnerStatus === 'approved' || isOnlineApproved || dbPartner?.status === 'approved') {
+            account.status = 'approved'
+            if (matchingDev?.id) account.deviceId = matchingDev.id
+          } else if (devPartnerStatus === 'rejected' || dbPartner?.status === 'rejected') {
+            account.status = 'rejected'
+            account.rejection_reason = matchingDev?.location?.rejection_reason || dbPartner?.rejection_reason || 'Storefront requirements not met.'
+          } else if (devPartnerStatus === 'pending' || dbPartner?.status === 'pending') {
+            account.status = 'pending'
+          }
         }
       } catch (dbErr) {
         console.warn('Sync partner DB check note:', dbErr.message)
@@ -369,80 +403,8 @@ export async function POST(request) {
     // -------------------------------------------------------------------------
     if (action === 'check-status') {
       const { deviceId, phone } = body
-      const cleanPhone = phone ? phone.trim().replace(/[^0-9]/g, '') : ''
-
-      let currentStatus = 'online'
-      let reason = ''
-      let suspendedAt = ''
-      let provisionedDeviceId = deviceId || ''
-
-      // 1. Check DB partners table
-      try {
-        let q = supabase.from('partners').select('*')
-        if (cleanPhone) q = q.eq('phone', cleanPhone)
-        else if (deviceId) q = q.eq('provisioned_device_id', deviceId)
-
-        const { data: dbPartner } = await q.order('created_at', { ascending: false }).limit(1).maybeSingle()
-        if (dbPartner) {
-          currentStatus = dbPartner.status
-          reason = dbPartner.rejection_reason || ''
-          provisionedDeviceId = dbPartner.provisioned_device_id || provisionedDeviceId
-
-          // Sync into memory
-          const memAcc = memoryShopAccounts.find((a) => a.phone === dbPartner.phone)
-          if (memAcc) {
-            memAcc.status = dbPartner.status
-            memAcc.rejection_reason = dbPartner.rejection_reason
-            if (dbPartner.provisioned_device_id) memAcc.deviceId = dbPartner.provisioned_device_id
-          }
-        }
-      } catch (e) {
-        // fallback
-      }
-
-      // 2. Check DB devices table if status is approved or checking by deviceId
-      if (deviceId && currentStatus !== 'rejected' && currentStatus !== 'pending') {
-        try {
-          const { data: dev } = await supabase
-            .from('devices')
-            .select('*')
-            .eq('id', deviceId)
-            .maybeSingle()
-
-          if (dev) {
-            currentStatus = dev.status
-            if (dev.status === 'suspended' || dev.status === 'cancelled') {
-              reason = dev.location?.suspension_reason || 'Partnership cancelled by QuickInk administration'
-              suspendedAt = dev.location?.suspended_at || ''
-            }
-          }
-        } catch (e) {
-          // fallback
-        }
-      }
-
-      // 3. Check memory store if status is still default
-      if (cleanPhone) {
-        const mem = memoryShopAccounts.find((a) => a.phone === cleanPhone)
-        if (mem) {
-          if (mem.status) currentStatus = mem.status
-          if (mem.rejection_reason) reason = mem.rejection_reason
-          if (mem.deviceId) provisionedDeviceId = mem.deviceId
-        }
-      }
-
-      return NextResponse.json({
-        success: true,
-        status: currentStatus,
-        pending: currentStatus === 'pending',
-        approved: currentStatus === 'approved' || currentStatus === 'online',
-        rejected: currentStatus === 'rejected',
-        suspended: currentStatus === 'suspended' || currentStatus === 'cancelled',
-        reason,
-        suspended_at: suspendedAt,
-        deviceId: provisionedDeviceId,
-        contact: ADMIN_CONTACT,
-      })
+      const result = await resolveAccountStatus(phone, deviceId)
+      return NextResponse.json(result)
     }
 
     // -------------------------------------------------------------------------
@@ -478,6 +440,94 @@ export async function POST(request) {
 }
 
 /**
+ * Shared helper to resolve account approval status from Supabase devices & partners tables
+ */
+async function resolveAccountStatus(phone, deviceId) {
+  const cleanPhone = phone ? phone.trim().replace(/[^0-9]/g, '') : ''
+
+  let currentStatus = 'pending'
+  let reason = ''
+  let suspendedAt = ''
+  let provisionedDeviceId = deviceId || ''
+
+  try {
+    const [{ data: dbPartners }, { data: dbDevices }] = await Promise.all([
+      supabase.from('partners').select('*'),
+      supabase.from('devices').select('*'),
+    ])
+
+    const partner = (dbPartners || []).find((p) => {
+      const pClean = (p.phone || '').trim().replace(/[^0-9]/g, '')
+      return (cleanPhone && pClean === cleanPhone) || (deviceId && p.id === deviceId)
+    })
+
+    const dev = (dbDevices || []).find((d) => {
+      const dPhone = (d.location?.phone || '').trim().replace(/[^0-9]/g, '')
+      return (cleanPhone && dPhone === cleanPhone) || (deviceId && d.id === deviceId)
+    })
+
+    if (dev) {
+      provisionedDeviceId = dev.id
+      const partnerStatus = dev.location?.partner_status
+
+      if (dev.status === 'suspended' || dev.status === 'cancelled') {
+        currentStatus = 'suspended'
+        reason = dev.location?.suspension_reason || 'Partnership suspended by QuickInk administration'
+        suspendedAt = dev.location?.suspended_at || ''
+      } else if (partnerStatus === 'rejected') {
+        currentStatus = 'rejected'
+        reason = dev.location?.rejection_reason || 'Application rejected by administration.'
+      } else if (partnerStatus === 'approved' || (dev.status === 'online' && partnerStatus !== 'pending')) {
+        currentStatus = 'approved'
+      } else if (partnerStatus === 'pending') {
+        currentStatus = 'pending'
+      }
+    }
+
+    if (partner && currentStatus === 'pending') {
+      if (partner.status === 'approved') {
+        currentStatus = 'approved'
+      } else if (partner.status === 'rejected') {
+        currentStatus = 'rejected'
+        reason = partner.rejection_reason || reason || 'Application rejected by administration.'
+      } else if (partner.status === 'pending') {
+        currentStatus = 'pending'
+      }
+    }
+  } catch (e) {
+    console.warn('Status resolve note:', e.message)
+  }
+
+  // Memory store fallback/sync
+  if (cleanPhone) {
+    const memAcc = memoryShopAccounts.find((a) => a.phone === cleanPhone)
+    if (memAcc) {
+      if (currentStatus !== 'pending') {
+        memAcc.status = currentStatus
+        if (reason) memAcc.rejection_reason = reason
+        if (provisionedDeviceId) memAcc.deviceId = provisionedDeviceId
+      } else if (memAcc.status) {
+        currentStatus = memAcc.status
+        reason = memAcc.rejection_reason || reason
+      }
+    }
+  }
+
+  return {
+    success: true,
+    status: currentStatus,
+    pending: currentStatus === 'pending',
+    approved: currentStatus === 'approved' || currentStatus === 'online',
+    rejected: currentStatus === 'rejected',
+    suspended: currentStatus === 'suspended' || currentStatus === 'cancelled',
+    reason,
+    suspended_at: suspendedAt,
+    deviceId: provisionedDeviceId,
+    contact: ADMIN_CONTACT,
+  }
+}
+
+/**
  * GET /api/desktop/auth?action=check-status&deviceId=...&phone=...
  * Real-time station approval & status check for desktop app
  */
@@ -487,85 +537,14 @@ export async function GET(request) {
     const action = searchParams.get('action') || 'check-status'
     const deviceId = searchParams.get('deviceId')
     const phone = searchParams.get('phone')
-    const cleanPhone = phone ? phone.trim().replace(/[^0-9]/g, '') : ''
 
     if (action === 'list-accounts') {
       return NextResponse.json({ success: true, accounts: memoryShopAccounts })
     }
 
-    if (action === 'check-status' && (deviceId || cleanPhone)) {
-      let currentStatus = 'online'
-      let reason = ''
-      let suspendedAt = ''
-      let provisionedDeviceId = deviceId || ''
-
-      // 1. Check DB partners table
-      try {
-        let q = supabase.from('partners').select('*')
-        if (cleanPhone) q = q.eq('phone', cleanPhone)
-        else if (deviceId) q = q.eq('provisioned_device_id', deviceId)
-
-        const { data: dbPartner } = await q.order('created_at', { ascending: false }).limit(1).maybeSingle()
-        if (dbPartner) {
-          currentStatus = dbPartner.status
-          reason = dbPartner.rejection_reason || ''
-          provisionedDeviceId = dbPartner.provisioned_device_id || provisionedDeviceId
-
-          // Sync into memory
-          const memAcc = memoryShopAccounts.find((a) => a.phone === dbPartner.phone)
-          if (memAcc) {
-            memAcc.status = dbPartner.status
-            memAcc.rejection_reason = dbPartner.rejection_reason
-            if (dbPartner.provisioned_device_id) memAcc.deviceId = dbPartner.provisioned_device_id
-          }
-        }
-      } catch (e) {
-        // DB note
-      }
-
-      // 2. Check DB devices table
-      if (deviceId && currentStatus !== 'rejected' && currentStatus !== 'pending') {
-        try {
-          const { data: dev } = await supabase
-            .from('devices')
-            .select('*')
-            .eq('id', deviceId)
-            .maybeSingle()
-
-          if (dev) {
-            currentStatus = dev.status
-            if (dev.status === 'suspended' || dev.status === 'cancelled') {
-              reason = dev.location?.suspension_reason || 'Partnership cancelled by QuickInk administration'
-              suspendedAt = dev.location?.suspended_at || ''
-            }
-          }
-        } catch (e) {
-          // DB note
-        }
-      }
-
-      // 3. Check memory store
-      if (cleanPhone) {
-        const mem = memoryShopAccounts.find((a) => a.phone === cleanPhone)
-        if (mem) {
-          if (mem.status) currentStatus = mem.status
-          if (mem.rejection_reason) reason = mem.rejection_reason
-          if (mem.deviceId) provisionedDeviceId = mem.deviceId
-        }
-      }
-
-      return NextResponse.json({
-        success: true,
-        status: currentStatus,
-        pending: currentStatus === 'pending',
-        approved: currentStatus === 'approved' || currentStatus === 'online',
-        rejected: currentStatus === 'rejected',
-        suspended: currentStatus === 'suspended' || currentStatus === 'cancelled',
-        reason,
-        suspended_at: suspendedAt,
-        deviceId: provisionedDeviceId,
-        contact: ADMIN_CONTACT,
-      })
+    if (action === 'check-status') {
+      const result = await resolveAccountStatus(phone, deviceId)
+      return NextResponse.json(result)
     }
 
     return NextResponse.json({ success: true, message: 'QuickInk Desktop Auth API Ready', contact: ADMIN_CONTACT })
@@ -573,5 +552,6 @@ export async function GET(request) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
+
 
 
