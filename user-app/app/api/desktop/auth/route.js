@@ -36,19 +36,17 @@ export async function POST(request) {
 
       console.log(`[Desktop Auth] Mobile verification code generated for ${cleanPhone}: ${code}`)
 
-      // Send Real SMS via fraudchecker.link API
+      // Fire-and-forget: Send SMS without blocking the response
       const smsApiKey = '42fc1e917497409da3d3ffc7622e566e'
       const smsMessage = encodeURIComponent(`Your QuickInk verification code is: ${code}. Valid for 10 minutes.`)
       const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
 
-      try {
-        const smsRes = await fetch(smsUrl)
-        const smsData = await smsRes.json()
-        console.log(`[Desktop Auth] SMS sent to ${cleanPhone}:`, smsData)
-      } catch (smsErr) {
-        console.warn('[Desktop Auth SMS Warning]:', smsErr.message)
-      }
+      fetch(smsUrl)
+        .then((r) => r.json())
+        .then((d) => console.log(`[Desktop Auth] SMS dispatched to ${cleanPhone}:`, d))
+        .catch((e) => console.warn('[Desktop Auth SMS Warning]:', e.message))
 
+      // Return success immediately — don't wait for SMS delivery
       return NextResponse.json({
         success: true,
         message: `Verification code sent to ${cleanPhone}`,

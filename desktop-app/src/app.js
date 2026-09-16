@@ -1278,6 +1278,9 @@ async function handleSendMobileOtp() {
   state.regDraft.location = location
 
   try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+
     const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1285,7 +1288,9 @@ async function handleSendMobileOtp() {
         action: 'send-otp',
         phone: cleanPhone,
       }),
+      signal: controller.signal,
     })
+    clearTimeout(timer)
 
     const data = await res.json().catch(() => null)
 
@@ -1301,7 +1306,11 @@ async function handleSendMobileOtp() {
     el.authOtpBoxes.forEach((b) => (b.value = ''))
     setRegStep(2)
   } catch (e) {
-    showRegMsg(el.regStep1StatusMsg, 'Unable to connect to QuickInk server. Please check your internet connection.', true)
+    if (e.name === 'AbortError') {
+      showRegMsg(el.regStep1StatusMsg, 'Request timed out. Please check your internet connection and try again.', true)
+    } else {
+      showRegMsg(el.regStep1StatusMsg, 'Unable to connect to QuickInk server. Please check your internet connection.', true)
+    }
   } finally {
     el.btnToStep2.disabled = false
     el.btnToStep2.textContent = 'Verify Mobile via OTP →'
