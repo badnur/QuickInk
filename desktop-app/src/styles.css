@@ -1423,6 +1423,54 @@ body, html {
   color: var(--text-muted);
 }
 
+/* =============================================================================
+   VERIFY & FETCH PRINT JOB HERO ACTION BUTTON
+   ============================================================================= */
+.btn-verify-action,
+#btn-verify-otp {
+  width: 100%;
+  max-width: 380px;
+  margin: 18px auto 0 auto;
+  background: linear-gradient(135deg, #00e074 0%, #00bf63 55%, #00994f 100%);
+  color: #000000;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  padding: 14px 28px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 4px 20px rgba(0, 191, 99, 0.4), 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-verify-action:hover,
+#btn-verify-otp:hover {
+  background: linear-gradient(135deg, #10f483 0%, #00d66c 55%, #00bf63 100%);
+  box-shadow: 0 8px 30px rgba(0, 191, 99, 0.6), 0 3px 10px rgba(0, 0, 0, 0.5);
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+}
+
+.btn-verify-action:active,
+#btn-verify-otp:active {
+  transform: translateY(1px) scale(0.99);
+  box-shadow: 0 3px 12px rgba(0, 191, 99, 0.3);
+}
+
+.btn-verify-action:disabled,
+#btn-verify-otp:disabled {
+  background: #27272a;
+  color: #71717a;
+  box-shadow: none;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .hardware-strip {
   display: flex;
   gap: 20px;
