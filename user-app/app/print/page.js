@@ -106,6 +106,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
   const [showChoiceScreen, setShowChoiceScreen] = useState(false)
   const [previewPageIndex, setPreviewPageIndex] = useState(1)
   const [pdfDoc, setPdfDoc] = useState(null)
+  const [pdfLibDoc, setPdfLibDoc] = useState(null)
   const [pagePreviewUrls, setPagePreviewUrls] = useState({})
   const [isAnalyzingPdf, setIsAnalyzingPdf] = useState(false)
   const [isRenderingPage, setIsRenderingPage] = useState(false)
@@ -249,6 +250,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
     setBrightness(0)
     setContrast(0)
     setPdfDoc(null)
+    setPdfLibDoc(null)
     setPagePreviewUrls({})
 
     const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
@@ -269,15 +271,16 @@ function PrintOrderPageContent({ initialDeviceId }) {
       setShowChoiceScreen(true)
 
       try {
-        const { pdfDoc: loadedDoc, pageCount } = await loadPdfDocument(file)
+        const { pdfDoc: loadedDoc, pdfLibDoc: loadedLibDoc, pageCount } = await loadPdfDocument(file)
         setPdfDoc(loadedDoc)
+        setPdfLibDoc(loadedLibDoc)
         const pages = Math.max(1, pageCount || 1)
         setTotalPages(pages)
         setFromPage(1)
         setToPage(pages)
 
-        if (loadedDoc) {
-          const firstPagePreview = await renderPdfPageToDataUrl(loadedDoc, 1)
+        if (loadedDoc || loadedLibDoc) {
+          const firstPagePreview = await renderPdfPageToDataUrl(loadedDoc, 1, 800, loadedLibDoc)
           if (firstPagePreview) {
             setPagePreviewUrls({ 1: firstPagePreview })
             setFilePreviewUrl(firstPagePreview)
@@ -307,10 +310,10 @@ function PrintOrderPageContent({ initialDeviceId }) {
       return
     }
 
-    if (pdfDoc) {
+    if (pdfDoc || pdfLibDoc) {
       setIsRenderingPage(true)
       try {
-        const dataUrl = await renderPdfPageToDataUrl(pdfDoc, pageNum)
+        const dataUrl = await renderPdfPageToDataUrl(pdfDoc, pageNum, 800, pdfLibDoc)
         if (dataUrl) {
           setPagePreviewUrls((prev) => ({ ...prev, [pageNum]: dataUrl }))
           setFilePreviewUrl(dataUrl)
@@ -322,6 +325,39 @@ function PrintOrderPageContent({ initialDeviceId }) {
       }
     }
   }
+
+  // Automatically render missing preview pages for currently visible sheet or view
+  useEffect(() => {
+    if (!selectedFile || (!pdfDoc && !pdfLibDoc) || totalPages <= 1) return
+
+    const currentSheetIdx = Math.floor((previewPageIndex - 1) / pagesPerSheet)
+    const startPage = currentSheetIdx * pagesPerSheet + 1
+    const endPage = Math.min(totalPages, startPage + pagesPerSheet - 1)
+
+    let isMounted = true
+    const loadMissingPreviews = async () => {
+      for (let p = startPage; p <= endPage; p++) {
+        if (!pagePreviewUrls[p]) {
+          try {
+            const url = await renderPdfPageToDataUrl(pdfDoc, p, 500, pdfLibDoc)
+            if (url && isMounted) {
+              setPagePreviewUrls((prev) => ({ ...prev, [p]: url }))
+              if (p === previewPageIndex) {
+                setFilePreviewUrl(url)
+              }
+            }
+          } catch (e) {
+            console.warn(`[renderPreview] Page ${p} notice:`, e)
+          }
+        }
+      }
+    }
+
+    loadMissingPreviews()
+    return () => {
+      isMounted = false
+    }
+  }, [previewPageIndex, pagesPerSheet, pdfDoc, pdfLibDoc, totalPages, selectedFile])
 
   // Handle scanner completion
   const handleScannerComplete = ({ file, pageCount: scannedPages, previewUrl }) => {
@@ -753,6 +789,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
                       setSelectedFile(null)
                       setFilePreviewUrl(null)
                       setPdfDoc(null)
+                      setPdfLibDoc(null)
                       setPagePreviewUrls({})
                       setTotalPages(1)
                       setPreviewPageIndex(1)
@@ -773,7 +810,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
                       <p className="text-xs font-bold text-gray-700">Analyzing Document Pages...</p>
                       <span className="text-[10px] text-gray-400">Reading PDF structure</span>
                     </div>
-                  ) : filePreviewUrl ? (
+                  ) : (pagePreviewUrls[previewPageIndex] || filePreviewUrl) ? (
                     <div className="relative flex flex-col items-center justify-center">
                       {isRenderingPage && (
                         <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center z-20 rounded">
@@ -808,7 +845,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
                               const currentSheetIdx = Math.floor((previewPageIndex - 1) / pagesPerSheet)
                               const slotPageNum = currentSheetIdx * pagesPerSheet + slotIdx + 1
                               const hasPage = slotPageNum <= totalPages
-                              const slotImg = hasPage ? (pagePreviewUrls[slotPageNum] || filePreviewUrl) : null
+                              const slotImg = hasPage ? pagePreviewUrls[slotPageNum] : null
 
                               return (
                                 <div
@@ -828,6 +865,11 @@ function PrintOrderPageContent({ initialDeviceId }) {
                                         P.{slotPageNum}
                                       </span>
                                     </>
+                                  ) : hasPage ? (
+                                    <div className="flex flex-col items-center justify-center p-1 text-center">
+                                      <RefreshCw className="w-3.5 h-3.5 text-[#00bf63] animate-spin mb-1 opacity-70" />
+                                      <span className="text-[7px] font-bold text-gray-400">P.{slotPageNum}</span>
+                                    </div>
                                   ) : (
                                     <span className="text-[8px] font-medium text-gray-300">Blank</span>
                                   )}
@@ -839,7 +881,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
                       ) : (
                         /* Standard 1-in-1 Preview */
                         <img
-                          src={filePreviewUrl}
+                          src={pagePreviewUrls[previewPageIndex] || filePreviewUrl}
                           alt="Document Preview"
                           style={{
                             transform: `rotate(${rotation}deg)`,

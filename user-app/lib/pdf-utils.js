@@ -74,108 +74,167 @@ function extractPageCountFast(binaryStr) {
 }
 
 /**
- * Robustly load a PDF file and return its page count and a document handle for rendering.
+ * Robustly load a PDF file and return its page count and document handles for rendering.
+ * Employs in-memory byte buffer loading for PDF.js to eliminate blob HTTP range-request errors,
+ * alongside pure JavaScript pdf-lib parsing to guarantee accurate multi-page detection.
  */
 export async function loadPdfDocument(file) {
   const objectUrl = URL.createObjectURL(file)
+  let arrayBuffer = null
+  try {
+    arrayBuffer = await file.arrayBuffer()
+  } catch (bufErr) {
+    console.warn('[loadPdfDocument] arrayBuffer read notice:', bufErr)
+  }
 
-  // 1. Try PDF.js (fastest and supports streaming range requests for huge files)
+  // 1. Authoritative Page Count via pdf-lib
+  // Pure JavaScript parsing of PDF catalog /Pages tree — never trips on workers, CORS, or blob range requests
+  let pdfLibDoc = null
+  let pdfLibPageCount = 0
+  if (arrayBuffer) {
+    try {
+      pdfLibDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true })
+      pdfLibPageCount = pdfLibDoc.getPageCount()
+      console.log(`[loadPdfDocument] pdf-lib parsed ${pdfLibPageCount} page(s)`)
+    } catch (libErr) {
+      console.warn('[loadPdfDocument] pdf-lib notice:', libErr.message)
+    }
+  }
+
+  // 2. High-Fidelity Visual Renderer via PDF.js
+  let pdfDoc = null
   try {
     const pdfjs = await loadPdfJs()
     if (pdfjs) {
-      const loadingTask = pdfjs.getDocument({
-        url: objectUrl,
-        disableAutoFetch: true,
-        disableStream: false
-      })
-      const pdfDoc = await loadingTask.promise
-      return {
-        pdfDoc,
-        pageCount: pdfDoc.numPages || 1,
-        objectUrl,
-        source: 'pdfjs'
+      // Primary: load from in-memory byte buffer (eliminates blob range request errors on Chrome/Edge/Firefox)
+      if (arrayBuffer) {
+        try {
+          const loadingTask = pdfjs.getDocument({
+            data: new Uint8Array(arrayBuffer),
+            cMapUrl: '/pdfjs/cmaps/',
+            cMapPacked: true,
+          })
+          pdfDoc = await loadingTask.promise
+          console.log(`[loadPdfDocument] PDF.js loaded in-memory: ${pdfDoc.numPages} page(s)`)
+        } catch (memErr) {
+          console.warn('[loadPdfDocument] PDF.js in-memory notice, trying URL fallback:', memErr.message)
+        }
+      }
+
+      // Secondary: load from blob objectUrl if in-memory wasn't available or failed
+      if (!pdfDoc) {
+        const loadingTask = pdfjs.getDocument({
+          url: objectUrl,
+        })
+        pdfDoc = await loadingTask.promise
+        console.log(`[loadPdfDocument] PDF.js loaded via URL: ${pdfDoc.numPages} page(s)`)
       }
     }
   } catch (pdfjsErr) {
-    console.warn('[loadPdfDocument] PDF.js failed, falling back to pdf-lib:', pdfjsErr)
+    console.warn('[loadPdfDocument] PDF.js failed, relying on pdf-lib for pages & rendering:', pdfjsErr.message)
   }
 
-  // 2. Fallback to pdf-lib
-  try {
-    const arrayBuffer = await file.arrayBuffer()
-    const pdfLibDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true })
-    const pageCount = pdfLibDoc.getPageCount()
-    return {
-      pdfDoc: null,
-      pdfLibDoc,
-      pageCount: pageCount || 1,
-      objectUrl,
-      source: 'pdf-lib'
-    }
-  } catch (pdfLibErr) {
-    console.warn('[loadPdfDocument] pdf-lib failed, falling back to fast scan:', pdfLibErr)
+  // 3. Fallback regex binary scan if both parsers failed
+  let fastCount = null
+  if (!pdfDoc && !pdfLibPageCount && file) {
+    try {
+      const sliceSize = Math.min(file.size, 5 * 1024 * 1024)
+      const blobSlice = file.slice(0, sliceSize)
+      const text = await blobSlice.text()
+      fastCount = extractPageCountFast(text)
+    } catch (e) {}
   }
 
-  // 3. Last fallback: Fast text/binary regex
-  try {
-    const sliceSize = Math.min(file.size, 5 * 1024 * 1024)
-    const blobSlice = file.slice(0, sliceSize)
-    const text = await blobSlice.text()
-    const fastCount = extractPageCountFast(text)
-    if (fastCount && fastCount > 0) {
-      return {
-        pdfDoc: null,
-        pageCount: fastCount,
-        objectUrl,
-        source: 'fast-scan'
-      }
-    }
-  } catch (e) {
-    console.warn('[loadPdfDocument] Fast scan failed:', e)
-  }
+  // Determine true authoritative page count (whichever parser found more valid pages)
+  const truePageCount = Math.max(
+    pdfDoc?.numPages || 0,
+    pdfLibPageCount || 0,
+    fastCount || 0,
+    1
+  )
 
-  // Safe default
   return {
-    pdfDoc: null,
-    pageCount: 1,
+    pdfDoc,
+    pdfLibDoc,
+    pageCount: truePageCount,
     objectUrl,
-    source: 'fallback'
+    source: pdfDoc ? 'pdfjs' : (pdfLibDoc ? 'pdf-lib' : 'fallback')
   }
 }
 
 /**
  * Render a specific page of a PDF document to a data URL (image/jpeg)
+ * Handles both PDF.js and pdf-lib extraction fallback to ensure all pages render.
  */
-export async function renderPdfPageToDataUrl(pdfDoc, pageNum, maxDimension = 800) {
-  if (!pdfDoc || !pdfDoc.getPage) return null
+export async function renderPdfPageToDataUrl(pdfDoc, pageNum, maxDimension = 800, pdfLibDoc = null) {
+  // 1. Primary: If pdfDoc is loaded and has this page, render directly
+  if (pdfDoc && pdfDoc.getPage) {
+    try {
+      const numPages = pdfDoc.numPages || 1
+      if (pageNum <= numPages) {
+        const page = await pdfDoc.getPage(pageNum)
+        const unscaledViewport = page.getViewport({ scale: 1.0 })
+        const scale = Math.min(
+          maxDimension / Math.max(unscaledViewport.width, unscaledViewport.height),
+          2.0
+        )
+        const viewport = page.getViewport({ scale: Math.max(scale, 0.75) })
 
-  try {
-    const page = await pdfDoc.getPage(pageNum)
-    const unscaledViewport = page.getViewport({ scale: 1.0 })
-    
-    // Scale to fit inside maxDimension
-    const scale = Math.min(
-      maxDimension / Math.max(unscaledViewport.width, unscaledViewport.height),
-      2.0
-    )
-    const viewport = page.getViewport({ scale: Math.max(scale, 0.75) })
+        const canvas = document.createElement('canvas')
+        const context = canvas.getContext('2d', { alpha: false })
+        canvas.width = Math.floor(viewport.width)
+        canvas.height = Math.floor(viewport.height)
 
-    const canvas = document.createElement('canvas')
-    const context = canvas.getContext('2d', { alpha: false })
-    canvas.width = Math.floor(viewport.width)
-    canvas.height = Math.floor(viewport.height)
-
-    const renderContext = {
-      canvasContext: context,
-      viewport: viewport
+        await page.render({
+          canvasContext: context,
+          viewport: viewport
+        }).promise
+        return canvas.toDataURL('image/jpeg', 0.88)
+      }
+    } catch (renderErr) {
+      console.warn(`[renderPdfPageToDataUrl] Direct render for page ${pageNum} notice:`, renderErr.message)
     }
-
-    await page.render(renderContext).promise
-    return canvas.toDataURL('image/jpeg', 0.88)
-  } catch (renderErr) {
-    console.warn(`[renderPdfPageToDataUrl] Error rendering page ${pageNum}:`, renderErr)
-    return null
   }
+
+  // 2. Secondary fallback: Extract page with pdf-lib, wrap in single-page PDF, render with PDF.js
+  if (pdfLibDoc) {
+    try {
+      const totalLibPages = pdfLibDoc.getPageCount()
+      if (pageNum >= 1 && pageNum <= totalLibPages) {
+        const singleDoc = await PDFDocument.create()
+        const [copiedPage] = await singleDoc.copyPages(pdfLibDoc, [pageNum - 1])
+        singleDoc.addPage(copiedPage)
+        const singleBytes = await singleDoc.save()
+
+        const pdfjs = await loadPdfJs()
+        if (pdfjs) {
+          const singleLoadingTask = pdfjs.getDocument({
+            data: new Uint8Array(singleBytes),
+            cMapUrl: '/pdfjs/cmaps/',
+            cMapPacked: true,
+          })
+          const singlePdfDoc = await singleLoadingTask.promise
+          const singlePage = await singlePdfDoc.getPage(1)
+          const unscaledViewport = singlePage.getViewport({ scale: 1.0 })
+          const scale = Math.min(
+            maxDimension / Math.max(unscaledViewport.width, unscaledViewport.height),
+            2.0
+          )
+          const viewport = singlePage.getViewport({ scale: Math.max(scale, 0.75) })
+          const canvas = document.createElement('canvas')
+          const context = canvas.getContext('2d', { alpha: false })
+          canvas.width = Math.floor(viewport.width)
+          canvas.height = Math.floor(viewport.height)
+          await singlePage.render({ canvasContext: context, viewport }).promise
+          return canvas.toDataURL('image/jpeg', 0.88)
+        }
+      }
+    } catch (fallbackErr) {
+      console.warn(`[renderPdfPageToDataUrl] Secondary fallback failed for page ${pageNum}:`, fallbackErr.message)
+    }
+  }
+
+  return null
 }
 
 /**
