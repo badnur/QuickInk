@@ -123,6 +123,32 @@ app.on('window-all-closed', () => {
   }
 })
 
+// Helper: Parse page range string into 0-indexed page number array
+function parsePageRange(rangeStr, maxPages) {
+  if (!rangeStr || !String(rangeStr).trim()) return []
+  const indices = new Set()
+  const parts = String(rangeStr).split(',')
+  for (const part of parts) {
+    const trimmed = part.trim()
+    if (trimmed.includes('-')) {
+      const [startStr, endStr] = trimmed.split('-')
+      const start = parseInt(startStr, 10)
+      const end = parseInt(endStr, 10)
+      if (!isNaN(start) && !isNaN(end)) {
+        const min = Math.max(1, Math.min(start, end))
+        const max = Math.min(maxPages, Math.max(start, end))
+        for (let i = min; i <= max; i++) indices.add(i - 1)
+      }
+    } else {
+      const p = parseInt(trimmed, 10)
+      if (!isNaN(p) && p >= 1 && p <= maxPages) {
+        indices.add(p - 1)
+      }
+    }
+  }
+  return Array.from(indices).sort((a, b) => a - b)
+}
+
 // Helper: Download a remote file to a local temp file
 async function downloadToTemp(fileUrl, preferredExt = '.pdf') {
   try {
@@ -135,6 +161,9 @@ async function downloadToTemp(fileUrl, preferredExt = '.pdf') {
     }
 
     let resolvedUrl = String(fileUrl).trim()
+    if (resolvedUrl.includes('#')) {
+      resolvedUrl = resolvedUrl.split('#')[0]
+    }
 
     // 1. If it's already a valid local file on disk
     if (fs.existsSync(resolvedUrl)) {
@@ -524,14 +553,23 @@ async function generateTestPdf(printerName, isColor) {
         return { success: false, error: 'No printer specified for this job' }
       }
 
+      let effectivePageRange = pageRange
+      if (!effectivePageRange && fileUrl && fileUrl.includes('#range=')) {
+        try {
+          effectivePageRange = decodeURIComponent(fileUrl.split('#range=')[1].split('&')[0])
+        } catch (e) {}
+      }
+      if (effectivePageRange) effectivePageRange = String(effectivePageRange).trim()
+
       const isColor = Boolean(color)
-      console.log(`[PrintJob] Preparing print to ${printerName} | Copies: ${copies} | Color: ${isColor} | Duplex: ${duplex} | PageRange: ${pageRange || 'all'}`)
+      console.log(`[PrintJob] Preparing print to ${printerName} | Copies: ${copies} | Color: ${isColor} | Duplex: ${duplex} | PageRange: ${effectivePageRange || 'all'}`)
 
       // 1. Enforce Color mode at the Windows driver level
       await setPrinterColorMode(printerName, isColor)
 
       let tempFilePath = null
       let convertedPdfPath = null
+      let slicedPdfPath = null
 
       if (fileUrl) {
         try {
@@ -555,6 +593,34 @@ async function generateTestPdf(printerName, isColor) {
             console.log(`[PrintJob] A4 PDF ready at: ${convertedPdfPath}`)
           }
 
+          // Exact Hardware Page-Range Slicing: If specific pages requested, physically slice PDF
+          // This guarantees that ANY printer (TOSHIBA, HP, Epson) prints ONLY the requested pages.
+          if (PDFLib && targetPdfPath && effectivePageRange) {
+            try {
+              const srcBytes = fs.readFileSync(targetPdfPath)
+              const srcDoc = await PDFLib.PDFDocument.load(srcBytes)
+              const totalPdfPages = srcDoc.getPageCount()
+              const targetIndices = parsePageRange(effectivePageRange, totalPdfPages)
+
+              if (targetIndices.length > 0 && targetIndices.length < totalPdfPages) {
+                console.log(`[PrintJob] Slicing PDF: requested range "${effectivePageRange}" on ${totalPdfPages}-page document → extracting ${targetIndices.length} page(s) (indices: [${targetIndices.join(',')}])`)
+                const slicedDoc = await PDFLib.PDFDocument.create()
+                const copiedPages = await slicedDoc.copyPages(srcDoc, targetIndices)
+                copiedPages.forEach((p) => slicedDoc.addPage(p))
+                const slicedBytes = await slicedDoc.save()
+
+                slicedPdfPath = path.join(app.getPath('temp'), `quickink_sliced_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`)
+                fs.writeFileSync(slicedPdfPath, slicedBytes)
+                targetPdfPath = slicedPdfPath
+                console.log(`[PrintJob] Sliced PDF ready for hardware spooler at: ${slicedPdfPath} (page count: ${slicedDoc.getPageCount()})`)
+              } else {
+                console.log(`[PrintJob] Page range "${effectivePageRange}" covers all ${totalPdfPages} pages or full document.`)
+              }
+            } catch (sliceErr) {
+              console.warn('[PrintJob] PDF page slicing error, using original document:', sliceErr.message)
+            }
+          }
+
           // Primary: Send to Windows Spooler via SumatraPDF with explicit monochrome/color flag
           if (pdfToPrinter && targetPdfPath) {
             try {
@@ -576,10 +642,9 @@ async function generateTestPdf(printerName, isColor) {
               // adds 'color' to print-settings (prevents any leftover monochrome setting)
               if (isColor) ptpOptions.monochrome = false
 
-              // Apply page range if customer selected specific pages
-              // SumatraPDF accepts ranges like "1-3,5" via -print-settings
-              if (pageRange && pageRange.trim()) {
-                ptpOptions.pages = pageRange.trim()
+              // If the file was not sliced, also supply pages option as extra fallback
+              if (effectivePageRange && !slicedPdfPath) {
+                ptpOptions.pages = effectivePageRange
                 console.log(`[PrintJob] Applying page range filter: ${ptpOptions.pages}`)
               }
 
@@ -589,6 +654,7 @@ async function generateTestPdf(printerName, isColor) {
               setTimeout(() => {
                 try { if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath) } catch (e) {}
                 try { if (convertedPdfPath && fs.existsSync(convertedPdfPath)) fs.unlinkSync(convertedPdfPath) } catch (e) {}
+                try { if (slicedPdfPath && fs.existsSync(slicedPdfPath)) fs.unlinkSync(slicedPdfPath) } catch (e) {}
               }, 20000)
 
               return { success: true, message: `Document successfully dispatched to ${printerName}` }
@@ -642,6 +708,7 @@ async function generateTestPdf(printerName, isColor) {
                 setTimeout(() => {
                   try { if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath) } catch (e) {}
                   try { if (convertedPdfPath && fs.existsSync(convertedPdfPath)) fs.unlinkSync(convertedPdfPath) } catch (e) {}
+                  try { if (slicedPdfPath && fs.existsSync(slicedPdfPath)) fs.unlinkSync(slicedPdfPath) } catch (e) {}
                 }, 10000)
 
                 if (success) {
@@ -659,6 +726,9 @@ async function generateTestPdf(printerName, isColor) {
           }
           if (convertedPdfPath) {
             try { if (fs.existsSync(convertedPdfPath)) fs.unlinkSync(convertedPdfPath) } catch (e) {}
+          }
+          if (slicedPdfPath) {
+            try { if (fs.existsSync(slicedPdfPath)) fs.unlinkSync(slicedPdfPath) } catch (e) {}
           }
           return { success: false, error: `Document preparation failed: ${downloadErr.message}` }
         }

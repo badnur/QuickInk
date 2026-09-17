@@ -123,29 +123,48 @@ export async function POST(request) {
     // Generate download URL for file
     let fileUrl = null
     const rawPath = data?.print_job?.file_path
-    if (rawPath) {
-      if (rawPath.startsWith('http://') || rawPath.startsWith('https://')) {
-        fileUrl = rawPath
-      } else if (rawPath.startsWith('/uploads/')) {
-        fileUrl = `http://localhost:3000${rawPath}`
+    let cleanPath = rawPath
+    let rangeFromPath = null
+
+    if (rawPath && rawPath.includes('#range=')) {
+      const parts = rawPath.split('#range=')
+      cleanPath = parts[0]
+      try {
+        rangeFromPath = decodeURIComponent(parts[1])
+      } catch (e) {
+        rangeFromPath = parts[1]
+      }
+    }
+
+    const effectivePageRange = data?.print_job?.page_range || rangeFromPath || null
+
+    if (cleanPath) {
+      if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+        fileUrl = cleanPath
+      } else if (cleanPath.startsWith('/uploads/')) {
+        fileUrl = `http://localhost:3000${cleanPath}`
       } else {
         try {
           const { data: signedData } = await supabase.storage
             .from('print-files')
-            .createSignedUrl(rawPath, 3600)
+            .createSignedUrl(cleanPath, 3600)
 
           if (signedData?.signedUrl) {
             fileUrl = signedData.signedUrl
           } else {
             const { data: publicData } = supabase.storage
               .from('print-files')
-              .getPublicUrl(rawPath)
+              .getPublicUrl(cleanPath)
             fileUrl = publicData?.publicUrl
           }
         } catch (e) {
           console.warn('Could not generate signed URL for print file:', e)
         }
       }
+    }
+
+    if (fileUrl && effectivePageRange) {
+      fileUrl = `${fileUrl}#range=${encodeURIComponent(effectivePageRange)}`
     }
 
     return NextResponse.json({
@@ -155,6 +174,8 @@ export async function POST(request) {
         ...data,
         print_job: {
           ...data?.print_job,
+          file_path: cleanPath,
+          page_range: effectivePageRange,
           file_url: fileUrl,
         },
         target_printer: targetPrinter,

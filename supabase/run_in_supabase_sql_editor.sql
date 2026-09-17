@@ -270,6 +270,13 @@ ON public.print_jobs FOR SELECT
 TO anon, authenticated
 USING (true);
 
+DROP POLICY IF EXISTS "Allow anon update print jobs" ON public.print_jobs;
+CREATE POLICY "Allow anon update print jobs"
+ON public.print_jobs FOR UPDATE
+TO anon, authenticated
+USING (true)
+WITH CHECK (true);
+
 DROP POLICY IF EXISTS "Allow anon create otps" ON public.otps;
 CREATE POLICY "Allow anon create otps"
 ON public.otps FOR INSERT

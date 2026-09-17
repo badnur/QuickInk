@@ -37,9 +37,13 @@ export async function POST(request) {
     const otpType = validPaymentType === 'online' ? 'type_a' : 'type_b'
     const parsedAmount = parseFloat(amount) || 0
 
+    // Encode page_range in file_path so it permanently survives in database even if RLS restricts direct column updates
+    const cleanRange = page_range && String(page_range).trim() ? String(page_range).trim() : null
+    const storedFilePath = cleanRange ? `${file_path}#range=${encodeURIComponent(cleanRange)}` : file_path
+
     // 1. Try atomic database RPC function first
     const { data: rpcData, error: rpcError } = await supabase.rpc('create_print_job', {
-      p_file_path: file_path,
+      p_file_path: storedFilePath,
       p_file_type: file_type,
       p_copies: parsedCopies,
       p_color_mode: validColorMode,

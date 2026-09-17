@@ -321,10 +321,24 @@ const QuickInkCloud = {
     const unitPrice = colorMode === 'color' ? 8.0 : 2.0
     const calculatedAmount = ((printJob.page_count || 1) * unitPrice * (printJob.copies || 1)).toFixed(2)
 
-    let fileUrl = printJob.file_path
+    let rawPath = printJob.file_path
+    let cleanPath = rawPath
+    let rangeFromPath = null
+    if (rawPath && rawPath.includes('#range=')) {
+      const parts = rawPath.split('#range=')
+      cleanPath = parts[0]
+      try {
+        rangeFromPath = decodeURIComponent(parts[1])
+      } catch (e) {
+        rangeFromPath = parts[1]
+      }
+    }
+    const effectivePageRange = printJob.page_range || rangeFromPath || null
+
+    let fileUrl = cleanPath
     if (fileUrl && !fileUrl.startsWith('http')) {
       try {
-        const signRes = await fetch(`${this.SUPABASE_URL}/storage/v1/object/sign/print-files/${fileUrl}`, {
+        const signRes = await fetch(`${this.SUPABASE_URL}/storage/v1/object/sign/print-files/${cleanPath}`, {
           method: 'POST',
           headers: {
             apikey: this.SUPABASE_KEY,
@@ -344,11 +358,20 @@ const QuickInkCloud = {
       }
     }
 
+    if (fileUrl && effectivePageRange) {
+      fileUrl = `${fileUrl}#range=${encodeURIComponent(effectivePageRange)}`
+    }
+
     return {
       ok: true,
       data: {
         ...data,
-        print_job: { ...printJob, file_url: fileUrl },
+        print_job: {
+          ...printJob,
+          file_path: cleanPath,
+          page_range: effectivePageRange,
+          file_url: fileUrl
+        },
         target_printer: targetPrinter,
         amount: calculatedAmount,
         payment: {
@@ -1374,10 +1397,20 @@ function openJobModal(jobData) {
   const job = jobData?.data?.print_job || jobData?.print_job || {}
   const isColor = job.color_mode === 'color'
 
+  const rawUrlOrPath = job.file_url || job.file_path || ''
+  let rangeFromUrl = null
+  if (rawUrlOrPath.includes('#range=')) {
+    try {
+      rangeFromUrl = decodeURIComponent(rawUrlOrPath.split('#range=')[1].split('&')[0])
+    } catch (e) {}
+  }
+  const effectiveRange = job.page_range || rangeFromUrl || null
+
   el.modalDocTitle.textContent = job.file_name || 'Customer_Document.pdf'
   el.modalOtp.textContent = jobData?.data?.otp?.code || jobData?.otp?.code || getEnteredOtp()
   el.modalColorMode.textContent = isColor ? 'Full Color' : 'Black & White'
-  el.modalPagesCopies.textContent = `${job.page_count || 1} page(s) × ${job.copies || 1} copy`
+  const rangeNotice = effectiveRange ? ` (Range: ${effectiveRange})` : ''
+  el.modalPagesCopies.textContent = `${job.page_count || 1} page(s)${rangeNotice} × ${job.copies || 1} copy`
   el.modalDuplex.textContent = job.duplex === 'duplex' ? 'Double-Sided (Duplex)' : 'Single-Sided'
 
   const targetPrinter = isColor ? state.config.colorPrinterName : state.config.bwPrinterName
@@ -1424,6 +1457,15 @@ el.btnReleasePrint?.addEventListener('click', async () => {
   const chosenPrinter = isColor ? state.config.colorPrinterName : state.config.bwPrinterName
   const fileToPrint = job.file_url || job.file_path
 
+  const rawUrlOrPath = job.file_url || job.file_path || ''
+  let rangeFromUrl = null
+  if (rawUrlOrPath.includes('#range=')) {
+    try {
+      rangeFromUrl = decodeURIComponent(rawUrlOrPath.split('#range=')[1].split('&')[0])
+    } catch (e) {}
+  }
+  const effectiveRange = job.page_range || rangeFromUrl || null
+
   try {
     await new Promise((r) => setTimeout(r, 600))
     el.spoolingStepLabel.textContent = `Rendering pages & routing to ${chosenPrinter || 'hardware'}...`
@@ -1434,10 +1476,10 @@ el.btnReleasePrint?.addEventListener('click', async () => {
       const printResult = await window.quickinkDesktop.printJob({
         fileUrl: fileToPrint,
         printerName: chosenPrinter,
-        monochrome: !isColor,
-        side: job.duplex === 'duplex' ? 'duplex' : 'simplex',
+        color: isColor,
+        duplex: job.duplex === 'duplex',
         copies: job.copies || 1,
-        pageRange: job.page_range || null
+        pageRange: effectiveRange
       })
 
       if (!printResult.success) {
