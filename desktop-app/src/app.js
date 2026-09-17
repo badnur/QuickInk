@@ -937,12 +937,16 @@ function setupAutoUpdaterClient() {
     el.btnManualCheckUpdate.textContent = 'Checking...'
     try {
       const res = await window.quickinkDesktop.checkForUpdates()
-      if (res.success) {
-        if (el.updateBanner) el.updateBanner.classList.remove('hidden')
-        if (el.updateBannerTitle) el.updateBannerTitle.textContent = 'QuickInk Updater'
-        if (el.updateBannerDesc) el.updateBannerDesc.textContent = res.version ? `New version v${res.version} found! Downloading...` : 'Checking GitHub releases...'
+      if (res?.success) {
+        if (res.isLatest) {
+          alert('QuickInk Station is up to date! (v' + (res.version || '') + ')')
+        } else {
+          if (el.updateBanner) el.updateBanner.classList.remove('hidden')
+          if (el.updateBannerTitle) el.updateBannerTitle.textContent = 'QuickInk Updater'
+          if (el.updateBannerDesc) el.updateBannerDesc.textContent = res.version ? `New version v${res.version} found! Downloading in background...` : 'Checking GitHub releases...'
+        }
       } else {
-        alert(res.error || 'Could not reach update server. Check internet connection.')
+        alert(res?.error || 'Could not reach update server. Check internet connection.')
       }
     } catch (e) {
       console.warn('Manual update check error:', e)

@@ -747,9 +747,19 @@ async function generateTestPdf(printerName, isColor) {
     if (!autoUpdater) return { success: false, error: 'Auto-updater not available in this environment' }
     try {
       const result = await autoUpdater.checkForUpdates()
-      return { success: true, version: result?.updateInfo?.version }
+      const newVersion = result?.updateInfo?.version
+      const currentVersion = app.getVersion()
+      if (!newVersion || newVersion === currentVersion) {
+        return { success: true, isLatest: true, version: currentVersion }
+      }
+      return { success: true, isLatest: false, version: newVersion }
     } catch (err) {
-      return { success: false, error: err.message }
+      console.warn('[AutoUpdater] Manual check error:', err?.message || err)
+      const msg = err?.message || ''
+      if (msg.includes('404') || msg.includes('latest.yml')) {
+        return { success: true, isLatest: true, version: app.getVersion() }
+      }
+      return { success: false, error: 'Unable to reach update server. Please check your internet connection.' }
     }
   })
 
