@@ -190,20 +190,32 @@ export default function PartnerPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto text-left">
             <div className="bg-[#111827] border border-slate-800 rounded-xl p-4">
-              <div className="text-xs text-slate-400">Partner Earnings</div>
-              <div className="text-2xl font-bold text-[#00bf63]">40% Net</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Fixed cut on every sheet printed</div>
+              <div className="text-xs text-slate-400">Shop Earnings</div>
+              <div className="text-2xl font-bold text-[#00bf63]">100% Retained</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">Keep full customer print revenue</div>
             </div>
             <div className="bg-[#111827] border border-slate-800 rounded-xl p-4">
-              <div className="text-xs text-slate-400">Hardware & Software</div>
+              <div className="text-xs text-slate-400">Terminal Software</div>
               <div className="text-2xl font-bold text-white">Desktop POS</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Free touch terminal application</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">Pairs directly with counter printers</div>
             </div>
             <div className="bg-[#111827] border border-slate-800 rounded-xl p-4">
               <div className="text-xs text-slate-400">Approval Time</div>
-              <div className="text-2xl font-bold text-white">24 Hours</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Fast field technician deployment</div>
+              <div className="text-2xl font-bold text-white">Instant / 24h</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">Quick verification & provisioning</div>
             </div>
+          </div>
+
+          {/* Direct Download Call to Action */}
+          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <a
+              href="/api/download/desktop"
+              className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#00bf63] hover:bg-[#00a855] text-black font-extrabold text-sm shadow-xl shadow-[#00bf63]/20 transition-all hover:scale-[1.02]"
+            >
+              <Download className="w-5 h-5 text-black" />
+              <span>Download QuickInk Desktop App (.exe)</span>
+            </a>
+            <span className="text-xs text-slate-400">Windows 10 / 11 • Version 1.0.0 • Auto-Updating</span>
           </div>
         </div>
       </section>
@@ -212,6 +224,28 @@ export default function PartnerPage() {
       <section className="py-12 sm:py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
           
+          {/* Already Registered / Counter PC Setup Banner */}
+          <div className="mb-8 p-5 bg-gradient-to-r from-slate-900 to-slate-800 border border-slate-700/80 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md text-left">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-[#00bf63]/15 border border-[#00bf63]/30 flex items-center justify-center text-[#00bf63] shrink-0">
+                <HardDrive className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Already Approved or Setting Up Your Counter PC?</h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Download the QuickInk Desktop Terminal on your shop computer and log in with your registered phone number.
+                </p>
+              </div>
+            </div>
+            <a
+              href="/api/download/desktop"
+              className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00bf63] hover:bg-[#00a855] text-black font-bold text-xs shadow-sm transition-all hover:scale-[1.02]"
+            >
+              <Download className="w-4 h-4 text-black" />
+              <span>Download Installer (.exe)</span>
+            </a>
+          </div>
+
           {/* Segmented Selector Tabs */}
           <div className="flex bg-slate-200/80 p-1.5 rounded-2xl mb-8 max-w-xl mx-auto border border-slate-300">
             <button
