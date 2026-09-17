@@ -1400,18 +1400,32 @@ function openJobModal(jobData) {
 
   const rawUrlOrPath = job.file_url || job.file_path || ''
   let rangeFromUrl = null
-  if (rawUrlOrPath.includes('#range=')) {
+  let nupFromUrl = 1
+  let borderFromUrl = false
+
+  if (rawUrlOrPath.includes('#')) {
     try {
-      rangeFromUrl = decodeURIComponent(rawUrlOrPath.split('#range=')[1].split('&')[0])
+      const hashStr = rawUrlOrPath.split('#')[1] || ''
+      const parts = hashStr.split('&')
+      for (const part of parts) {
+        const [k, v] = part.split('=')
+        if (k === 'range' && v) rangeFromUrl = decodeURIComponent(v)
+        else if (k === 'nup' && v) nupFromUrl = parseInt(v, 10) || 1
+        else if (k === 'border') borderFromUrl = v === '1' || v === 'true'
+      }
     } catch (e) {}
   }
+
   const effectiveRange = job.page_range || rangeFromUrl || null
+  const effectiveNup = job.pages_per_sheet || nupFromUrl || 1
+  const effectiveBorder = Boolean(job.mini_border ?? borderFromUrl)
 
   el.modalDocTitle.textContent = job.file_name || 'Customer_Document.pdf'
   el.modalOtp.textContent = jobData?.data?.otp?.code || jobData?.otp?.code || getEnteredOtp()
   el.modalColorMode.textContent = isColor ? 'Full Color' : 'Black & White'
   const rangeNotice = effectiveRange ? ` (Range: ${effectiveRange})` : ''
-  el.modalPagesCopies.textContent = `${job.page_count || 1} page(s)${rangeNotice} × ${job.copies || 1} copy`
+  const miniNotice = effectiveNup > 1 ? ` · ${effectiveNup}-in-1 Mini Print` : ''
+  el.modalPagesCopies.textContent = `${job.page_count || 1} sheet(s)${rangeNotice}${miniNotice} × ${job.copies || 1} copy`
   el.modalDuplex.textContent = isDuplex ? 'Double-Sided (Duplex)' : 'Single-Sided'
 
   const targetPrinter = isColor ? state.config.colorPrinterName : state.config.bwPrinterName
@@ -1461,12 +1475,25 @@ el.btnReleasePrint?.addEventListener('click', async () => {
 
   const rawUrlOrPath = job.file_url || job.file_path || ''
   let rangeFromUrl = null
-  if (rawUrlOrPath.includes('#range=')) {
+  let nupFromUrl = 1
+  let borderFromUrl = false
+
+  if (rawUrlOrPath.includes('#')) {
     try {
-      rangeFromUrl = decodeURIComponent(rawUrlOrPath.split('#range=')[1].split('&')[0])
+      const hashStr = rawUrlOrPath.split('#')[1] || ''
+      const parts = hashStr.split('&')
+      for (const part of parts) {
+        const [k, v] = part.split('=')
+        if (k === 'range' && v) rangeFromUrl = decodeURIComponent(v)
+        else if (k === 'nup' && v) nupFromUrl = parseInt(v, 10) || 1
+        else if (k === 'border') borderFromUrl = v === '1' || v === 'true'
+      }
     } catch (e) {}
   }
+
   const effectiveRange = job.page_range || rangeFromUrl || null
+  const effectiveNup = job.pages_per_sheet || nupFromUrl || 1
+  const effectiveBorder = Boolean(job.mini_border ?? borderFromUrl)
 
   try {
     await new Promise((r) => setTimeout(r, 600))
@@ -1481,7 +1508,9 @@ el.btnReleasePrint?.addEventListener('click', async () => {
         color: isColor,
         duplex: isDuplex,
         copies: job.copies || 1,
-        pageRange: effectiveRange
+        pageRange: effectiveRange,
+        pagesPerSheet: effectiveNup,
+        miniBorder: effectiveBorder
       })
 
       if (!printResult.success) {

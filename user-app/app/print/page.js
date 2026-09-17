@@ -423,6 +423,8 @@ function PrintOrderPageContent({ initialDeviceId }) {
           duplex: colorMode === 'color' ? false : duplex,
           page_count: calculatedSheets,
           page_range: effectivePageRange,   // null = all pages; "1-3,5" = specific range
+          pages_per_sheet: pagesPerSheet || 1,
+          mini_border: Boolean(miniBorder),
           payment_type: paymentMethod,
           amount: parseFloat(totalPrice),
         }),
@@ -756,20 +758,79 @@ function PrintOrderPageContent({ initialDeviceId }) {
                   ) : filePreviewUrl ? (
                     <div className="relative flex flex-col items-center justify-center">
                       {isRenderingPage && (
-                        <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center z-10 rounded">
+                        <div className="absolute inset-0 bg-white/70 backdrop-blur-[1px] flex items-center justify-center z-20 rounded">
                           <RefreshCw className="h-6 w-6 text-[#00bf63] animate-spin" />
                         </div>
                       )}
-                      <img
-                        src={filePreviewUrl}
-                        alt="Document Preview"
-                        style={{
-                          transform: `rotate(${rotation}deg)`,
-                          filter: `brightness(${100 + brightness}%) contrast(${100 + contrast}%)`,
-                          transition: 'transform 0.15s ease, filter 0.15s ease'
-                        }}
-                        className="max-h-56 max-w-full rounded border object-contain bg-white shadow-sm"
-                      />
+                      
+                      {pagesPerSheet > 1 ? (
+                        /* Mini Print: Authentic A4 Sheet Simulation */
+                        <div
+                          style={{
+                            transform: `rotate(${rotation}deg)`,
+                            filter: `brightness(${100 + brightness}%) contrast(${100 + contrast}%)`,
+                            transition: 'transform 0.15s ease, filter 0.15s ease'
+                          }}
+                          className="w-[185px] h-[262px] bg-white border border-gray-300 rounded shadow-md relative p-2 flex flex-col justify-between"
+                        >
+                          {/* Sheet badge */}
+                          <div className="absolute top-1 left-2 z-10 flex items-center gap-1">
+                            <span className="bg-[#00bf63] text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
+                              Sheet {Math.floor((previewPageIndex - 1) / pagesPerSheet) + 1}/{Math.ceil(totalPages / pagesPerSheet)} · {pagesPerSheet}-in-1
+                            </span>
+                          </div>
+
+                          {/* N-up Grid Slots */}
+                          <div className={`w-full h-full pt-4 grid gap-1.5 ${
+                            pagesPerSheet === 2 ? 'grid-rows-2 grid-cols-1' :
+                            pagesPerSheet === 4 ? 'grid-rows-2 grid-cols-2' :
+                            'grid-rows-3 grid-cols-2'
+                          }`}>
+                            {Array.from({ length: pagesPerSheet }).map((_, slotIdx) => {
+                              const currentSheetIdx = Math.floor((previewPageIndex - 1) / pagesPerSheet)
+                              const slotPageNum = currentSheetIdx * pagesPerSheet + slotIdx + 1
+                              const hasPage = slotPageNum <= totalPages
+                              const slotImg = hasPage ? (pagePreviewUrls[slotPageNum] || filePreviewUrl) : null
+
+                              return (
+                                <div
+                                  key={slotIdx}
+                                  className={`relative rounded overflow-hidden flex items-center justify-center bg-slate-50 ${
+                                    miniBorder ? 'border border-dashed border-gray-400' : 'border border-gray-200'
+                                  }`}
+                                >
+                                  {hasPage && slotImg ? (
+                                    <>
+                                      <img
+                                        src={slotImg}
+                                        alt={`Page ${slotPageNum}`}
+                                        className="w-full h-full object-contain p-0.5"
+                                      />
+                                      <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white font-mono text-[7px] px-1 py-0.2 rounded font-bold">
+                                        P.{slotPageNum}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="text-[8px] font-medium text-gray-300">Blank</span>
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        /* Standard 1-in-1 Preview */
+                        <img
+                          src={filePreviewUrl}
+                          alt="Document Preview"
+                          style={{
+                            transform: `rotate(${rotation}deg)`,
+                            filter: `brightness(${100 + brightness}%) contrast(${100 + contrast}%)`,
+                            transition: 'transform 0.15s ease, filter 0.15s ease'
+                          }}
+                          className="max-h-56 max-w-full rounded border object-contain bg-white shadow-sm"
+                        />
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-6">
@@ -780,45 +841,62 @@ function PrintOrderPageContent({ initialDeviceId }) {
                   )}
                 </div>
 
-                {/* Multipage PDF Page Navigation */}
+                {/* Multipage PDF Page/Sheet Navigation */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between bg-slate-100/90 border border-gray-200 rounded-xl px-3 py-1.5 mb-3">
                     <Button
                       size="sm"
                       variant="ghost"
                       disabled={previewPageIndex <= 1 || isRenderingPage}
-                      onClick={() => handlePdfPageChange(previewPageIndex - 1)}
+                      onClick={() => {
+                        const step = pagesPerSheet > 1 ? pagesPerSheet : 1
+                        handlePdfPageChange(Math.max(1, previewPageIndex - step))
+                      }}
                       className="h-7 px-2 text-xs font-bold text-gray-700 hover:text-[#00bf63] hover:bg-white"
                     >
-                      <ChevronLeft className="w-3.5 h-3.5 mr-0.5" /> Prev
+                      <ChevronLeft className="w-3.5 h-3.5 mr-0.5" /> Prev {pagesPerSheet > 1 ? 'Sheet' : ''}
                     </Button>
 
                     <div className="text-xs font-medium text-gray-700 flex items-center gap-1.5">
-                      <span>Previewing Page</span>
-                      <input
-                        type="number"
-                        min={1}
-                        max={totalPages}
-                        value={previewPageIndex}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value)
-                          if (!isNaN(val) && val >= 1 && val <= totalPages) {
-                            handlePdfPageChange(val)
-                          }
-                        }}
-                        className="w-12 text-center font-bold text-gray-900 border border-gray-300 rounded py-0.5 text-xs bg-white focus:outline-none focus:border-[#00bf63]"
-                      />
-                      <span className="text-gray-400">of {totalPages}</span>
+                      {pagesPerSheet > 1 ? (
+                        <span className="font-bold text-gray-900">
+                          Sheet {Math.floor((previewPageIndex - 1) / pagesPerSheet) + 1} of {Math.ceil(totalPages / pagesPerSheet)}
+                          <span className="text-gray-400 font-normal ml-1">
+                            (P.{Math.floor((previewPageIndex - 1) / pagesPerSheet) * pagesPerSheet + 1}–{Math.min(totalPages, (Math.floor((previewPageIndex - 1) / pagesPerSheet) + 1) * pagesPerSheet)})
+                          </span>
+                        </span>
+                      ) : (
+                        <>
+                          <span>Previewing Page</span>
+                          <input
+                            type="number"
+                            min={1}
+                            max={totalPages}
+                            value={previewPageIndex}
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value)
+                              if (!isNaN(val) && val >= 1 && val <= totalPages) {
+                                handlePdfPageChange(val)
+                              }
+                            }}
+                            className="w-12 text-center font-bold text-gray-900 border border-gray-300 rounded py-0.5 text-xs bg-white focus:outline-none focus:border-[#00bf63]"
+                          />
+                          <span className="text-gray-400">of {totalPages}</span>
+                        </>
+                      )}
                     </div>
 
                     <Button
                       size="sm"
                       variant="ghost"
-                      disabled={previewPageIndex >= totalPages || isRenderingPage}
-                      onClick={() => handlePdfPageChange(previewPageIndex + 1)}
+                      disabled={(pagesPerSheet > 1 ? (Math.floor((previewPageIndex - 1) / pagesPerSheet) + 1) >= Math.ceil(totalPages / pagesPerSheet) : previewPageIndex >= totalPages) || isRenderingPage}
+                      onClick={() => {
+                        const step = pagesPerSheet > 1 ? pagesPerSheet : 1
+                        handlePdfPageChange(Math.min(totalPages, previewPageIndex + step))
+                      }}
                       className="h-7 px-2 text-xs font-bold text-gray-700 hover:text-[#00bf63] hover:bg-white"
                     >
-                      Next <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
+                      Next {pagesPerSheet > 1 ? 'Sheet' : ''} <ChevronRight className="w-3.5 h-3.5 ml-0.5" />
                     </Button>
                   </div>
                 )}

@@ -22,6 +22,8 @@ export async function POST(request) {
       duplex = false,
       page_count = 1,
       page_range = null,   // e.g. "1-3,5" or null for all pages
+      pages_per_sheet = 1, // 1, 2, 4, 6
+      mini_border = false,
       payment_type = 'online',
       amount = 0,
     } = body
@@ -36,10 +38,17 @@ export async function POST(request) {
     const validPaymentType = payment_type === 'cash' ? 'cash' : 'online'
     const otpType = validPaymentType === 'online' ? 'type_a' : 'type_b'
     const parsedAmount = parseFloat(amount) || 0
+    const parsedNup = [1, 2, 4, 6].includes(parseInt(pages_per_sheet, 10)) ? parseInt(pages_per_sheet, 10) : 1
+    const hasBorder = Boolean(mini_border)
 
-    // Encode page_range in file_path so it permanently survives in database even if RLS restricts direct column updates
+    // Build URL hash parameters so range, nup, and border survive all database layers
+    const params = []
     const cleanRange = page_range && String(page_range).trim() ? String(page_range).trim() : null
-    const storedFilePath = cleanRange ? `${file_path}#range=${encodeURIComponent(cleanRange)}` : file_path
+    if (cleanRange) params.push(`range=${encodeURIComponent(cleanRange)}`)
+    if (parsedNup > 1) params.push(`nup=${parsedNup}`)
+    if (hasBorder) params.push(`border=1`)
+
+    const storedFilePath = params.length > 0 ? `${file_path}#${params.join('&')}` : file_path
 
     // 1. Try atomic database RPC function first
     const { data: rpcData, error: rpcError } = await supabase.rpc('create_print_job', {
@@ -66,6 +75,8 @@ export async function POST(request) {
             ...rpcData.order,
             file_name,
             page_range: page_range || null,
+            pages_per_sheet: parsedNup,
+            mini_border: hasBorder,
           },
           otp: rpcData.otp,
         },
@@ -81,7 +92,7 @@ export async function POST(request) {
       .from('print_jobs')
       .insert([
         {
-          file_path,
+          file_path: storedFilePath,
           file_type: file_type.toLowerCase(),
           copies: parsedCopies,
           color_mode: validColorMode,

@@ -430,11 +430,15 @@ async function generateTestPdf(printerName, isColor) {
 }
 
 // Helper: Normalize any PDF to standard A4 (scaling oversized scans/documents down proportionally
-// with safe printable margins) and compile requested page range into a single hardware-ready PDF.
-async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange) {
+// with safe printable margins), tile pages for Mini Print (2-in-1, 4-in-1, 6-in-1), and compile
+// requested page range into a single hardware-ready PDF.
+async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange, nup = 1, hasBorder = false) {
   if (!PDFLib || !srcPdfPath) return { finalPdfPath: srcPdfPath, wasModified: false }
 
   try {
+    const parsedNup = [1, 2, 4, 6].includes(parseInt(nup, 10)) ? parseInt(nup, 10) : 1
+    const drawBorder = Boolean(hasBorder)
+
     const srcBytes = fs.readFileSync(srcPdfPath)
     let srcDoc = null
     try {
@@ -457,7 +461,7 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange) {
       targetIndices = Array.from({ length: totalPdfPages }, (_, i) => i)
     }
 
-    console.log(`[PDFCompiler] Total document pages: ${totalPdfPages}. Target print indices: [${targetIndices.join(',')}]`)
+    console.log(`[PDFCompiler] Total document pages: ${totalPdfPages}. Target print indices: [${targetIndices.join(',')}] | Mini Print N-up: ${parsedNup} | Border: ${drawBorder}`)
 
     const isSubset = targetIndices.length < totalPdfPages
     const a4W = 595.28
@@ -465,7 +469,7 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange) {
     const margin = 18 // 18pt (~6.35mm) hardware printable safe margin
 
     // Check if any page to print exceeds standard A4 dimensions or has non-standard aspect ratio
-    let needsNormalization = isSubset
+    let needsNormalization = isSubset || parsedNup > 1
     if (!needsNormalization) {
       for (const idx of targetIndices) {
         const p = srcDoc.getPage(idx)
@@ -474,7 +478,6 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange) {
         const isLandscape = pw > ph
         const maxW = isLandscape ? a4H : a4W
         const maxH = isLandscape ? a4W : a4H
-        // If page is larger than standard A4 by > 5pt, or differs from standard A4 dimensions
         if (pw > maxW + 5 || ph > maxH + 5 || Math.abs(pw - maxW) > 20 || Math.abs(ph - maxH) > 20) {
           needsNormalization = true
           break
@@ -483,7 +486,7 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange) {
     }
 
     if (!needsNormalization) {
-      console.log(`[PDFCompiler] PDF is already standard A4 and covers all pages. Using directly.`)
+      console.log(`[PDFCompiler] PDF is already standard A4, 1-in-1, and covers all pages. Using directly.`)
       return { finalPdfPath: srcPdfPath, wasModified: false }
     }
 
@@ -495,33 +498,94 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange) {
       const srcPagesToEmbed = targetIndices.map((idx) => srcDoc.getPage(idx))
       const embeddedPages = await outDoc.embedPages(srcPagesToEmbed)
 
-      embeddedPages.forEach((ep) => {
-        const isLandscape = ep.width > ep.height
-        const canvasW = isLandscape ? a4H : a4W
-        const canvasH = isLandscape ? a4W : a4H
-        const availW = canvasW - (margin * 2)
-        const availH = canvasH - (margin * 2)
+      if (parsedNup > 1) {
+        // Mini Print N-up Layout (2-in-1, 4-in-1, 6-in-1)
+        const cols = parsedNup === 2 ? 1 : 2
+        const rows = parsedNup === 2 ? 2 : parsedNup === 4 ? 2 : 3
+        const gap = parsedNup === 6 ? 6 : 8
 
-        const isExactA4 = Math.abs(ep.width - canvasW) <= 5 && Math.abs(ep.height - canvasH) <= 5
+        const availW = a4W - margin * 2
+        const availH = a4H - margin * 2
+        const cellW = (availW - (cols - 1) * gap) / cols
+        const cellH = (availH - (rows - 1) * gap) / rows
 
-        let finalW, finalH, x, y
-        if (isExactA4) {
-          finalW = canvasW
-          finalH = canvasH
-          x = 0
-          y = 0
-        } else {
-          // Proportionally scale down if oversized, or keep 1:1 if smaller (scale capped at 1.0)
-          const scale = Math.min(availW / ep.width, availH / ep.height, 1.0)
-          finalW = ep.width * scale
-          finalH = ep.height * scale
-          x = (canvasW - finalW) / 2
-          y = (canvasH - finalH) / 2
+        const totalSheets = Math.ceil(embeddedPages.length / parsedNup)
+        for (let sh = 0; sh < totalSheets; sh++) {
+          const page = outDoc.addPage([a4W, a4H])
+          const sheetPages = embeddedPages.slice(sh * parsedNup, sh * parsedNup + parsedNup)
+
+          sheetPages.forEach((ep, slotIdx) => {
+            const col = slotIdx % cols
+            const row = Math.floor(slotIdx / cols)
+            const cellX = margin + col * (cellW + gap)
+            const cellY = a4H - margin - (row + 1) * cellH - row * gap
+
+            const padding = 4
+            const innerW = cellW - padding * 2
+            const innerH = cellH - padding * 2
+            const scale = Math.min(innerW / ep.width, innerH / ep.height)
+            const w = ep.width * scale
+            const h = ep.height * scale
+            const drawX = cellX + (cellW - w) / 2
+            const drawY = cellY + (cellH - h) / 2
+
+            page.drawPage(ep, { x: drawX, y: drawY, width: w, height: h })
+          })
+
+          // Draw optional thin dividing cutting borders
+          if (drawBorder) {
+            const lineColor = PDFLib.rgb(0.75, 0.75, 0.75)
+            // Vertical dividing lines
+            for (let c = 1; c < cols; c++) {
+              const lineX = margin + c * cellW + (c - 0.5) * gap
+              page.drawLine({
+                start: { x: lineX, y: margin },
+                end: { x: lineX, y: a4H - margin },
+                thickness: 0.75,
+                color: lineColor
+              })
+            }
+            // Horizontal dividing lines
+            for (let r = 1; r < rows; r++) {
+              const lineY = a4H - margin - r * cellH - (r - 0.5) * gap
+              page.drawLine({
+                start: { x: margin, y: lineY },
+                end: { x: a4W - margin, y: lineY },
+                thickness: 0.75,
+                color: lineColor
+              })
+            }
+          }
         }
+      } else {
+        // Standard 1-in-1 A4 Canvas Layout
+        embeddedPages.forEach((ep) => {
+          const isLandscape = ep.width > ep.height
+          const canvasW = isLandscape ? a4H : a4W
+          const canvasH = isLandscape ? a4W : a4H
+          const availW = canvasW - (margin * 2)
+          const availH = canvasH - (margin * 2)
 
-        const page = outDoc.addPage([canvasW, canvasH])
-        page.drawPage(ep, { x, y, width: finalW, height: finalH })
-      })
+          const isExactA4 = Math.abs(ep.width - canvasW) <= 5 && Math.abs(ep.height - canvasH) <= 5
+
+          let finalW, finalH, x, y
+          if (isExactA4) {
+            finalW = canvasW
+            finalH = canvasH
+            x = 0
+            y = 0
+          } else {
+            const scale = Math.min(availW / ep.width, availH / ep.height, 1.0)
+            finalW = ep.width * scale
+            finalH = ep.height * scale
+            x = (canvasW - finalW) / 2
+            y = (canvasH - finalH) / 2
+          }
+
+          const page = outDoc.addPage([canvasW, canvasH])
+          page.drawPage(ep, { x, y, width: finalW, height: finalH })
+        })
+      }
 
       const compiledBytes = await outDoc.save()
       const compiledPdfPath = path.join(
@@ -529,7 +593,7 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange) {
         `quickink_compiled_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`
       )
       fs.writeFileSync(compiledPdfPath, compiledBytes)
-      console.log(`[PDFCompiler] Standard A4 PDF compiled successfully: ${compiledPdfPath} (${outDoc.getPageCount()} pages, ${compiledBytes.length} bytes)`)
+      console.log(`[PDFCompiler] Standard A4 PDF compiled successfully: ${compiledPdfPath} (${outDoc.getPageCount()} sheet(s), ${compiledBytes.length} bytes, nup: ${parsedNup})`)
       return { finalPdfPath: compiledPdfPath, wasModified: true }
     } catch (embedErr) {
       console.warn('[PDFCompiler] embedPages method notice, attempting copyPages fallback:', embedErr.message)
@@ -674,23 +738,40 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange) {
   })
 
   // 3. Print Actual Customer Document to Hardware Printer
-  ipcMain.handle('printers:print-job', async (event, { printerName, fileUrl, copies = 1, color = false, duplex = false, pageRange = null }) => {
+  ipcMain.handle('printers:print-job', async (event, { printerName, fileUrl, copies = 1, color = false, duplex = false, pageRange = null, pagesPerSheet = 1, miniBorder = false }) => {
     try {
       if (!printerName) {
         return { success: false, error: 'No printer specified for this job' }
       }
 
       let effectivePageRange = pageRange
-      if (!effectivePageRange && fileUrl && fileUrl.includes('#range=')) {
+      let effectiveNup = parseInt(pagesPerSheet, 10) || 1
+      let effectiveBorder = Boolean(miniBorder)
+
+      // Parse hash parameters from fileUrl if present (#range=1-2&nup=2&border=1)
+      if (fileUrl && fileUrl.includes('#')) {
         try {
-          effectivePageRange = decodeURIComponent(fileUrl.split('#range=')[1].split('&')[0])
+          const hashStr = fileUrl.split('#')[1] || ''
+          const parts = hashStr.split('&')
+          for (const part of parts) {
+            const [k, v] = part.split('=')
+            if (k === 'range' && !effectivePageRange && v) {
+              effectivePageRange = decodeURIComponent(v)
+            } else if (k === 'nup' && v) {
+              const parsed = parseInt(v, 10)
+              if ([1, 2, 4, 6].includes(parsed)) effectiveNup = parsed
+            } else if (k === 'border') {
+              effectiveBorder = v === '1' || v === 'true'
+            }
+          }
         } catch (e) {}
       }
+
       if (effectivePageRange) effectivePageRange = String(effectivePageRange).trim()
 
       const isColor = Boolean(color)
       const isDuplex = Boolean(duplex === true || duplex === 'duplex' || duplex === 'duplexlong' || duplex === 'true')
-      console.log(`[PrintJob] Preparing print to ${printerName} | Copies: ${copies} | Color: ${isColor} | Duplex: ${isDuplex} | PageRange: ${effectivePageRange || 'all'}`)
+      console.log(`[PrintJob] Preparing print to ${printerName} | Copies: ${copies} | Color: ${isColor} | Duplex: ${isDuplex} | PageRange: ${effectivePageRange || 'all'} | MiniPrint N-up: ${effectiveNup} | Border: ${effectiveBorder}`)
 
       // 1. Enforce Color and Duplex mode at the Windows driver level
       await setPrinterHardwareConfig(printerName, isColor, isDuplex)
@@ -721,17 +802,18 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange) {
             console.log(`[PrintJob] A4 PDF ready at: ${convertedPdfPath}`)
           }
 
-          // Exact Hardware Normalization & Page-Range Slicing:
+          // Exact Hardware Normalization, N-up Tiling & Page-Range Slicing:
           // Scales oversized/scanned pages down to standard A4 so text is never cut off,
+          // arranges multiple pages per sheet for Mini Print (2, 4, 6 in 1),
           // and extracts exact page range (e.g. 1-2) so printer prints only requested pages.
           let compilationSucceeded = false
           if (PDFLib && targetPdfPath) {
-            const prepResult = await prepareDocumentForPrinting(targetPdfPath, effectivePageRange)
+            const prepResult = await prepareDocumentForPrinting(targetPdfPath, effectivePageRange, effectiveNup, effectiveBorder)
             if (prepResult.wasModified) {
               compiledPdfPath = prepResult.finalPdfPath
               targetPdfPath = compiledPdfPath
               compilationSucceeded = true
-              console.log(`[PrintJob] Dispatched file normalized to standard A4 at: ${compiledPdfPath}`)
+              console.log(`[PrintJob] Dispatched file normalized to standard A4 at: ${compiledPdfPath} (nup: ${effectiveNup})`)
             } else if (!prepResult.error) {
               // File is already standard A4 and covers all pages
               compilationSucceeded = true

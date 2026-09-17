@@ -125,18 +125,30 @@ export async function POST(request) {
     const rawPath = data?.print_job?.file_path
     let cleanPath = rawPath
     let rangeFromPath = null
+    let nupFromPath = 1
+    let borderFromPath = false
 
-    if (rawPath && rawPath.includes('#range=')) {
-      const parts = rawPath.split('#range=')
+    if (rawPath && rawPath.includes('#')) {
+      const parts = rawPath.split('#')
       cleanPath = parts[0]
-      try {
-        rangeFromPath = decodeURIComponent(parts[1])
-      } catch (e) {
-        rangeFromPath = parts[1]
+      const hashStr = parts[1] || ''
+      const hashParams = hashStr.split('&')
+      for (const param of hashParams) {
+        const [k, v] = param.split('=')
+        if (k === 'range' && v) {
+          try { rangeFromPath = decodeURIComponent(v) } catch (e) { rangeFromPath = v }
+        } else if (k === 'nup' && v) {
+          const parsed = parseInt(v, 10)
+          if ([1, 2, 4, 6].includes(parsed)) nupFromPath = parsed
+        } else if (k === 'border') {
+          borderFromPath = v === '1' || v === 'true'
+        }
       }
     }
 
     const effectivePageRange = data?.print_job?.page_range || rangeFromPath || null
+    const effectiveNup = data?.print_job?.pages_per_sheet || nupFromPath || 1
+    const effectiveBorder = Boolean(data?.print_job?.mini_border ?? borderFromPath)
 
     if (cleanPath) {
       if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
@@ -163,8 +175,12 @@ export async function POST(request) {
       }
     }
 
-    if (fileUrl && effectivePageRange) {
-      fileUrl = `${fileUrl}#range=${encodeURIComponent(effectivePageRange)}`
+    if (fileUrl) {
+      const outParams = []
+      if (effectivePageRange) outParams.push(`range=${encodeURIComponent(effectivePageRange)}`)
+      if (effectiveNup > 1) outParams.push(`nup=${effectiveNup}`)
+      if (effectiveBorder) outParams.push(`border=1`)
+      if (outParams.length > 0) fileUrl = `${fileUrl}#${outParams.join('&')}`
     }
 
     return NextResponse.json({
@@ -176,6 +192,8 @@ export async function POST(request) {
           ...data?.print_job,
           file_path: cleanPath,
           page_range: effectivePageRange,
+          pages_per_sheet: effectiveNup,
+          mini_border: effectiveBorder,
           file_url: fileUrl,
         },
         target_printer: targetPrinter,
