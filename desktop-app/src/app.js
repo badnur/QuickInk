@@ -1367,22 +1367,24 @@ async function verifyAndFetchJob() {
 // JOB MODAL & DISPATCH TO HARDWARE
 // =============================================================================
 function openJobModal(jobData) {
-  const job = jobData.print_job
+  const job = jobData?.data?.print_job || jobData?.print_job || {}
   const isColor = job.color_mode === 'color'
 
   el.modalDocTitle.textContent = job.file_name || 'Customer_Document.pdf'
-  el.modalOtp.textContent = jobData.otp?.code || getEnteredOtp()
+  el.modalOtp.textContent = jobData?.data?.otp?.code || jobData?.otp?.code || getEnteredOtp()
   el.modalColorMode.textContent = isColor ? 'Full Color' : 'Black & White'
-  el.modalPagesCopies.textContent = `${job.page_count} page(s) × ${job.copies} copy`
+  el.modalPagesCopies.textContent = `${job.page_count || 1} page(s) × ${job.copies || 1} copy`
   el.modalDuplex.textContent = job.duplex === 'duplex' ? 'Double-Sided (Duplex)' : 'Single-Sided'
 
   const targetPrinter = isColor ? state.config.colorPrinterName : state.config.bwPrinterName
   el.modalRoutedPrinter.textContent = targetPrinter ? `${targetPrinter} (${isColor ? 'Color' : 'B&W'})` : 'Hardware default'
 
+  const amountToPay = jobData?.data?.amount || job.amount || ((job.page_count || 1) * (isColor ? 8.0 : 2.0) * (job.copies || 1)).toFixed(2)
+
   if (job.payment_type === 'counter_cash' || job.payment_type === 'cash') {
     el.modalPaymentAlert.className = 'payment-alert cash'
     el.modalPayHeading.textContent = 'Collect Cash at Counter'
-    el.modalPayInstruction.innerHTML = `Please collect <strong id="modal-pay-amount">৳${job.amount || 10.0}</strong> from customer before confirming print.`
+    el.modalPayInstruction.innerHTML = `Please collect <strong id="modal-pay-amount">৳${amountToPay}</strong> from customer before confirming print.`
   } else {
     el.modalPaymentAlert.className = 'payment-alert online'
     el.modalPayHeading.textContent = 'Payment Completed Online'
@@ -1413,9 +1415,10 @@ el.btnReleasePrint?.addEventListener('click', async () => {
   el.spoolingPercentage.textContent = '25%'
   el.spoolingProgressBar.style.width = '25%'
 
-  const job = state.activeJob.print_job
+  const job = state.activeJob?.data?.print_job || state.activeJob?.print_job || {}
   const isColor = job.color_mode === 'color'
   const chosenPrinter = isColor ? state.config.colorPrinterName : state.config.bwPrinterName
+  const fileToPrint = job.file_url || job.file_path
 
   try {
     await new Promise((r) => setTimeout(r, 600))
@@ -1425,7 +1428,7 @@ el.btnReleasePrint?.addEventListener('click', async () => {
 
     if (isElectron) {
       const printResult = await window.quickinkDesktop.printJob({
-        fileUrl: job.file_path,
+        fileUrl: fileToPrint,
         printerName: chosenPrinter,
         monochrome: !isColor,
         side: job.duplex === 'duplex' ? 'duplex' : 'simplex',
@@ -1448,6 +1451,7 @@ el.btnReleasePrint?.addEventListener('click', async () => {
       fetchRecentJobs()
     }, 1200)
   } catch (err) {
+    el.spoolingPanel.classList.add('hidden')
     alert(`Print Execution Notice: ${err.message}`)
     el.btnReleasePrint.disabled = false
   }

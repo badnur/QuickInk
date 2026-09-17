@@ -130,28 +130,46 @@ async function downloadToTemp(fileUrl, preferredExt = '.pdf') {
     const fileName = `quickink_${Date.now()}_${Math.random().toString(36).substring(7)}${preferredExt}`
     const tempFilePath = path.join(tempDir, fileName)
 
-    let resolvedUrl = fileUrl
+    if (!fileUrl) {
+      throw new Error('Document file path or URL is missing')
+    }
+
+    let resolvedUrl = String(fileUrl).trim()
+
+    // 1. If it's already a valid local file on disk
+    if (fs.existsSync(resolvedUrl)) {
+      return resolvedUrl
+    }
+
+    // 2. If it's a relative path from local dev server uploads
     if (resolvedUrl.startsWith('/uploads/')) {
       const cfg = loadConfig()
       const base = cfg.apiBaseUrl || 'http://localhost:3000'
       resolvedUrl = `${base}${resolvedUrl}`
-    } else if (resolvedUrl.startsWith('/')) {
+    }
+    // 3. If it's a path starting with slash
+    else if (resolvedUrl.startsWith('/')) {
       resolvedUrl = `https://xhzfrmpbhasnipirccnt.supabase.co/storage/v1/object/public/print-files${resolvedUrl}`
     }
+    // 4. If it's a Supabase storage path like "jobs/..." or "1789..." (not starting with http and not local)
+    else if (!resolvedUrl.startsWith('http://') && !resolvedUrl.startsWith('https://')) {
+      resolvedUrl = `https://xhzfrmpbhasnipirccnt.supabase.co/storage/v1/object/public/print-files/${resolvedUrl}`
+    }
+
+    console.log(`[DownloadToTemp] Fetching document from: ${resolvedUrl}`)
 
     if (resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://')) {
       const response = await fetch(resolvedUrl)
       if (!response.ok) {
-        throw new Error(`Failed to download document from server (HTTP ${response.status})`)
+        throw new Error(`Failed to download document from storage (HTTP ${response.status})`)
       }
       const arrayBuffer = await response.arrayBuffer()
       fs.writeFileSync(tempFilePath, Buffer.from(arrayBuffer))
+      console.log(`[DownloadToTemp] Downloaded ${arrayBuffer.byteLength} bytes to ${tempFilePath}`)
       return tempFilePath
-    } else if (fs.existsSync(resolvedUrl)) {
-      // Already a local path
-      return resolvedUrl
     }
-    throw new Error('Invalid file URL or path')
+
+    throw new Error(`Invalid file URL or path: ${fileUrl}`)
   } catch (err) {
     console.error('Download to temp error:', err)
     throw err

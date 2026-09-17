@@ -1,6 +1,6 @@
 {
   "name": "quickink-desktop",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "QuickInk Partner Shop & Kiosk Native Desktop Application",
   "main": "main.js",
   "scripts": {
