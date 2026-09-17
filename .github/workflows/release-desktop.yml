@@ -23,6 +23,29 @@ jobs:
         with:
           node-version: 20
 
+      - name: Clean Duplicate Empty Releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Cleaning duplicate releases from GitHub..."
+          node -e "
+          async function clean() {
+            const token = process.env.GH_TOKEN;
+            const headers = { 'Authorization': 'token ' + token, 'Accept': 'application/vnd.github.v3+json', 'User-Agent': 'Actions' };
+            const res = await fetch('https://api.github.com/repos/badnur/QuickInk/releases', { headers });
+            const list = await res.json();
+            for (const r of list || []) {
+              const hasExe = (r.assets || []).some(a => a.name.endsWith('.exe'));
+              if (!hasExe) {
+                console.log('Deleting duplicate empty release id:', r.id, 'tag:', r.tag_name);
+                await fetch('https://api.github.com/repos/badnur/QuickInk/releases/' + r.id, { method: 'DELETE', headers });
+              }
+            }
+          }
+          clean();
+          "
+
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
         with:
@@ -45,8 +68,18 @@ jobs:
       - name: Install Dependencies
         run: pnpm install
 
-      - name: Build & Publish to GitHub Releases
+      - name: Build Windows Installer
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          pnpm --filter quickink-desktop exec electron-builder --win --publish always
+          pnpm --filter quickink-desktop exec electron-builder --win
+
+      - name: Publish to Single GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: |
+            desktop-app/dist/*.exe
+            desktop-app/dist/latest.yml
+            desktop-app/dist/*.blockmap
+          token: ${{ secrets.GITHUB_TOKEN }}
