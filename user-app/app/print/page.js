@@ -8,7 +8,7 @@ import DocumentScannerModal from '@/components/scanner/DocumentScannerModal'
 import PassportPhotoModal from '@/components/print/PassportPhotoModal'
 import IdCardScannerModal from '@/components/print/IdCardScannerModal'
 import { playCompletionChime } from '@/lib/audio-chime'
-import { loadPdfDocument, renderPdfPageToDataUrl, slicePdfBlob } from '@/lib/pdf-utils'
+import { loadPdfDocument, renderPdfPageToDataUrl, slicePdfBlob, fastScanPdfPages } from '@/lib/pdf-utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -270,21 +270,28 @@ function PrintOrderPageContent({ initialDeviceId }) {
       setToPage(1)
       setShowChoiceScreen(true)
 
+      // Step 1: Ultra-fast binary scan (< 15ms) to immediately set multi-page count
+      fastScanPdfPages(file).then((instantCount) => {
+        if (instantCount && instantCount > 1) {
+          setTotalPages((prev) => Math.max(prev, instantCount))
+          setFromPage(1)
+          setToPage((prev) => Math.max(prev, instantCount))
+        }
+      }).catch(() => {})
+
+      // Step 2: Full document load & high-res first page preview
       try {
         const { pdfDoc: loadedDoc, pdfLibDoc: loadedLibDoc, pageCount } = await loadPdfDocument(file)
         setPdfDoc(loadedDoc)
         setPdfLibDoc(loadedLibDoc)
-        const pages = Math.max(1, pageCount || 1)
-        setTotalPages(pages)
-        setFromPage(1)
-        setToPage(pages)
+        const finalPages = Math.max(1, pageCount || 1)
+        setTotalPages((prev) => Math.max(prev, finalPages))
+        setToPage((prev) => Math.max(prev, finalPages))
 
-        if (loadedDoc || loadedLibDoc) {
-          const firstPagePreview = await renderPdfPageToDataUrl(loadedDoc, 1, 800, loadedLibDoc)
-          if (firstPagePreview) {
-            setPagePreviewUrls({ 1: firstPagePreview })
-            setFilePreviewUrl(firstPagePreview)
-          }
+        const firstPagePreview = await renderPdfPageToDataUrl(loadedDoc, 1, 800, loadedLibDoc, file)
+        if (firstPagePreview) {
+          setPagePreviewUrls((prev) => ({ ...prev, 1: firstPagePreview }))
+          setFilePreviewUrl(firstPagePreview)
         }
       } catch (err) {
         console.warn('PDF load notice:', err)
@@ -310,10 +317,10 @@ function PrintOrderPageContent({ initialDeviceId }) {
       return
     }
 
-    if (pdfDoc || pdfLibDoc) {
+    if (pdfDoc || pdfLibDoc || selectedFile) {
       setIsRenderingPage(true)
       try {
-        const dataUrl = await renderPdfPageToDataUrl(pdfDoc, pageNum, 800, pdfLibDoc)
+        const dataUrl = await renderPdfPageToDataUrl(pdfDoc, pageNum, 800, pdfLibDoc, selectedFile)
         if (dataUrl) {
           setPagePreviewUrls((prev) => ({ ...prev, [pageNum]: dataUrl }))
           setFilePreviewUrl(dataUrl)
@@ -328,7 +335,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
 
   // Automatically render missing preview pages for currently visible sheet or view
   useEffect(() => {
-    if (!selectedFile || (!pdfDoc && !pdfLibDoc) || totalPages <= 1) return
+    if (!selectedFile || totalPages <= 1) return
 
     const currentSheetIdx = Math.floor((previewPageIndex - 1) / pagesPerSheet)
     const startPage = currentSheetIdx * pagesPerSheet + 1
@@ -339,7 +346,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
       for (let p = startPage; p <= endPage; p++) {
         if (!pagePreviewUrls[p]) {
           try {
-            const url = await renderPdfPageToDataUrl(pdfDoc, p, 500, pdfLibDoc)
+            const url = await renderPdfPageToDataUrl(pdfDoc, p, 500, pdfLibDoc, selectedFile)
             if (url && isMounted) {
               setPagePreviewUrls((prev) => ({ ...prev, [p]: url }))
               if (p === previewPageIndex) {
