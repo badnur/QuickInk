@@ -1424,48 +1424,48 @@ body, html {
 }
 
 /* =============================================================================
-   VERIFY & FETCH PRINT JOB HERO ACTION BUTTON
+   VERIFY & FETCH PRINT JOB HERO ACTION BUTTON (MINIMAL CLEAN DESIGN)
    ============================================================================= */
 .btn-verify-action,
 #btn-verify-otp {
   width: 100%;
-  max-width: 380px;
+  max-width: 360px;
   margin: 18px auto 0 auto;
-  background: linear-gradient(135deg, #00e074 0%, #00bf63 55%, #00994f 100%);
-  color: #000000;
-  font-weight: 800;
-  font-size: 15px;
-  letter-spacing: 0.3px;
-  padding: 14px 28px;
-  border-radius: 12px;
-  border: none;
+  background: #00bf63;
+  color: #050505;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.2px;
+  padding: 13px 24px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  box-shadow: 0 4px 20px rgba(0, 191, 99, 0.4), 0 2px 6px rgba(0, 0, 0, 0.4);
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  gap: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+  transition: background 0.15s ease, opacity 0.15s ease, transform 0.05s ease;
 }
 
 .btn-verify-action:hover,
 #btn-verify-otp:hover {
-  background: linear-gradient(135deg, #10f483 0%, #00d66c 55%, #00bf63 100%);
-  box-shadow: 0 8px 30px rgba(0, 191, 99, 0.6), 0 3px 10px rgba(0, 0, 0, 0.5);
-  transform: translateY(-2px);
-  filter: brightness(1.05);
+  background: #00d66f;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
+  transform: none;
 }
 
 .btn-verify-action:active,
 #btn-verify-otp:active {
-  transform: translateY(1px) scale(0.99);
-  box-shadow: 0 3px 12px rgba(0, 191, 99, 0.3);
+  background: #00a857;
+  transform: scale(0.99);
 }
 
 .btn-verify-action:disabled,
 #btn-verify-otp:disabled {
   background: #27272a;
   color: #71717a;
+  border-color: transparent;
   box-shadow: none;
   cursor: not-allowed;
   transform: none;
