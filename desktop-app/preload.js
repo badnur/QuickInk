@@ -14,5 +14,15 @@ contextBridge.exposeInMainWorld('quickinkDesktop', {
   minimize: () => ipcRenderer.invoke('window:minimize'),
   maximize: () => ipcRenderer.invoke('window:maximize'),
   close: () => ipcRenderer.invoke('window:close'),
-  toggleKiosk: () => ipcRenderer.invoke('window:toggle-kiosk')
+  toggleKiosk: () => ipcRenderer.invoke('window:toggle-kiosk'),
+
+  // Auto Updater & App Version
+  getVersion: () => ipcRenderer.invoke('app:get-version'),
+  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
+  restartForUpdate: () => ipcRenderer.invoke('updater:restart'),
+  onUpdateStatus: (callback) => {
+    const handler = (_event, data) => callback(data)
+    ipcRenderer.on('updater:status', handler)
+    return () => ipcRenderer.removeListener('updater:status', handler)
+  }
 })

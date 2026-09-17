@@ -7,3 +7,4 @@ allowBuilds:
   core-js: true
   sharp: true
   electron: true
+  electron-winstaller: true

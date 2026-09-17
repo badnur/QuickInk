@@ -24,6 +24,14 @@ try {
   console.warn('jimp load notice:', e.message)
 }
 
+let autoUpdater = null
+try {
+  const updaterModule = require('electron-updater')
+  autoUpdater = updaterModule.autoUpdater
+} catch (e) {
+  console.warn('electron-updater load notice:', e.message)
+}
+
 let mainWindow = null
 
 // Config file path in app userData directory
@@ -102,6 +110,7 @@ function createWindow() {
 app.whenReady().then(() => {
   registerIpcHandlers()
   createWindow()
+  setupAutoUpdater()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -701,4 +710,93 @@ async function generateTestPdf(printerName, isColor) {
     }
     return false
   })
+
+  // 6. Application Version & Auto-Updater Controls
+  ipcMain.handle('app:get-version', () => {
+    return app.getVersion()
+  })
+
+  ipcMain.handle('updater:check', async () => {
+    if (!autoUpdater) return { success: false, error: 'Auto-updater not available in this environment' }
+    try {
+      const result = await autoUpdater.checkForUpdates()
+      return { success: true, version: result?.updateInfo?.version }
+    } catch (err) {
+      return { success: false, error: err.message }
+    }
+  })
+
+  ipcMain.handle('updater:restart', () => {
+    if (autoUpdater) {
+      autoUpdater.quitAndInstall(false, true)
+    }
+  })
+}
+
+// Background Auto-Updater Service
+function setupAutoUpdater() {
+  if (!autoUpdater) return
+
+  autoUpdater.autoDownload = true
+  autoUpdater.autoInstallOnAppQuit = true
+
+  function sendStatusToWindow(status, payload = {}) {
+    if (mainWindow && mainWindow.webContents) {
+      mainWindow.webContents.send('updater:status', { status, ...payload })
+    }
+  }
+
+  autoUpdater.on('checking-for-update', () => {
+    console.log('[AutoUpdater] Checking for updates on GitHub...')
+    sendStatusToWindow('checking')
+  })
+
+  autoUpdater.on('update-available', (info) => {
+    console.log('[AutoUpdater] New update available:', info.version)
+    sendStatusToWindow('available', {
+      version: info.version,
+      releaseDate: info.releaseDate,
+      releaseNotes: info.releaseNotes
+    })
+  })
+
+  autoUpdater.on('update-not-available', (info) => {
+    console.log('[AutoUpdater] App is up to date (version ' + info.version + ')')
+    sendStatusToWindow('up-to-date', { version: info.version })
+  })
+
+  autoUpdater.on('download-progress', (progressObj) => {
+    sendStatusToWindow('downloading', {
+      percent: Math.round(progressObj.percent),
+      bytesPerSecond: progressObj.bytesPerSecond,
+      transferred: progressObj.transferred,
+      total: progressObj.total
+    })
+  })
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[AutoUpdater] Update successfully downloaded:', info.version)
+    sendStatusToWindow('downloaded', {
+      version: info.version,
+      message: `Version ${info.version} downloaded and ready to install.`
+    })
+  })
+
+  autoUpdater.on('error', (err) => {
+    console.warn('[AutoUpdater] Update error:', err?.message || err)
+    sendStatusToWindow('error', { error: err?.message || 'Failed to check for updates' })
+  })
+
+  // Start checking only when running as a packaged app (production)
+  if (app.isPackaged) {
+    // Initial check 5 seconds after startup
+    setTimeout(() => {
+      autoUpdater.checkForUpdates().catch((e) => console.warn('[AutoUpdater] Initial check error:', e.message))
+    }, 5000)
+
+    // Recurring check every 2 hours
+    setInterval(() => {
+      autoUpdater.checkForUpdates().catch((e) => console.warn('[AutoUpdater] Recurring check error:', e.message))
+    }, 2 * 60 * 60 * 1000)
+  }
 }

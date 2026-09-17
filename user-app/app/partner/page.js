@@ -24,7 +24,8 @@ import {
   Sparkles,
   MapPin,
   Phone,
-  FileCheck
+  FileCheck,
+  Download
 } from 'lucide-react'
 
 export default function PartnerPage() {
@@ -716,6 +717,15 @@ export default function PartnerPage() {
                           Your QuickInk Desktop terminal profile has been set up. Our operations team is contacting you at{' '}
                           <strong>{trackResult.phone}</strong> to deliver your pairing key or dispatch our field technician with the self-service hardware.
                         </p>
+                        <div className="pt-2">
+                          <a
+                            href="/api/download/desktop"
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-[#00bf63] hover:bg-[#00a855] text-white font-semibold text-xs rounded-lg transition-colors shadow-sm"
+                          >
+                            <Download className="w-4 h-4" />
+                            Download QuickInk Desktop App (.exe)
+                          </a>
+                        </div>
                       </div>
                     )}
 

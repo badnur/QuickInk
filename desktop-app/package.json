@@ -6,7 +6,10 @@
   "scripts": {
     "start": "electron .",
     "dev": "electron .",
-    "desktop:dev": "electron ."
+    "desktop:dev": "electron .",
+    "pack": "electron-builder --dir",
+    "build": "electron-builder --win",
+    "release": "electron-builder --win --publish always"
   },
   "keywords": [
     "quickink",
@@ -18,11 +21,52 @@
   "author": "QuickInk",
   "license": "ISC",
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "jimp": "^1.6.1",
     "pdf-lib": "^1.17.1",
     "pdf-to-printer": "^5.8.1"
   },
   "devDependencies": {
-    "electron": "^34.0.0"
+    "electron": "^34.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "net.quickink.station",
+    "productName": "QuickInk Station",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "badnur",
+      "repo": "QuickInk",
+      "releaseType": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "QuickInk-Station-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "QuickInk Station",
+      "runAfterFinish": true
+    }
   }
 }

@@ -86,6 +86,18 @@ const el = {
   btnAccountToggle: document.getElementById('btn-account-toggle'),
   btnAccountLabel: document.getElementById('btn-account-label'),
 
+  // Auto-Updater UI
+  updateBanner: document.getElementById('update-banner'),
+  updateBannerIcon: document.getElementById('update-banner-icon'),
+  updateBannerTitle: document.getElementById('update-banner-title'),
+  updateBannerDesc: document.getElementById('update-banner-desc'),
+  updateProgressContainer: document.getElementById('update-progress-container'),
+  updateProgressFill: document.getElementById('update-progress-fill'),
+  btnUpdateRestart: document.getElementById('btn-update-restart'),
+  btnUpdateDismiss: document.getElementById('btn-update-dismiss'),
+  appVersionTxt: document.getElementById('app-version-txt'),
+  btnManualCheckUpdate: document.getElementById('btn-manual-check-update'),
+
   // Customer OTP Terminal
   otpBoxes: [
     document.getElementById('otp-0'),
@@ -304,6 +316,7 @@ async function init() {
   setupOtpKeypad()
   setupWindowControls()
   setupAuthSystem()
+  setupAutoUpdaterClient()
 
   // Load configuration and native printers
   await loadAppConfig()
@@ -375,6 +388,95 @@ function setupTabNavigation() {
       }
     })
   })
+}
+
+// =============================================================================
+// AUTO-UPDATER CLIENT
+// =============================================================================
+function setupAutoUpdaterClient() {
+  // 1. Fetch & display app version
+  if (isElectron && window.quickinkDesktop?.getVersion) {
+    window.quickinkDesktop.getVersion().then((ver) => {
+      if (ver && el.appVersionTxt) {
+        el.appVersionTxt.textContent = `v${ver}`
+      }
+    }).catch(() => {})
+  }
+
+  // 2. Dismiss banner button
+  el.btnUpdateDismiss?.addEventListener('click', () => {
+    el.updateBanner?.classList.add('hidden')
+  })
+
+  // 3. Restart & Update button
+  el.btnUpdateRestart?.addEventListener('click', () => {
+    if (isElectron && window.quickinkDesktop?.restartForUpdate) {
+      window.quickinkDesktop.restartForUpdate()
+    }
+  })
+
+  // 4. Manual check button in profile modal
+  el.btnManualCheckUpdate?.addEventListener('click', async () => {
+    if (!isElectron || !window.quickinkDesktop?.checkForUpdates) {
+      alert('Automatic updates are active in the installed desktop version.')
+      return
+    }
+    el.btnManualCheckUpdate.disabled = true
+    el.btnManualCheckUpdate.textContent = 'Checking...'
+    try {
+      const res = await window.quickinkDesktop.checkForUpdates()
+      if (res.success) {
+        if (el.updateBanner) el.updateBanner.classList.remove('hidden')
+        if (el.updateBannerTitle) el.updateBannerTitle.textContent = 'QuickInk Updater'
+        if (el.updateBannerDesc) el.updateBannerDesc.textContent = res.version ? `New version v${res.version} found! Downloading...` : 'Checking GitHub releases...'
+      } else {
+        alert(res.error || 'Could not reach update server. Check internet connection.')
+      }
+    } catch (e) {
+      console.warn('Manual update check error:', e)
+    } finally {
+      setTimeout(() => {
+        if (el.btnManualCheckUpdate) {
+          el.btnManualCheckUpdate.disabled = false
+          el.btnManualCheckUpdate.textContent = 'Check for Update'
+        }
+      }, 4000)
+    }
+  })
+
+  // 5. Listen for updates from Electron main process
+  if (isElectron && window.quickinkDesktop?.onUpdateStatus) {
+    window.quickinkDesktop.onUpdateStatus((data) => {
+      console.log('[Updater Client] Status received:', data)
+      const { status } = data
+
+      if (status === 'checking') {
+        // Quiet check
+      } else if (status === 'available') {
+        el.updateBanner?.classList.remove('hidden')
+        if (el.updateBannerTitle) el.updateBannerTitle.textContent = `Update v${data.version || ''} Available`
+        if (el.updateBannerDesc) el.updateBannerDesc.textContent = 'Downloading update in background...'
+        el.updateProgressContainer?.classList.remove('hidden')
+        el.btnUpdateRestart?.classList.add('hidden')
+      } else if (status === 'downloading') {
+        el.updateBanner?.classList.remove('hidden')
+        if (el.updateProgressContainer) el.updateProgressContainer.classList.remove('hidden')
+        if (el.updateProgressFill) el.updateProgressFill.style.width = `${data.percent || 0}%`
+        if (el.updateBannerDesc) el.updateBannerDesc.textContent = `Downloading update: ${data.percent || 0}%`
+      } else if (status === 'downloaded') {
+        el.updateBanner?.classList.remove('hidden')
+        if (el.updateBannerTitle) el.updateBannerTitle.textContent = `Version ${data.version || ''} Ready`
+        if (el.updateBannerDesc) el.updateBannerDesc.textContent = 'Update downloaded! Restart now to complete installation.'
+        el.updateProgressContainer?.classList.add('hidden')
+        el.btnUpdateRestart?.classList.remove('hidden')
+        playSuccessChime()
+      } else if (status === 'up-to-date') {
+        // App is latest
+      } else if (status === 'error') {
+        console.warn('[Updater UI] Error notice:', data.error)
+      }
+    })
+  }
 }
 
 // Load App Configuration

@@ -2067,3 +2067,105 @@ body, html {
   border: 1px solid var(--success-border);
   color: var(--success-text);
 }
+
+/* =============================================================================
+   AUTO-UPDATER BANNER NOTIFICATION
+   ============================================================================= */
+.update-banner {
+  background: linear-gradient(90deg, rgba(0, 191, 99, 0.12), rgba(0, 191, 99, 0.04));
+  border-bottom: 1px solid rgba(0, 191, 99, 0.25);
+  padding: 8px 24px;
+  animation: slideDown 0.25s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.update-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.update-spinner-icon {
+  display: flex;
+  align-items: center;
+  color: var(--primary);
+}
+
+.update-spinner-icon svg.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.update-info-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  flex: 1;
+}
+
+.update-title {
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.update-desc {
+  color: #a1a1aa;
+}
+
+.update-progress-bar {
+  width: 140px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.update-progress-fill {
+  height: 100%;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width 0.2s ease;
+}
+
+.btn-update-action {
+  background: var(--primary);
+  color: #000000;
+  font-weight: 700;
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: transform 0.1s ease, filter 0.2s ease;
+}
+
+.btn-update-action:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn-icon-dismiss {
+  background: transparent;
+  border: none;
+  color: #71717a;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.btn-icon-dismiss:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.08);
+}
