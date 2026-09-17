@@ -4,44 +4,80 @@ export const dynamic = 'force-dynamic'
 
 const GITHUB_OWNER = 'badnur'
 const GITHUB_REPO = 'QuickInk'
-const LATEST_RELEASE_API = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`
-const FALLBACK_DOWNLOAD_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download/QuickInk-Station-Setup.exe`
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
   const format = searchParams.get('format')
 
   try {
-    const res = await fetch(LATEST_RELEASE_API, {
+    // 1. Fetch releases from GitHub API
+    const res = await fetch(`https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases`, {
       headers: {
         'Accept': 'application/vnd.github.v3+json',
-        'User-Agent': 'QuickInk-App-Download'
+        'User-Agent': 'QuickInk-Website-Download'
       },
-      next: { revalidate: 60 } // Cache for 60 seconds
+      next: { revalidate: 30 }
     })
 
     if (res.ok) {
-      const release = await res.json()
-      // Find .exe asset
-      const exeAsset = release.assets?.find((a) => a.name.endsWith('.exe'))
-      const downloadUrl = exeAsset?.browser_download_url || FALLBACK_DOWNLOAD_URL
+      const releases = await res.json()
+      
+      // Find the first release that has a Windows .exe installer
+      let exeAsset = null
+      let targetRelease = null
 
-      if (format === 'json') {
-        return NextResponse.json({
-          version: release.tag_name,
-          name: release.name,
-          downloadUrl,
-          publishedAt: release.published_at,
-          notes: release.body
-        })
+      for (const r of releases || []) {
+        const found = (r.assets || []).find((a) => a.name.toLowerCase().endsWith('.exe'))
+        if (found) {
+          exeAsset = found
+          targetRelease = r
+          break
+        }
       }
 
-      return NextResponse.redirect(downloadUrl, 302)
+      if (exeAsset) {
+        if (format === 'json') {
+          return NextResponse.json({
+            version: targetRelease.tag_name,
+            fileName: exeAsset.name,
+            sizeBytes: exeAsset.size,
+            sizeMB: (exeAsset.size / (1024 * 1024)).toFixed(1),
+            publishedAt: targetRelease.published_at,
+            downloadUrl: exeAsset.browser_download_url
+          })
+        }
+
+        // 2. Resolve direct CDN URL via asset API endpoint
+        // GitHub redirects asset.url -> release-assets.githubusercontent.com (Direct File Download)
+        try {
+          const assetRes = await fetch(exeAsset.url, {
+            headers: {
+              'Accept': 'application/octet-stream',
+              'User-Agent': 'QuickInk-Website-Download'
+            },
+            redirect: 'manual'
+          })
+
+          const cdnLocation = assetRes.headers.get('location')
+          if (cdnLocation) {
+            // Direct 1-click download attachment via CDN
+            return NextResponse.redirect(cdnLocation, 302)
+          }
+        } catch (cdnErr) {
+          console.warn('[Desktop Download] Direct CDN resolve warning:', cdnErr.message)
+        }
+
+        // Fallback to browser_download_url
+        return NextResponse.redirect(exeAsset.browser_download_url, 302)
+      }
     }
   } catch (err) {
-    console.warn('[Desktop Download API] Could not fetch GitHub release:', err.message)
+    console.error('[Desktop Download] Error resolving release:', err.message)
   }
 
-  // Fallback direct redirect
-  return NextResponse.redirect(FALLBACK_DOWNLOAD_URL, 302)
+  // Fallback direct URL
+  return NextResponse.redirect(
+    `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download/QuickInk-Station-Setup-1.0.0.exe`,
+    302
+  )
 }
