@@ -8,7 +8,7 @@ import DocumentScannerModal from '@/components/scanner/DocumentScannerModal'
 import PassportPhotoModal from '@/components/print/PassportPhotoModal'
 import IdCardScannerModal from '@/components/print/IdCardScannerModal'
 import { playCompletionChime } from '@/lib/audio-chime'
-import { loadPdfDocument, renderPdfPageToDataUrl } from '@/lib/pdf-utils'
+import { loadPdfDocument, renderPdfPageToDataUrl, slicePdfBlob } from '@/lib/pdf-utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -376,17 +376,35 @@ function PrintOrderPageContent({ initialDeviceId }) {
     setSubmitError(null)
 
     try {
-      const fileExt = selectedFile.name.split('.').pop() || 'pdf'
-      const cleanFileName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+      let fileToUpload = selectedFile
+      const isPdf = selectedFile.type === 'application/pdf' || selectedFile.name.toLowerCase().endsWith('.pdf')
+
+      // Pre-Upload Instant Slicing:
+      // If customer selected a specific page range (e.g. pages 2-3 of a 300-page 50MB PDF),
+      // slice only those pages right here in the browser before uploading.
+      // This reduces upload from 50MB down to ~250KB (0.5s upload vs 45s upload),
+      // making ticket creation and OTP printing instantaneous.
+      if (isPdf && effectivePageRange) {
+        setUploadProgress(20)
+        try {
+          fileToUpload = await slicePdfBlob(selectedFile, effectivePageRange)
+        } catch (sliceErr) {
+          console.warn('Pre-upload slice notice, uploading original:', sliceErr)
+          fileToUpload = selectedFile
+        }
+      }
+
+      const fileExt = fileToUpload.name.split('.').pop() || 'pdf'
+      const cleanFileName = fileToUpload.name.replace(/[^a-zA-Z0-9.-]/g, '_')
       let storagePath = `jobs/${Date.now()}_${cleanFileName}`
 
-      setUploadProgress(40)
+      setUploadProgress(45)
 
       // Upload document file to Supabase Storage or server fallback
       const { error: uploadError } = await supabase.storage
         .from('print-files')
-        .upload(storagePath, selectedFile, {
-          contentType: selectedFile.type || 'application/pdf',
+        .upload(storagePath, fileToUpload, {
+          contentType: fileToUpload.type || 'application/pdf',
           upsert: true,
         })
 
@@ -394,7 +412,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
         console.warn('Supabase storage notice, using server upload fallback:', uploadError.message)
         try {
           const fd = new FormData()
-          fd.append('file', selectedFile)
+          fd.append('file', fileToUpload)
           const upRes = await fetch('/api/upload', {
             method: 'POST',
             body: fd,
@@ -417,7 +435,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
         body: JSON.stringify({
           file_path: storagePath,
           file_type: fileExt,
-          file_name: selectedFile.name,
+          file_name: fileToUpload.name || selectedFile.name,
           copies,
           color_mode: colorMode,
           duplex: colorMode === 'color' ? false : duplex,

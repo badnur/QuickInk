@@ -177,3 +177,83 @@ export async function renderPdfPageToDataUrl(pdfDoc, pageNum, maxDimension = 800
     return null
   }
 }
+
+/**
+ * Helper: Parse page range string into 0-indexed page number array
+ */
+export function parsePageRange(rangeStr, maxPages) {
+  if (!rangeStr || !String(rangeStr).trim()) return []
+  const indices = new Set()
+  const parts = String(rangeStr).split(',')
+  for (const part of parts) {
+    const trimmed = part.trim()
+    if (trimmed.includes('-')) {
+      const [startStr, endStr] = trimmed.split('-')
+      const start = parseInt(startStr, 10)
+      const end = parseInt(endStr, 10)
+      if (!isNaN(start) && !isNaN(end)) {
+        const min = Math.max(1, Math.min(start, end))
+        const max = Math.min(maxPages, Math.max(start, end))
+        for (let i = min; i <= max; i++) indices.add(i - 1)
+      }
+    } else {
+      const p = parseInt(trimmed, 10)
+      if (!isNaN(p) && p >= 1 && p <= maxPages) {
+        indices.add(p - 1)
+      }
+    }
+  }
+  return Array.from(indices).sort((a, b) => a - b)
+}
+
+/**
+ * Slices a PDF file or blob to extract ONLY requested pages before uploading.
+ * Reduces 50-100MB documents down to ~200-300KB for instant upload and instant OTP printing.
+ */
+export async function slicePdfBlob(fileOrBlob, pageRangeStr) {
+  if (!fileOrBlob || !pageRangeStr || !String(pageRangeStr).trim()) {
+    return fileOrBlob
+  }
+
+  try {
+    const arrayBuffer = await fileOrBlob.arrayBuffer()
+    const srcDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true })
+    const totalPages = srcDoc.getPageCount()
+    const targetIndices = parsePageRange(pageRangeStr, totalPages)
+
+    // If all pages selected or invalid range, no slicing needed
+    if (!targetIndices || targetIndices.length === 0 || targetIndices.length >= totalPages) {
+      return fileOrBlob
+    }
+
+    console.log(`[slicePdfBlob] Extracting ${targetIndices.length} page(s) out of ${totalPages} before upload...`)
+    const outDoc = await PDFDocument.create()
+
+    try {
+      const srcPages = targetIndices.map((idx) => srcDoc.getPage(idx))
+      const embedded = await outDoc.embedPages(srcPages)
+      embedded.forEach((ep) => {
+        const page = outDoc.addPage([ep.width, ep.height])
+        page.drawPage(ep, { x: 0, y: 0, width: ep.width, height: ep.height })
+      })
+    } catch (embedErr) {
+      console.warn('[slicePdfBlob] embedPages notice, using copyPages:', embedErr.message)
+      const copied = await outDoc.copyPages(srcDoc, targetIndices)
+      copied.forEach((p) => outDoc.addPage(p))
+    }
+
+    const slicedBytes = await outDoc.save()
+    const origName = fileOrBlob.name || 'document.pdf'
+    const extMatch = origName.match(/\.([0-9a-z]+)(?:[\?#]|$)/i)
+    const ext = extMatch ? extMatch[1] : 'pdf'
+    const baseName = origName.replace(/\.[^/.]+$/, '')
+    const cleanRange = String(pageRangeStr).replace(/[^0-9,-]/g, '')
+    const slicedName = `${baseName}_p${cleanRange}.${ext}`
+
+    console.log(`[slicePdfBlob] Client-side slice complete! Size reduced from ${(fileOrBlob.size / 1024 / 1024).toFixed(1)} MB to ${(slicedBytes.length / 1024).toFixed(1)} KB`)
+    return new File([slicedBytes], slicedName, { type: 'application/pdf' })
+  } catch (err) {
+    console.warn('[slicePdfBlob] Slicing notice, proceeding with original file:', err.message)
+    return fileOrBlob
+  }
+}

@@ -455,7 +455,20 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange, nup = 
     let targetIndices = []
 
     if (effectivePageRange && String(effectivePageRange).trim()) {
-      targetIndices = parsePageRange(effectivePageRange, totalPdfPages)
+      const parsedFull = parsePageRange(effectivePageRange, 999999)
+      const maxPageRequested = parsedFull.length > 0 ? Math.max(...parsedFull.map((idx) => idx + 1)) : 0
+
+      // If document was already pre-sliced (e.g. client-side before upload):
+      // totalPdfPages matches the requested range page count, or is less than maxPageRequested
+      if (
+        parsedFull.length > 0 &&
+        (totalPdfPages === parsedFull.length || (maxPageRequested > totalPdfPages && parsedFull.length <= totalPdfPages))
+      ) {
+        console.log(`[PDFCompiler] Document was pre-sliced (${totalPdfPages} page(s) matching range ${effectivePageRange}). Printing all pages in document.`)
+        targetIndices = Array.from({ length: totalPdfPages }, (_, i) => i)
+      } else {
+        targetIndices = parsePageRange(effectivePageRange, totalPdfPages)
+      }
     }
     if (!targetIndices || targetIndices.length === 0) {
       targetIndices = Array.from({ length: totalPdfPages }, (_, i) => i)
