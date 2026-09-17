@@ -400,7 +400,7 @@ function setupAutoUpdaterClient() {
       if (ver && el.appVersionTxt) {
         el.appVersionTxt.textContent = `v${ver}`
       }
-    }).catch(() => {})
+    }).catch(() => { })
   }
 
   // 2. Dismiss banner button
