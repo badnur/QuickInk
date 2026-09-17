@@ -219,6 +219,8 @@ export default function AdminAnalyticsPage() {
               </div>
             </div>
           </div>
+        </div>
+
         {/* Shop Print Volumes & Earnings Leaderboard (SaaS Subscription Model) */}
         <div className="bg-[#0d131f] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
           <div className="p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { getAdminSession } from '@/lib/admin-auth'
 import { supabase } from '@/lib/supabase'
-import AdminSidebar from '@/components/AdminSidebar'
+import AdminSidebar from '@/components/admin/AdminSidebar'
 
 export default function AdminLayoutClient({ children }) {
   const [adminUser, setAdminUser] = useState(null)
