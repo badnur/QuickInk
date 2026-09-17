@@ -7,7 +7,7 @@
 const state = {
   config: {
     deviceId: '',
-    apiBaseUrl: 'http://localhost:3000',
+    apiBaseUrl: '', // empty or URL. When empty or unreachable, defaults to QuickInk Cloud
     bwPrinterName: '',
     colorPrinterName: '',
     isKiosk: false
@@ -64,6 +64,502 @@ function playSuccessChime() {
     })
   } catch (e) {
     console.warn('Audio chime error:', e)
+  }
+}
+
+// Phone Number Helpers
+function normalizePhone(p) {
+  if (!p) return ''
+  const digits = String(p).replace(/[^0-9]/g, '')
+  if (digits.startsWith('880') && digits.length >= 13) {
+    return '0' + digits.slice(3)
+  }
+  return digits
+}
+
+function phonesMatch(p1, p2) {
+  if (!p1 || !p2) return false
+  const c1 = String(p1).replace(/[^0-9]/g, '')
+  const c2 = String(p2).replace(/[^0-9]/g, '')
+  if (c1 === c2) return true
+  if (c1.length >= 10 && c2.length >= 10 && c1.slice(-10) === c2.slice(-10)) return true
+  return false
+}
+
+// =============================================================================
+// QUICKINK DIRECT CLOUD CLIENT
+// Connects directly to Supabase cloud across all devices
+// Automatically used when standalone or when local dev server is unreachable
+// =============================================================================
+const QuickInkCloud = {
+  SUPABASE_URL: 'https://xhzfrmpbhasnipirccnt.supabase.co',
+  SUPABASE_KEY: 'sb_publishable_5QRgqfQTgNnpH3PN2wfz1g_4wwy5k8I',
+  SMS_API_KEY: '42fc1e917497409da3d3ffc7622e566e',
+  ADMIN_CONTACT: { phone: '01733398911', email: 'help@quickink.net' },
+
+  otpCache: new Map(),
+
+  async rest(path, options = {}) {
+    const url = `${this.SUPABASE_URL}/rest/v1/${path}`
+    const headers = {
+      apikey: this.SUPABASE_KEY,
+      Authorization: `Bearer ${this.SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      Prefer: 'return=representation',
+      ...(options.headers || {})
+    }
+    return fetch(url, { ...options, headers })
+  },
+
+  async login(phone, password) {
+    const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
+    const [devRes, partRes] = await Promise.all([
+      this.rest('devices?select=*'),
+      this.rest('partners?select=*')
+    ])
+    if (!devRes.ok) throw new Error('Could not connect to QuickInk cloud database')
+    const devices = await devRes.json()
+    const partners = partRes.ok ? await partRes.json() : []
+
+    const matchingDevs = (devices || []).filter(d => phonesMatch(d.location?.phone, cleanPhone))
+    matchingDevs.sort((a, b) => {
+      const aScore = (a.status === 'online' ? 2 : 0) + (a.location?.partner_status === 'approved' ? 2 : 0)
+      const bScore = (b.status === 'online' ? 2 : 0) + (b.location?.partner_status === 'approved' ? 2 : 0)
+      return bScore - aScore
+    })
+
+    let candidateDev = matchingDevs.find(d => d.location?.password === password)
+    if (!candidateDev && matchingDevs.length > 0) {
+      const legacyDev = matchingDevs.find(d => !d.location?.password)
+      if (legacyDev && password.length >= 6) {
+        candidateDev = legacyDev
+        const updLoc = { ...(candidateDev.location || {}), password }
+        this.rest(`devices?id=eq.${candidateDev.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ location: updLoc })
+        }).catch(() => {})
+      }
+    }
+
+    if (!candidateDev) {
+      return { ok: false, status: 401, data: { error: 'Invalid mobile number or password.' } }
+    }
+
+    const loc = candidateDev.location || {}
+    const dbPartner = (partners || []).find(p => phonesMatch(p.phone, cleanPhone))
+    const devPartnerStatus = loc.partner_status
+    const isOnlineApproved = candidateDev.status === 'online' && devPartnerStatus !== 'pending' && devPartnerStatus !== 'rejected'
+
+    if (candidateDev.status === 'suspended' || candidateDev.status === 'cancelled') {
+      return {
+        ok: false,
+        status: 403,
+        data: {
+          suspended: true,
+          shop_name: loc.shop_name || candidateDev.name,
+          deviceId: candidateDev.id,
+          reason: loc.suspension_reason || 'Partnership suspended by QuickInk administration.',
+          suspended_at: candidateDev.updated_at || new Date().toISOString()
+        }
+      }
+    }
+
+    let finalStatus = 'pending'
+    let rejectionReason = null
+    if (devPartnerStatus === 'approved' || isOnlineApproved || dbPartner?.status === 'approved') {
+      finalStatus = 'approved'
+    } else if (devPartnerStatus === 'rejected' || dbPartner?.status === 'rejected') {
+      finalStatus = 'rejected'
+      rejectionReason = loc.rejection_reason || dbPartner?.rejection_reason || 'Storefront requirements not met.'
+    }
+
+    const account = {
+      id: candidateDev.id,
+      deviceId: candidateDev.id,
+      name: loc.owner_name || candidateDev.name,
+      shop_name: loc.shop_name || candidateDev.name,
+      phone: cleanPhone,
+      location: loc.address || '',
+      type: candidateDev.type || loc.type || 'shop',
+      operating_hours: loc.operating_hours || '09:00 AM - 10:00 PM',
+      status: finalStatus,
+      rejection_reason: rejectionReason,
+      password: password,
+      logo_url: loc.logo_url || '',
+      shop_photo_url: loc.shop_photo_url || '',
+      created_at: loc.created_at || candidateDev.created_at || new Date().toISOString(),
+    }
+
+    if (finalStatus === 'pending') {
+      return {
+        ok: false,
+        status: 403,
+        data: {
+          pending: true,
+          status: 'pending',
+          error: 'Application Under Review. Quick Ink administration must approve your shop before dashboard access is granted.',
+          account
+        }
+      }
+    }
+
+    if (finalStatus === 'rejected') {
+      return {
+        ok: false,
+        status: 403,
+        data: {
+          rejected: true,
+          status: 'rejected',
+          reason: rejectionReason,
+          account
+        }
+      }
+    }
+
+    // Set device online in Supabase
+    this.rest(`devices?id=eq.${candidateDev.id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status: 'online' })
+    }).catch(() => {})
+
+    return {
+      ok: true,
+      status: 200,
+      data: {
+        success: true,
+        account,
+        deviceId: candidateDev.id
+      }
+    }
+  },
+
+  async checkStatus(devId, phone) {
+    const cleanPhone = phone ? phone.trim().replace(/[^0-9]/g, '') : ''
+    let targetDev = null
+    if (devId) {
+      const res = await this.rest(`devices?id=eq.${devId}&select=*`)
+      if (res.ok) {
+        const rows = await res.json()
+        if (rows.length > 0) targetDev = rows[0]
+      }
+    }
+    if (!targetDev && cleanPhone) {
+      const res = await this.rest('devices?select=*')
+      if (res.ok) {
+        const rows = await res.json()
+        targetDev = rows.find(d => phonesMatch(d.location?.phone, cleanPhone))
+      }
+    }
+    if (!targetDev) {
+      return { ok: true, status: 200, data: { pending: true, status: 'pending' } }
+    }
+    if (targetDev.status === 'suspended' || targetDev.status === 'cancelled') {
+      return {
+        ok: true,
+        status: 200,
+        data: {
+          suspended: true,
+          status: 'suspended',
+          reason: targetDev.location?.suspension_reason || 'Administrative partnership suspension',
+          suspended_at: targetDev.updated_at
+        }
+      }
+    }
+    const loc = targetDev.location || {}
+    const isApproved = loc.partner_status === 'approved' || targetDev.status === 'online'
+    const isRejected = loc.partner_status === 'rejected'
+    if (isApproved) {
+      return { ok: true, status: 200, data: { approved: true, status: 'approved', deviceId: targetDev.id, device: targetDev } }
+    }
+    if (isRejected) {
+      return { ok: true, status: 200, data: { rejected: true, status: 'rejected', reason: loc.rejection_reason || 'Storefront requirements not met.' } }
+    }
+    return { ok: true, status: 200, data: { pending: true, status: 'pending' } }
+  },
+
+  async fetchDevices() {
+    const res = await this.rest('devices?select=*&order=name.asc')
+    if (res.ok) {
+      const devices = await res.json()
+      if (Array.isArray(devices) && devices.length > 0) return { ok: true, data: { success: true, devices } }
+    }
+    return { ok: true, data: { success: true, devices: [] } }
+  },
+
+  async fetchJobs(deviceId) {
+    let path = 'print_jobs?select=*&order=created_at.desc&limit=20'
+    if (deviceId) {
+      path += `&or=(redeemed_by_device_id.eq.${deviceId},status.eq.awaiting_redemption)`
+    }
+    const res = await this.rest(path)
+    if (res.ok) {
+      const jobs = await res.json()
+      return { ok: true, data: { success: true, jobs: Array.isArray(jobs) ? jobs : [] } }
+    }
+    return { ok: true, data: { success: true, jobs: [] } }
+  },
+
+  async redeemOtp(code, deviceId) {
+    const cleanCode = code.toString().trim().toUpperCase()
+    const res = await fetch(`${this.SUPABASE_URL}/rest/v1/rpc/redeem_otp`, {
+      method: 'POST',
+      headers: {
+        apikey: this.SUPABASE_KEY,
+        Authorization: `Bearer ${this.SUPABASE_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ p_code: cleanCode, p_device_id: deviceId })
+    })
+    const data = await res.json()
+    if (!res.ok || data.code) {
+      throw new Error(data.message || 'Invalid or expired OTP code')
+    }
+
+    const printJob = data.print_job || {}
+    const colorMode = printJob.color_mode || 'bw'
+    const targetPrinter = colorMode === 'color' ? 'color' : 'bw'
+    const unitPrice = colorMode === 'color' ? 8.0 : 2.0
+    const calculatedAmount = ((printJob.page_count || 1) * unitPrice * (printJob.copies || 1)).toFixed(2)
+
+    let fileUrl = printJob.file_path
+    if (fileUrl && !fileUrl.startsWith('http')) {
+      try {
+        const signRes = await fetch(`${this.SUPABASE_URL}/storage/v1/object/sign/print-files/${fileUrl}`, {
+          method: 'POST',
+          headers: {
+            apikey: this.SUPABASE_KEY,
+            Authorization: `Bearer ${this.SUPABASE_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ expiresIn: 3600 })
+        })
+        if (signRes.ok) {
+          const signData = await signRes.json()
+          if (signData.signedURL) {
+            fileUrl = `${this.SUPABASE_URL}/storage/v1${signData.signedURL}`
+          }
+        }
+      } catch (e) {
+        console.warn('Storage sign note:', e)
+      }
+    }
+
+    return {
+      ok: true,
+      data: {
+        ...data,
+        print_job: { ...printJob, file_url: fileUrl },
+        target_printer: targetPrinter,
+        amount: calculatedAmount,
+        payment: {
+          method: printJob.payment_type || 'cash',
+          status: printJob.payment_type === 'online' ? 'completed' : 'pending'
+        }
+      }
+    }
+  },
+
+  async sendOtp(phone) {
+    const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
+    const code = Math.floor(100000 + Math.random() * 900000).toString()
+    this.otpCache.set(cleanPhone, { code, expiresAt: Date.now() + 10 * 60 * 1000 })
+
+    const msg = encodeURIComponent(`Your QuickInk verification code is: ${code}. Valid for 10 minutes.`)
+    const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${this.SMS_API_KEY}&number=${cleanPhone}&message=${msg}`
+    fetch(smsUrl).catch(() => {})
+    return { ok: true, data: { success: true, message: `Verification code sent to ${cleanPhone}`, phone: cleanPhone } }
+  },
+
+  async verifyOtp(phone, otp) {
+    const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
+    const cleanOtp = otp.trim()
+    const stored = this.otpCache.get(cleanPhone)
+    if (stored && stored.code === cleanOtp && stored.expiresAt > Date.now()) {
+      return { ok: true, data: { success: true, verified: true, phone: cleanPhone } }
+    }
+    return { ok: false, data: { error: 'Invalid or expired verification code. Please check your SMS or request a new code.' } }
+  },
+
+  async register(draft) {
+    const cleanPhone = draft.phone.trim().replace(/[^0-9]/g, '')
+    const reference_id = `QIK-REG-${Math.floor(100000 + Math.random() * 900000)}`
+    const resolvedHours = draft.operating_hours || (draft.type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM')
+
+    const locationObj = {
+      address: draft.location,
+      phone: cleanPhone,
+      owner_name: draft.name,
+      shop_name: draft.shop_name,
+      type: draft.type === 'kiosk' ? 'kiosk' : 'shop',
+      operating_hours: resolvedHours,
+      password: draft.password,
+      logo_url: draft.logo_url || '',
+      shop_photo_url: draft.shop_photo_url || '',
+      payout_rate: 100.0,
+      subscription_status: 'active',
+      subscription_plan: 'Pro SaaS',
+      registration_reference: reference_id,
+      reference_id,
+      partner_status: 'pending',
+      rejection_reason: null,
+      is_partner_application: true,
+      created_at: new Date().toISOString(),
+    }
+
+    let devData = null
+    const insRes = await this.rest('devices', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: draft.type === 'kiosk' ? `QuickInk Kiosk — ${draft.shop_name}` : `QuickInk Shop — ${draft.shop_name}`,
+        type: draft.type === 'kiosk' ? 'kiosk' : 'shop',
+        location: locationObj,
+        status: 'offline'
+      })
+    })
+
+    if (insRes.ok) {
+      const rows = await insRes.json()
+      devData = rows[0]
+    }
+
+    this.rest('partners', {
+      method: 'POST',
+      body: JSON.stringify({
+        name: draft.name,
+        shop_name: draft.shop_name,
+        phone: cleanPhone,
+        location: draft.location,
+        status: 'pending'
+      })
+    }).catch(() => {})
+
+    const newAccount = {
+      id: devData?.id || `dev-${Date.now()}`,
+      reference_id,
+      deviceId: devData?.id,
+      name: draft.name,
+      shop_name: draft.shop_name,
+      phone: cleanPhone,
+      location: draft.location,
+      type: draft.type,
+      operating_hours: resolvedHours,
+      status: 'pending',
+      rejection_reason: null,
+      password: draft.password,
+      logo_url: draft.logo_url,
+      shop_photo_url: draft.shop_photo_url,
+      created_at: new Date().toISOString()
+    }
+
+    return {
+      ok: true,
+      status: 201,
+      data: {
+        success: true,
+        pending: true,
+        status: 'pending',
+        account: newAccount,
+        device: devData || newAccount,
+        contact: this.ADMIN_CONTACT
+      }
+    }
+  },
+
+  async resetPasswordSave(phone, newPassword) {
+    const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
+    const devRes = await this.rest('devices?select=*')
+    if (devRes.ok) {
+      const devices = await devRes.json()
+      const dev = (devices || []).find(d => phonesMatch(d.location?.phone, cleanPhone))
+      if (dev) {
+        const updLoc = { ...(dev.location || {}), password: newPassword }
+        await this.rest(`devices?id=eq.${dev.id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ location: updLoc })
+        })
+        return { ok: true, data: { success: true, message: 'Password reset successfully' } }
+      }
+    }
+    return { ok: false, data: { error: 'Account not found with this mobile number.' } }
+  }
+}
+
+// Universal API POST wrapper with transparent auto-fallback to Cloud
+async function apiPost(endpoint, body, fallbackCloudFn) {
+  const customUrl = state.config.apiBaseUrl?.trim()
+  if (!customUrl) {
+    updateConnectionBadge()
+    return fallbackCloudFn()
+  }
+
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 3500)
+    const res = await fetch(`${customUrl}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal
+    })
+    clearTimeout(timer)
+    const data = await res.json().catch(() => null)
+    return { ok: res.ok, status: res.status, data }
+  } catch (err) {
+    console.warn(`[QuickInk] API request to ${customUrl}${endpoint} failed (${err.message}). Auto-switching to QuickInk Cloud...`)
+    setConnectionStatus('cloud', 'QuickInk Cloud: Connected (Auto-fallback)')
+    return fallbackCloudFn()
+  }
+}
+
+// Universal API GET wrapper with transparent auto-fallback to Cloud
+async function apiGet(endpoint, fallbackCloudFn) {
+  const customUrl = state.config.apiBaseUrl?.trim()
+  if (!customUrl) {
+    updateConnectionBadge()
+    return fallbackCloudFn()
+  }
+
+  try {
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort(), 3500)
+    const res = await fetch(`${customUrl}${endpoint}`, { signal: controller.signal })
+    clearTimeout(timer)
+    const data = await res.json().catch(() => null)
+    return { ok: res.ok, status: res.status, data }
+  } catch (err) {
+    console.warn(`[QuickInk] API request to ${customUrl}${endpoint} failed (${err.message}). Auto-switching to QuickInk Cloud...`)
+    setConnectionStatus('cloud', 'QuickInk Cloud: Connected (Auto-fallback)')
+    return fallbackCloudFn()
+  }
+}
+
+function setConnectionStatus(type, label) {
+  if (el.authConnDot) {
+    if (type === 'offline') {
+      el.authConnDot.classList.add('offline')
+    } else {
+      el.authConnDot.classList.remove('offline')
+    }
+  }
+  if (el.authConnLabel) {
+    el.authConnLabel.textContent = label
+  }
+}
+
+function updateConnectionBadge() {
+  if (!el.authConnDot || !el.authConnLabel) return
+  const custom = state.config.apiBaseUrl?.trim()
+  if (custom) {
+    try {
+      const urlObj = new URL(custom)
+      el.authConnLabel.textContent = `Server: ${urlObj.host}`
+    } catch {
+      el.authConnLabel.textContent = `Server: ${custom}`
+    }
+    el.authConnDot.classList.remove('offline')
+  } else {
+    el.authConnLabel.textContent = 'QuickInk Cloud: Connected'
+    el.authConnDot.classList.remove('offline')
   }
 }
 
@@ -305,6 +801,20 @@ const el = {
   modalAccountDeviceId: document.getElementById('modal-account-device-id'),
   btnSwitchAccount: document.getElementById('btn-switch-account'),
   btnLogoutAccount: document.getElementById('btn-logout-account'),
+
+  // Connection Indicator & Server Settings Modal
+  authConnDot: document.getElementById('auth-conn-dot'),
+  authConnLabel: document.getElementById('auth-conn-label'),
+  btnOpenServerModal: document.getElementById('btn-open-server-modal'),
+  serverSettingsModal: document.getElementById('server-settings-modal'),
+  btnCloseServerModal: document.getElementById('btn-close-server-modal'),
+  connModeCloud: document.getElementById('conn-mode-cloud'),
+  connModeCustom: document.getElementById('conn-mode-custom'),
+  customServerField: document.getElementById('custom-server-field'),
+  inputServerUrl: document.getElementById('input-server-url'),
+  serverPingResult: document.getElementById('server-ping-result'),
+  btnTestServerConnection: document.getElementById('btn-test-server-connection'),
+  btnSaveServerSettings: document.getElementById('btn-save-server-settings'),
 }
 
 // =============================================================================
@@ -317,9 +827,11 @@ async function init() {
   setupWindowControls()
   setupAuthSystem()
   setupAutoUpdaterClient()
+  setupServerSettingsModal()
 
   // Load configuration and native printers
   await loadAppConfig()
+  updateConnectionBadge()
   await scanSystemPrinters()
   await fetchDevices()
   await fetchRecentJobs()
@@ -504,6 +1016,102 @@ async function loadAppConfig() {
       fetchRecentJobs()
     })
   }
+}
+
+// Server & Cloud Network Settings Modal
+function setupServerSettingsModal() {
+  if (!el.btnOpenServerModal || !el.serverSettingsModal) return
+
+  const openModal = () => {
+    const currentUrl = state.config.apiBaseUrl?.trim() || ''
+    if (currentUrl) {
+      if (el.connModeCustom) el.connModeCustom.checked = true
+      if (el.customServerField) el.customServerField.classList.remove('hidden')
+      if (el.inputServerUrl) el.inputServerUrl.value = currentUrl
+    } else {
+      if (el.connModeCloud) el.connModeCloud.checked = true
+      if (el.customServerField) el.customServerField.classList.add('hidden')
+      if (el.inputServerUrl) el.inputServerUrl.value = ''
+    }
+    if (el.serverPingResult) el.serverPingResult.innerHTML = ''
+    el.serverSettingsModal.classList.remove('hidden')
+  }
+
+  const closeModal = () => {
+    el.serverSettingsModal.classList.add('hidden')
+  }
+
+  el.btnOpenServerModal.addEventListener('click', openModal)
+  el.btnCloseServerModal?.addEventListener('click', closeModal)
+  el.serverSettingsModal.addEventListener('click', (e) => {
+    if (e.target === el.serverSettingsModal) closeModal()
+  })
+
+  el.connModeCloud?.addEventListener('change', () => {
+    if (el.customServerField) el.customServerField.classList.add('hidden')
+  })
+
+  el.connModeCustom?.addEventListener('change', () => {
+    if (el.customServerField) {
+      el.customServerField.classList.remove('hidden')
+      if (el.inputServerUrl && !el.inputServerUrl.value) {
+        el.inputServerUrl.value = 'http://localhost:3000'
+      }
+      el.inputServerUrl?.focus()
+    }
+  })
+
+  el.btnTestServerConnection?.addEventListener('click', async () => {
+    if (!el.serverPingResult) return
+    el.serverPingResult.innerHTML = '<span style="color: #38bdf8;">Testing connection...</span>'
+    const isCloud = el.connModeCloud?.checked
+
+    if (isCloud) {
+      try {
+        const res = await QuickInkCloud.rest('devices?limit=1')
+        if (res.ok) {
+          el.serverPingResult.innerHTML = '<span style="color: #4ade80;">✓ QuickInk Cloud is online & accessible!</span>'
+        } else {
+          el.serverPingResult.innerHTML = `<span style="color: #f87171;">✗ Cloud returned HTTP ${res.status}</span>`
+        }
+      } catch (err) {
+        el.serverPingResult.innerHTML = `<span style="color: #f87171;">✗ Connection failed: ${err.message}</span>`
+      }
+    } else {
+      const url = el.inputServerUrl?.value?.trim()
+      if (!url) {
+        el.serverPingResult.innerHTML = '<span style="color: #f87171;">Please enter a server URL</span>'
+        return
+      }
+      try {
+        const controller = new AbortController()
+        const timer = setTimeout(() => controller.abort(), 4000)
+        const res = await fetch(`${url}/api/desktop/devices`, { signal: controller.signal })
+        clearTimeout(timer)
+        if (res.ok) {
+          el.serverPingResult.innerHTML = '<span style="color: #4ade80;">✓ Server responded successfully!</span>'
+        } else {
+          el.serverPingResult.innerHTML = `<span style="color: #f87171;">✗ Server returned HTTP ${res.status}</span>`
+        }
+      } catch (err) {
+        el.serverPingResult.innerHTML = `<span style="color: #f87171;">✗ Failed to connect to ${url} (${err.message})</span>`
+      }
+    }
+  })
+
+  el.btnSaveServerSettings?.addEventListener('click', async () => {
+    const isCloud = el.connModeCloud?.checked
+    const newBaseUrl = isCloud ? '' : (el.inputServerUrl?.value?.trim() || '')
+
+    state.config.apiBaseUrl = newBaseUrl
+    if (isElectron) {
+      await window.quickinkDesktop.saveConfig({ apiBaseUrl: newBaseUrl })
+    }
+    updateConnectionBadge()
+    closeModal()
+    fetchDevices()
+    fetchRecentJobs()
+  })
 }
 
 // Scan Installed System Printers via Electron IPC
@@ -733,19 +1341,14 @@ async function verifyAndFetchJob() {
   el.btnVerifyOtp.disabled = true
 
   try {
-    const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/redeem`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        code,
-        deviceId: state.config.deviceId
-      })
-    })
+    const { ok, data } = await apiPost(
+      '/api/desktop/redeem',
+      { code, deviceId: state.config.deviceId },
+      () => QuickInkCloud.redeemOtp(code, state.config.deviceId)
+    )
 
-    const data = await res.json()
-
-    if (!res.ok || !data.success) {
-      throw new Error(data.error || 'Invalid OTP code')
+    if (!ok || !data?.success) {
+      throw new Error(data?.error || 'Invalid OTP code')
     }
 
     state.activeJob = data
@@ -855,8 +1458,10 @@ el.btnReleasePrint?.addEventListener('click', async () => {
 // =============================================================================
 async function fetchRecentJobs() {
   try {
-    const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/jobs?deviceId=${state.config.deviceId}`)
-    const data = await res.json()
+    const { data } = await apiGet(
+      `/api/desktop/jobs?deviceId=${state.config.deviceId}`,
+      () => QuickInkCloud.fetchJobs(state.config.deviceId)
+    )
     if (data?.jobs) {
       state.recentJobs = data.jobs
       renderJobsTable(data.jobs)
@@ -938,8 +1543,10 @@ function computeStats(jobs) {
 async function fetchDevices() {
   if (!el.stationSelect) return
   try {
-    const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/devices`)
-    const data = await res.json()
+    const { data } = await apiGet(
+      '/api/desktop/devices',
+      () => QuickInkCloud.fetchDevices()
+    )
     if (data?.devices && data.devices.length > 0) {
       el.stationSelect.innerHTML = data.devices
         .map((d) => `<option value="${d.id}">${d.name}</option>`)
@@ -1188,15 +1795,14 @@ function setupForgotPassword() {
     if (el.btnFpSendOtp) el.btnFpSendOtp.disabled = true
 
     try {
-      const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reset-password-send-otp', phone }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to send code')
+      const { ok, data } = await apiPost(
+        '/api/desktop/auth',
+        { action: 'reset-password-send-otp', phone },
+        () => QuickInkCloud.sendOtp(phone)
+      )
+      if (!ok || !data?.success) throw new Error(data?.error || 'Failed to send code')
 
-      fpPhoneVerified = data.phone
+      fpPhoneVerified = data.phone || phone.replace(/[^0-9]/g, '')
       if (el.fpOtpHint) el.fpOtpHint.textContent = `A 6-digit code was sent to ${fpPhoneVerified}`
       el.fpOtpBoxes?.forEach(b => { b.value = '' })
       fpShowStep(2)
@@ -1233,13 +1839,12 @@ function setupForgotPassword() {
     el.btnFpResend.textContent = 'Sending...'
     el.btnFpResend.disabled = true
     try {
-      const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reset-password-send-otp', phone: fpPhoneVerified }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to resend')
+      const { ok, data } = await apiPost(
+        '/api/desktop/auth',
+        { action: 'reset-password-send-otp', phone: fpPhoneVerified },
+        () => QuickInkCloud.sendOtp(fpPhoneVerified)
+      )
+      if (!ok || !data?.success) throw new Error(data?.error || 'Failed to resend')
       fpSetStatus(el.fpStep2Status, 'New code sent! Check your SMS.', false)
       el.fpOtpBoxes?.forEach(b => { b.value = '' })
       el.fpOtpBoxes?.[0]?.focus()
@@ -1270,13 +1875,12 @@ function setupForgotPassword() {
     if (el.btnFpVerifyOtp) el.btnFpVerifyOtp.disabled = true
 
     try {
-      const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reset-verify-otp', phone: fpPhoneVerified, otp }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error || 'Invalid or expired code')
+      const { ok, data } = await apiPost(
+        '/api/desktop/auth',
+        { action: 'reset-verify-otp', phone: fpPhoneVerified, otp },
+        () => QuickInkCloud.verifyOtp(fpPhoneVerified, otp)
+      )
+      if (!ok || !data?.success) throw new Error(data?.error || 'Invalid or expired code')
 
       fpShowStep(3)
       setTimeout(() => el.fpNewPassword?.focus(), 80)
@@ -1314,13 +1918,12 @@ function setupForgotPassword() {
     if (el.btnFpReset) el.btnFpReset.disabled = true
 
     try {
-      const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reset-password', phone: fpPhoneVerified, newPassword: newPw }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.success) throw new Error(data.error || 'Failed to update password')
+      const { ok, data } = await apiPost(
+        '/api/desktop/auth',
+        { action: 'reset-password', phone: fpPhoneVerified, newPassword: newPw },
+        () => QuickInkCloud.resetPasswordSave(fpPhoneVerified, newPw)
+      )
+      if (!ok || !data?.success) throw new Error(data?.error || 'Failed to update password')
 
       fpShowStep(4) // Show success
     } catch (err) {
@@ -1408,9 +2011,12 @@ async function checkApprovalStatus(isManual = false) {
   }
 
   try {
-    const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth?action=check-status&phone=${phone || ''}&deviceId=${devId || ''}`)
-    if (!res.ok) throw new Error('Status query failed')
-    const data = await res.json()
+    const { ok, data } = await apiGet(
+      `/api/desktop/auth?action=check-status&phone=${phone || ''}&deviceId=${devId || ''}`,
+      () => QuickInkCloud.checkStatus(devId, phone)
+    )
+
+    if (!ok || !data) throw new Error('Status query failed')
 
     if (data.approved) {
       if (state.account) {
@@ -1468,17 +2074,14 @@ async function checkStationStatus() {
   if (!devId) return
 
   try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 2000)
-    const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth?action=check-status&deviceId=${devId}`, {
-      signal: controller.signal
-    }).catch(() => null)
-    clearTimeout(timer)
+    const { ok, data } = await apiGet(
+      `/api/desktop/auth?action=check-status&deviceId=${devId}`,
+      () => QuickInkCloud.checkStatus(devId)
+    )
 
-    if (!res || !res.ok) return
-    const data = await res.json()
+    if (!ok || !data) return
 
-    if (data && data.suspended) {
+    if (data.suspended) {
       triggerSuspensionLockdown(
         state.account?.shop_name || 'Quick Ink Station',
         devId,
@@ -1628,23 +2231,13 @@ async function handleSendMobileOtp() {
   state.regDraft.operating_hours = operating_hours
 
   try {
-    const controller = new AbortController()
-    const timer = setTimeout(() => controller.abort(), 10000) // 10 second timeout
+    const { ok, data } = await apiPost(
+      '/api/desktop/auth',
+      { action: 'send-otp', phone: cleanPhone },
+      () => QuickInkCloud.sendOtp(cleanPhone)
+    )
 
-    const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'send-otp',
-        phone: cleanPhone,
-      }),
-      signal: controller.signal,
-    })
-    clearTimeout(timer)
-
-    const data = await res.json().catch(() => null)
-
-    if (!res.ok || !data?.success) {
+    if (!ok || !data?.success) {
       showRegMsg(el.regStep1StatusMsg, data?.error || 'Failed to dispatch verification SMS. Please verify your phone number.', true)
       return
     }
@@ -1656,11 +2249,7 @@ async function handleSendMobileOtp() {
     el.authOtpBoxes.forEach((b) => (b.value = ''))
     setRegStep(2)
   } catch (e) {
-    if (e.name === 'AbortError') {
-      showRegMsg(el.regStep1StatusMsg, 'Request timed out. Please check your internet connection and try again.', true)
-    } else {
-      showRegMsg(el.regStep1StatusMsg, 'Unable to connect to QuickInk server. Please check your internet connection.', true)
-    }
+    showRegMsg(el.regStep1StatusMsg, 'Unable to connect to QuickInk server. Please check your internet connection.', true)
   } finally {
     el.btnToStep2.disabled = false
     el.btnToStep2.textContent = 'Verify Mobile via OTP →'
@@ -1701,19 +2290,13 @@ async function handleVerifyMobileOtp() {
   hideRegMsg(el.regStep2StatusMsg)
 
   try {
-    const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'verify-otp',
-        phone: state.regDraft.phone,
-        otp: code,
-      }),
-    })
+    const { ok, data } = await apiPost(
+      '/api/desktop/auth',
+      { action: 'verify-otp', phone: state.regDraft.phone, otp: code },
+      () => QuickInkCloud.verifyOtp(state.regDraft.phone, code)
+    )
 
-    const data = await res.json().catch(() => null)
-
-    if (res.ok && data?.verified) {
+    if (ok && data?.verified) {
       el.regVerifiedPhoneTxt.textContent = `+880 ${state.regDraft.phone.slice(-10)} (Verified)`
       setRegStep(3)
       return
@@ -1761,15 +2344,13 @@ async function handleFinishRegistration() {
   }
 
   try {
-    const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    const { ok, data } = await apiPost(
+      '/api/desktop/auth',
+      payload,
+      () => QuickInkCloud.register({ ...state.regDraft, password: pass })
+    )
 
-    const data = await res.json().catch(() => null)
-
-    if (res.ok && data?.account) {
+    if (ok && data?.account) {
       const account = data.account
       const device = data.device
 
@@ -1812,32 +2393,26 @@ async function handleLoginSubmit(e) {
   hideRegMsg(el.loginStatusMsg)
 
   try {
-    const res = await fetch(`${state.config.apiBaseUrl}/api/desktop/auth`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'login',
-        phone,
-        password,
-      })
-    })
-
-    const data = await res.json()
+    const { ok, status, data } = await apiPost(
+      '/api/desktop/auth',
+      { action: 'login', phone, password },
+      () => QuickInkCloud.login(phone, password)
+    )
 
     // 1. Pending Approval Check
-    if (res.status === 403 && data.pending) {
+    if (status === 403 && data?.pending) {
       showPendingScreen(data.account)
       return
     }
 
     // 2. Rejected Application Check
-    if (res.status === 403 && data.rejected) {
+    if (status === 403 && data?.rejected) {
       showRejectedScreen(data.account, data.reason)
       return
     }
 
     // 3. Administrative Suspension / Partnership Revocation Check
-    if (res.status === 403 && data.suspended) {
+    if (status === 403 && data?.suspended) {
       triggerSuspensionLockdown(
         data.shop_name || 'Station',
         data.deviceId || state.config.deviceId,
@@ -1847,8 +2422,8 @@ async function handleLoginSubmit(e) {
       return
     }
 
-    if (!res.ok) {
-      throw new Error(data.error || 'Invalid credentials')
+    if (!ok || !data?.success) {
+      throw new Error(data?.error || 'Invalid credentials')
     }
 
     const account = data.account

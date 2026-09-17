@@ -2217,3 +2217,55 @@ body, html {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.08);
 }
+
+/* =============================================================================
+   CONNECTION BADGE & SERVER CONFIGURATION MODAL
+   ============================================================================= */
+.auth-conn-badge-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 11px;
+  color: #94a3b8;
+}
+
+.auth-conn-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #22c55e;
+  box-shadow: 0 0 6px rgba(34, 197, 94, 0.5);
+  display: inline-block;
+  transition: background-color 0.3s ease;
+}
+
+.auth-conn-dot.offline {
+  background-color: #ef4444;
+  box-shadow: 0 0 6px rgba(239, 68, 68, 0.5);
+}
+
+.auth-conn-label {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.auth-conn-gear-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 12px;
+  opacity: 0.75;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  line-height: 1;
+}
+
+.auth-conn-gear-btn:hover {
+  opacity: 1;
+  transform: rotate(30deg);
+}
+

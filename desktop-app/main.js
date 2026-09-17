@@ -50,7 +50,7 @@ function loadConfig() {
   }
   return {
     deviceId: '11111111-1111-1111-1111-111111111111',
-    apiBaseUrl: 'http://localhost:3000',
+    apiBaseUrl: '',
     bwPrinterName: '',
     colorPrinterName: '',
     isKiosk: false,
@@ -130,17 +130,26 @@ async function downloadToTemp(fileUrl, preferredExt = '.pdf') {
     const fileName = `quickink_${Date.now()}_${Math.random().toString(36).substring(7)}${preferredExt}`
     const tempFilePath = path.join(tempDir, fileName)
 
-    if (fileUrl.startsWith('http://') || fileUrl.startsWith('https://')) {
-      const response = await fetch(fileUrl)
+    let resolvedUrl = fileUrl
+    if (resolvedUrl.startsWith('/uploads/')) {
+      const cfg = loadConfig()
+      const base = cfg.apiBaseUrl || 'http://localhost:3000'
+      resolvedUrl = `${base}${resolvedUrl}`
+    } else if (resolvedUrl.startsWith('/')) {
+      resolvedUrl = `https://xhzfrmpbhasnipirccnt.supabase.co/storage/v1/object/public/print-files${resolvedUrl}`
+    }
+
+    if (resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://')) {
+      const response = await fetch(resolvedUrl)
       if (!response.ok) {
         throw new Error(`Failed to download document from server (HTTP ${response.status})`)
       }
       const arrayBuffer = await response.arrayBuffer()
       fs.writeFileSync(tempFilePath, Buffer.from(arrayBuffer))
       return tempFilePath
-    } else if (fs.existsSync(fileUrl)) {
+    } else if (fs.existsSync(resolvedUrl)) {
       // Already a local path
-      return fileUrl
+      return resolvedUrl
     }
     throw new Error('Invalid file URL or path')
   } catch (err) {
