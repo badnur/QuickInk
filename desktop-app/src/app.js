@@ -1396,6 +1396,7 @@ async function verifyAndFetchJob() {
 function openJobModal(jobData) {
   const job = jobData?.data?.print_job || jobData?.print_job || {}
   const isColor = job.color_mode === 'color'
+  const isDuplex = Boolean(job.duplex === true || job.duplex === 'duplex' || job.duplex === 'true' || job.duplex === 'duplexlong')
 
   const rawUrlOrPath = job.file_url || job.file_path || ''
   let rangeFromUrl = null
@@ -1411,7 +1412,7 @@ function openJobModal(jobData) {
   el.modalColorMode.textContent = isColor ? 'Full Color' : 'Black & White'
   const rangeNotice = effectiveRange ? ` (Range: ${effectiveRange})` : ''
   el.modalPagesCopies.textContent = `${job.page_count || 1} page(s)${rangeNotice} × ${job.copies || 1} copy`
-  el.modalDuplex.textContent = job.duplex === 'duplex' ? 'Double-Sided (Duplex)' : 'Single-Sided'
+  el.modalDuplex.textContent = isDuplex ? 'Double-Sided (Duplex)' : 'Single-Sided'
 
   const targetPrinter = isColor ? state.config.colorPrinterName : state.config.bwPrinterName
   el.modalRoutedPrinter.textContent = targetPrinter ? `${targetPrinter} (${isColor ? 'Color' : 'B&W'})` : 'Hardware default'
@@ -1454,6 +1455,7 @@ el.btnReleasePrint?.addEventListener('click', async () => {
 
   const job = state.activeJob?.data?.print_job || state.activeJob?.print_job || {}
   const isColor = job.color_mode === 'color'
+  const isDuplex = Boolean(job.duplex === true || job.duplex === 'duplex' || job.duplex === 'true' || job.duplex === 'duplexlong')
   const chosenPrinter = isColor ? state.config.colorPrinterName : state.config.bwPrinterName
   const fileToPrint = job.file_url || job.file_path
 
@@ -1477,7 +1479,7 @@ el.btnReleasePrint?.addEventListener('click', async () => {
         fileUrl: fileToPrint,
         printerName: chosenPrinter,
         color: isColor,
-        duplex: job.duplex === 'duplex',
+        duplex: isDuplex,
         copies: job.copies || 1,
         pageRange: effectiveRange
       })

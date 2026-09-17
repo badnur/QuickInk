@@ -269,30 +269,33 @@ function registerIpcHandlers() {
     }
   })
 
-// Helper: Synchronize Windows Printer Driver Color setting (monochrome vs color)
+// Helper: Synchronize Windows Printer Driver settings (monochrome vs color & duplex)
 // Returns true if the driver change was applied successfully, false otherwise.
-async function setPrinterColorMode(printerName, isColor) {
+async function setPrinterHardwareConfig(printerName, isColor, isDuplex = false) {
   if (process.platform !== 'win32' || !printerName) return false
   return new Promise((resolve) => {
     const escapedName = printerName.replace(/"/g, '`"')
-    // Set-PrintConfiguration -Color $true enables color; $false forces monochrome
-    const psCmd = `Set-PrintConfiguration -PrinterName "${escapedName}" -Color ${isColor ? '$true' : '$false'}`
+    const colorVal = isColor ? '$true' : '$false'
+    const duplexVal = isDuplex ? 'TwoSidedLongEdge' : 'OneSided'
+    const psCmd = `try { Set-PrintConfiguration -PrinterName "${escapedName}" -Color ${colorVal} -DuplexingMode ${duplexVal} -ErrorAction Stop } catch { try { Set-PrintConfiguration -PrinterName "${escapedName}" -Color ${colorVal} -ErrorAction SilentlyContinue } catch {} }`
     child_process.execFile(
       'powershell.exe',
       ['-NoProfile', '-NonInteractive', '-Command', psCmd],
       { timeout: 5000 },
       (err) => {
         if (err) {
-          console.warn(`[PrinterConfig] Set-PrintConfiguration failed (driver may not support this): ${err.message}`)
+          console.warn(`[PrinterConfig] Set-PrintConfiguration notice: ${err.message}`)
           resolve(false)
         } else {
-          console.log(`[PrinterConfig] Driver color mode set → "${printerName}" Color=${isColor}`)
+          console.log(`[PrinterConfig] Driver config synchronized → "${printerName}" Color=${isColor} Duplex=${duplexVal}`)
           resolve(true)
         }
       }
     )
   })
 }
+
+const setPrinterColorMode = (name, isColor) => setPrinterHardwareConfig(name, isColor, false)
 
 // Helper: Convert Image file (PNG, JPG, etc) to standard A4 PDF via pdf-lib and jimp
 async function convertImageToA4Pdf(imagePath, isColor = true) {
@@ -562,10 +565,11 @@ async function generateTestPdf(printerName, isColor) {
       if (effectivePageRange) effectivePageRange = String(effectivePageRange).trim()
 
       const isColor = Boolean(color)
-      console.log(`[PrintJob] Preparing print to ${printerName} | Copies: ${copies} | Color: ${isColor} | Duplex: ${duplex} | PageRange: ${effectivePageRange || 'all'}`)
+      const isDuplex = Boolean(duplex === true || duplex === 'duplex' || duplex === 'duplexlong' || duplex === 'true')
+      console.log(`[PrintJob] Preparing print to ${printerName} | Copies: ${copies} | Color: ${isColor} | Duplex: ${isDuplex} | PageRange: ${effectivePageRange || 'all'}`)
 
-      // 1. Enforce Color mode at the Windows driver level
-      await setPrinterColorMode(printerName, isColor)
+      // 1. Enforce Color and Duplex mode at the Windows driver level
+      await setPrinterHardwareConfig(printerName, isColor, isDuplex)
 
       let tempFilePath = null
       let convertedPdfPath = null
@@ -625,16 +629,16 @@ async function generateTestPdf(printerName, isColor) {
           if (pdfToPrinter && targetPdfPath) {
             try {
               // Map duplex value to SumatraPDF's accepted 'side' option values
-              const sideValue = duplex ? 'duplexlong' : 'simplex'
-              console.log(`[PrintJob] Using pdf-to-printer → ${printerName} | monochrome: ${!isColor} | side: ${sideValue}`)
+              const sideValue = isDuplex ? 'duplexlong' : 'simplex'
+              console.log(`[PrintJob] Using pdf-to-printer → ${printerName} | monochrome: ${!isColor} | side: ${sideValue} | scale: shrink`)
 
-              // Build options object. When isColor is true, explicitly pass monochrome: false
-              // so SumatraPDF injects 'color' into -print-settings (overrides any driver default)
+              // Build options object. scale: 'shrink' prevents zoom distortion and preserves 1:1 scale
               const ptpOptions = {
                 printer: printerName,
                 copies: parseInt(copies, 10) || 1,
                 paperSize: 'A4',
                 side: sideValue,
+                scale: 'shrink',
                 monochrome: !isColor    // true → SumatraPDF -print-settings includes 'monochrome'
               }
 
@@ -698,7 +702,7 @@ async function generateTestPdf(printerName, isColor) {
                 pageSize: 'A4',
                 printBackground: true,
                 margins: { marginType: 'printableArea' },
-                duplexMode: duplex ? 'longEdge' : 'simplex'
+                duplexMode: isDuplex ? 'longEdge' : 'simplex'
               },
               (success, failureReason) => {
                 if (finished) return
