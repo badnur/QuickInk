@@ -158,7 +158,8 @@ export async function imagesToPdfBlob(dataUrls) {
     const x = margin + (maxWidth - printWidth) / 2
     const y = margin + (maxHeight - printHeight) / 2
 
-    pdf.addImage(imgData, 'JPEG', x, y, printWidth, printHeight, undefined, 'FAST')
+    const imgFormat = typeof imgData === 'string' && imgData.startsWith('data:image/png') ? 'PNG' : 'JPEG'
+    pdf.addImage(imgData, imgFormat, x, y, printWidth, printHeight, undefined, 'FAST')
   }
 
   const pdfOutput = pdf.output('blob')

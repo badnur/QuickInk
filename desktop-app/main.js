@@ -429,6 +429,130 @@ async function generateTestPdf(printerName, isColor) {
   return testPdfPath
 }
 
+// Helper: Normalize any PDF to standard A4 (scaling oversized scans/documents down proportionally
+// with safe printable margins) and compile requested page range into a single hardware-ready PDF.
+async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange) {
+  if (!PDFLib || !srcPdfPath) return { finalPdfPath: srcPdfPath, wasModified: false }
+
+  try {
+    const srcBytes = fs.readFileSync(srcPdfPath)
+    let srcDoc = null
+    try {
+      srcDoc = await PDFLib.PDFDocument.load(srcBytes, {
+        ignoreEncryption: true,
+        parseSpeed: PDFLib.ParseSpeeds ? PDFLib.ParseSpeeds.Fast : 1500
+      })
+    } catch (fastErr) {
+      console.warn('[PDFCompiler] Fast load failed, falling back to standard load:', fastErr.message)
+      srcDoc = await PDFLib.PDFDocument.load(srcBytes, { ignoreEncryption: true })
+    }
+
+    const totalPdfPages = srcDoc.getPageCount()
+    let targetIndices = []
+
+    if (effectivePageRange && String(effectivePageRange).trim()) {
+      targetIndices = parsePageRange(effectivePageRange, totalPdfPages)
+    }
+    if (!targetIndices || targetIndices.length === 0) {
+      targetIndices = Array.from({ length: totalPdfPages }, (_, i) => i)
+    }
+
+    console.log(`[PDFCompiler] Total document pages: ${totalPdfPages}. Target print indices: [${targetIndices.join(',')}]`)
+
+    const isSubset = targetIndices.length < totalPdfPages
+    const a4W = 595.28
+    const a4H = 841.89
+    const margin = 18 // 18pt (~6.35mm) hardware printable safe margin
+
+    // Check if any page to print exceeds standard A4 dimensions or has non-standard aspect ratio
+    let needsNormalization = isSubset
+    if (!needsNormalization) {
+      for (const idx of targetIndices) {
+        const p = srcDoc.getPage(idx)
+        const pw = p.getWidth()
+        const ph = p.getHeight()
+        const isLandscape = pw > ph
+        const maxW = isLandscape ? a4H : a4W
+        const maxH = isLandscape ? a4W : a4H
+        // If page is larger than standard A4 by > 5pt, or differs from standard A4 dimensions
+        if (pw > maxW + 5 || ph > maxH + 5 || Math.abs(pw - maxW) > 20 || Math.abs(ph - maxH) > 20) {
+          needsNormalization = true
+          break
+        }
+      }
+    }
+
+    if (!needsNormalization) {
+      console.log(`[PDFCompiler] PDF is already standard A4 and covers all pages. Using directly.`)
+      return { finalPdfPath: srcPdfPath, wasModified: false }
+    }
+
+    // Compile into standard A4 document
+    const outDoc = await PDFLib.PDFDocument.create()
+
+    // Primary Engine: embedPages (XObject vector encapsulation — avoids font/object AST corruption)
+    try {
+      const srcPagesToEmbed = targetIndices.map((idx) => srcDoc.getPage(idx))
+      const embeddedPages = await outDoc.embedPages(srcPagesToEmbed)
+
+      embeddedPages.forEach((ep) => {
+        const isLandscape = ep.width > ep.height
+        const canvasW = isLandscape ? a4H : a4W
+        const canvasH = isLandscape ? a4W : a4H
+        const availW = canvasW - (margin * 2)
+        const availH = canvasH - (margin * 2)
+
+        const isExactA4 = Math.abs(ep.width - canvasW) <= 5 && Math.abs(ep.height - canvasH) <= 5
+
+        let finalW, finalH, x, y
+        if (isExactA4) {
+          finalW = canvasW
+          finalH = canvasH
+          x = 0
+          y = 0
+        } else {
+          // Proportionally scale down if oversized, or keep 1:1 if smaller (scale capped at 1.0)
+          const scale = Math.min(availW / ep.width, availH / ep.height, 1.0)
+          finalW = ep.width * scale
+          finalH = ep.height * scale
+          x = (canvasW - finalW) / 2
+          y = (canvasH - finalH) / 2
+        }
+
+        const page = outDoc.addPage([canvasW, canvasH])
+        page.drawPage(ep, { x, y, width: finalW, height: finalH })
+      })
+
+      const compiledBytes = await outDoc.save()
+      const compiledPdfPath = path.join(
+        app.getPath('temp'),
+        `quickink_compiled_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`
+      )
+      fs.writeFileSync(compiledPdfPath, compiledBytes)
+      console.log(`[PDFCompiler] Standard A4 PDF compiled successfully: ${compiledPdfPath} (${outDoc.getPageCount()} pages, ${compiledBytes.length} bytes)`)
+      return { finalPdfPath: compiledPdfPath, wasModified: true }
+    } catch (embedErr) {
+      console.warn('[PDFCompiler] embedPages method notice, attempting copyPages fallback:', embedErr.message)
+
+      // Fallback Engine: copyPages
+      const copyDoc = await PDFLib.PDFDocument.create()
+      const copiedPages = await copyDoc.copyPages(srcDoc, targetIndices)
+      copiedPages.forEach((p) => copyDoc.addPage(p))
+      const copiedBytes = await copyDoc.save()
+      const copiedPdfPath = path.join(
+        app.getPath('temp'),
+        `quickink_copied_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`
+      )
+      fs.writeFileSync(copiedPdfPath, copiedBytes)
+      console.log(`[PDFCompiler] copyPages fallback succeeded: ${copiedPdfPath}`)
+      return { finalPdfPath: copiedPdfPath, wasModified: true }
+    }
+  } catch (err) {
+    console.error('[PDFCompiler] PDF compilation error, will use original PDF directly:', err.message)
+    return { finalPdfPath: srcPdfPath, wasModified: false, error: err.message }
+  }
+}
+
   // 2. Test Print to Physical Printer
   ipcMain.handle('printers:print-test', async (event, { printerName, mode = 'bw' }) => {
     try {
@@ -573,7 +697,7 @@ async function generateTestPdf(printerName, isColor) {
 
       let tempFilePath = null
       let convertedPdfPath = null
-      let slicedPdfPath = null
+      let compiledPdfPath = null
 
       if (fileUrl) {
         try {
@@ -597,31 +721,20 @@ async function generateTestPdf(printerName, isColor) {
             console.log(`[PrintJob] A4 PDF ready at: ${convertedPdfPath}`)
           }
 
-          // Exact Hardware Page-Range Slicing: If specific pages requested, physically slice PDF
-          // This guarantees that ANY printer (TOSHIBA, HP, Epson) prints ONLY the requested pages.
-          if (PDFLib && targetPdfPath && effectivePageRange) {
-            try {
-              const srcBytes = fs.readFileSync(targetPdfPath)
-              const srcDoc = await PDFLib.PDFDocument.load(srcBytes)
-              const totalPdfPages = srcDoc.getPageCount()
-              const targetIndices = parsePageRange(effectivePageRange, totalPdfPages)
-
-              if (targetIndices.length > 0 && targetIndices.length < totalPdfPages) {
-                console.log(`[PrintJob] Slicing PDF: requested range "${effectivePageRange}" on ${totalPdfPages}-page document → extracting ${targetIndices.length} page(s) (indices: [${targetIndices.join(',')}])`)
-                const slicedDoc = await PDFLib.PDFDocument.create()
-                const copiedPages = await slicedDoc.copyPages(srcDoc, targetIndices)
-                copiedPages.forEach((p) => slicedDoc.addPage(p))
-                const slicedBytes = await slicedDoc.save()
-
-                slicedPdfPath = path.join(app.getPath('temp'), `quickink_sliced_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`)
-                fs.writeFileSync(slicedPdfPath, slicedBytes)
-                targetPdfPath = slicedPdfPath
-                console.log(`[PrintJob] Sliced PDF ready for hardware spooler at: ${slicedPdfPath} (page count: ${slicedDoc.getPageCount()})`)
-              } else {
-                console.log(`[PrintJob] Page range "${effectivePageRange}" covers all ${totalPdfPages} pages or full document.`)
-              }
-            } catch (sliceErr) {
-              console.warn('[PrintJob] PDF page slicing error, using original document:', sliceErr.message)
+          // Exact Hardware Normalization & Page-Range Slicing:
+          // Scales oversized/scanned pages down to standard A4 so text is never cut off,
+          // and extracts exact page range (e.g. 1-2) so printer prints only requested pages.
+          let compilationSucceeded = false
+          if (PDFLib && targetPdfPath) {
+            const prepResult = await prepareDocumentForPrinting(targetPdfPath, effectivePageRange)
+            if (prepResult.wasModified) {
+              compiledPdfPath = prepResult.finalPdfPath
+              targetPdfPath = compiledPdfPath
+              compilationSucceeded = true
+              console.log(`[PrintJob] Dispatched file normalized to standard A4 at: ${compiledPdfPath}`)
+            } else if (!prepResult.error) {
+              // File is already standard A4 and covers all pages
+              compilationSucceeded = true
             }
           }
 
@@ -632,13 +745,13 @@ async function generateTestPdf(printerName, isColor) {
               const sideValue = isDuplex ? 'duplexlong' : 'simplex'
               console.log(`[PrintJob] Using pdf-to-printer → ${printerName} | monochrome: ${!isColor} | side: ${sideValue} | scale: shrink`)
 
-              // Build options object. scale: 'shrink' prevents zoom distortion and preserves 1:1 scale
+              // Build options object. scale: 'shrink' preserves 1:1 scale on standard A4
               const ptpOptions = {
                 printer: printerName,
                 copies: parseInt(copies, 10) || 1,
                 paperSize: 'A4',
                 side: sideValue,
-                scale: 'shrink',
+                scale: compilationSucceeded ? 'shrink' : 'fit',
                 monochrome: !isColor    // true → SumatraPDF -print-settings includes 'monochrome'
               }
 
@@ -646,10 +759,10 @@ async function generateTestPdf(printerName, isColor) {
               // adds 'color' to print-settings (prevents any leftover monochrome setting)
               if (isColor) ptpOptions.monochrome = false
 
-              // If the file was not sliced, also supply pages option as extra fallback
-              if (effectivePageRange && !slicedPdfPath) {
+              // If compilation was not performed, supply pages option as extra fallback
+              if (effectivePageRange && !compiledPdfPath) {
                 ptpOptions.pages = effectivePageRange
-                console.log(`[PrintJob] Applying page range filter: ${ptpOptions.pages}`)
+                console.log(`[PrintJob] Applying fallback page range filter: ${ptpOptions.pages}`)
               }
 
               await pdfToPrinter.print(targetPdfPath, ptpOptions)
@@ -658,7 +771,7 @@ async function generateTestPdf(printerName, isColor) {
               setTimeout(() => {
                 try { if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath) } catch (e) {}
                 try { if (convertedPdfPath && fs.existsSync(convertedPdfPath)) fs.unlinkSync(convertedPdfPath) } catch (e) {}
-                try { if (slicedPdfPath && fs.existsSync(slicedPdfPath)) fs.unlinkSync(slicedPdfPath) } catch (e) {}
+                try { if (compiledPdfPath && fs.existsSync(compiledPdfPath)) fs.unlinkSync(compiledPdfPath) } catch (e) {}
               }, 20000)
 
               return { success: true, message: `Document successfully dispatched to ${printerName}` }
@@ -712,7 +825,7 @@ async function generateTestPdf(printerName, isColor) {
                 setTimeout(() => {
                   try { if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath) } catch (e) {}
                   try { if (convertedPdfPath && fs.existsSync(convertedPdfPath)) fs.unlinkSync(convertedPdfPath) } catch (e) {}
-                  try { if (slicedPdfPath && fs.existsSync(slicedPdfPath)) fs.unlinkSync(slicedPdfPath) } catch (e) {}
+                  try { if (compiledPdfPath && fs.existsSync(compiledPdfPath)) fs.unlinkSync(compiledPdfPath) } catch (e) {}
                 }, 10000)
 
                 if (success) {
@@ -731,8 +844,8 @@ async function generateTestPdf(printerName, isColor) {
           if (convertedPdfPath) {
             try { if (fs.existsSync(convertedPdfPath)) fs.unlinkSync(convertedPdfPath) } catch (e) {}
           }
-          if (slicedPdfPath) {
-            try { if (fs.existsSync(slicedPdfPath)) fs.unlinkSync(slicedPdfPath) } catch (e) {}
+          if (compiledPdfPath) {
+            try { if (fs.existsSync(compiledPdfPath)) fs.unlinkSync(compiledPdfPath) } catch (e) {}
           }
           return { success: false, error: `Document preparation failed: ${downloadErr.message}` }
         }
