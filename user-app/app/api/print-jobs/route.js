@@ -45,12 +45,15 @@ export async function POST(request) {
       p_color_mode: validColorMode,
       p_duplex: Boolean(duplex),
       p_page_count: parsedPages,
-      p_page_range: page_range || null,
       p_payment_type: validPaymentType,
       p_amount: parsedAmount,
     })
 
     if (!rpcError && rpcData?.success) {
+      if (page_range && rpcData.order?.id) {
+        await supabase.from('print_jobs').update({ page_range }).eq('id', rpcData.order.id).then(() => {})
+      }
+
       return NextResponse.json(
         {
           success: true,
@@ -58,6 +61,7 @@ export async function POST(request) {
           order: {
             ...rpcData.order,
             file_name,
+            page_range: page_range || null,
           },
           otp: rpcData.otp,
         },
