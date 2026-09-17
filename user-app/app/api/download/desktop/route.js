@@ -16,7 +16,7 @@ export async function GET(request) {
         'Accept': 'application/vnd.github.v3+json',
         'User-Agent': 'QuickInk-Website-Download'
       },
-      next: { revalidate: 30 }
+      cache: 'no-store'
     })
 
     if (res.ok) {
