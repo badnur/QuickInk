@@ -991,7 +991,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
 
                           {/* N-up Grid Slots */}
                           <div className={`w-full h-full pt-4 grid gap-1.5 ${
-                            pagesPerSheet === 2 ? 'grid-rows-2 grid-cols-1' :
+                            pagesPerSheet === 2 ? 'grid-cols-2 grid-rows-1' :
                             pagesPerSheet === 4 ? 'grid-rows-2 grid-cols-2' :
                             'grid-rows-3 grid-cols-2'
                           }`}>

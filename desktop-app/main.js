@@ -512,9 +512,9 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange, nup = 
       const embeddedPages = await outDoc.embedPages(srcPagesToEmbed)
 
       if (parsedNup > 1) {
-        // Mini Print N-up Layout (2-in-1, 4-in-1, 6-in-1)
-        const cols = parsedNup === 2 ? 1 : 2
-        const rows = parsedNup === 2 ? 2 : parsedNup === 4 ? 2 : 3
+        // Mini Print N-up Layout (2-in-1: 2 cols x 1 row vertical; 4-in-1: 2x2; 6-in-1: 2x3)
+        const cols = 2
+        const rows = parsedNup === 2 ? 1 : parsedNup === 4 ? 2 : 3
         const gap = parsedNup === 6 ? 6 : 8
 
         const availW = a4W - margin * 2
