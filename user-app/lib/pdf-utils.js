@@ -404,3 +404,132 @@ export async function slicePdfBlob(fileOrBlob, pageRangeStr) {
     return fileOrBlob
   }
 }
+
+/**
+ * Helper: Convert any image file (WebP, BMP, HEIC, JPG, PNG) to JPEG ArrayBuffer via Canvas
+ */
+async function convertImageToJpegBuffer(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth || img.width
+      canvas.height = img.naturalHeight || img.height
+      const ctx = canvas.getContext('2d')
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.drawImage(img, 0, 0)
+      canvas.toBlob(async (blob) => {
+        if (!blob) {
+          reject(new Error('Canvas image conversion failed'))
+          return
+        }
+        resolve(await blob.arrayBuffer())
+      }, 'image/jpeg', 0.92)
+    }
+    img.onerror = (e) => {
+      URL.revokeObjectURL(url)
+      reject(e)
+    }
+    img.src = url
+  })
+}
+
+/**
+ * Merges multiple files (PDFs and images) into a single unified multi-page PDF document.
+ * Enables selecting multiple photos or documents and compiling them into one seamless print job.
+ */
+export async function mergeFilesToPdf(files) {
+  if (!files || files.length === 0) return null
+
+  // If only 1 PDF file, return directly
+  if (files.length === 1 && (files[0].type === 'application/pdf' || files[0].name.toLowerCase().endsWith('.pdf'))) {
+    return files[0]
+  }
+
+  const mergedDoc = await PDFDocument.create()
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i]
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')
+    const isImage = file.type.startsWith('image/') || /\.(jpe?g|png|webp|bmp|gif)$/i.test(file.name)
+
+    if (isPdf) {
+      try {
+        const buffer = await file.arrayBuffer()
+        const srcDoc = await PDFDocument.load(buffer, { ignoreEncryption: true })
+        const pageIndices = srcDoc.getPageIndices()
+        const copiedPages = await mergedDoc.copyPages(srcDoc, pageIndices)
+        copiedPages.forEach((page) => mergedDoc.addPage(page))
+      } catch (pdfErr) {
+        console.warn(`[mergeFilesToPdf] Error loading PDF ${file.name}:`, pdfErr)
+      }
+    } else if (isImage) {
+      try {
+        let embeddedImage = null
+        const isPng = file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')
+        const isJpg = file.type === 'image/jpeg' || /\.(jpe?g)$/i.test(file.name)
+
+        if (isPng) {
+          try {
+            const buf = await file.arrayBuffer()
+            embeddedImage = await mergedDoc.embedPng(buf)
+          } catch (pngErr) {
+            // PNG fallback to canvas jpeg
+            const convertedBuf = await convertImageToJpegBuffer(file)
+            embeddedImage = await mergedDoc.embedJpg(convertedBuf)
+          }
+        } else if (isJpg) {
+          try {
+            const buf = await file.arrayBuffer()
+            embeddedImage = await mergedDoc.embedJpg(buf)
+          } catch (jpgErr) {
+            const convertedBuf = await convertImageToJpegBuffer(file)
+            embeddedImage = await mergedDoc.embedJpg(convertedBuf)
+          }
+        } else {
+          // WebP, BMP, etc. convert to Jpeg
+          const convertedBuf = await convertImageToJpegBuffer(file)
+          embeddedImage = await mergedDoc.embedJpg(convertedBuf)
+        }
+
+        if (embeddedImage) {
+          // Standard A4 dimensions in points
+          const A4_W = 595.28
+          const A4_H = 841.89
+          const isLandscape = embeddedImage.width > embeddedImage.height
+          const pageWidth = isLandscape ? A4_H : A4_W
+          const pageHeight = isLandscape ? A4_W : A4_H
+
+          const page = mergedDoc.addPage([pageWidth, pageHeight])
+          const margin = 20
+          const availW = pageWidth - margin * 2
+          const availH = pageHeight - margin * 2
+
+          const scale = Math.min(availW / embeddedImage.width, availH / embeddedImage.height, 1.0)
+          const renderW = embeddedImage.width * scale
+          const renderH = embeddedImage.height * scale
+          const x = (pageWidth - renderW) / 2
+          const y = (pageHeight - renderH) / 2
+
+          page.drawImage(embeddedImage, {
+            x,
+            y,
+            width: renderW,
+            height: renderH,
+          })
+        }
+      } catch (imgErr) {
+        console.warn(`[mergeFilesToPdf] Error embedding image ${file.name}:`, imgErr)
+      }
+    }
+  }
+
+  const mergedBytes = await mergedDoc.save()
+  const baseName = files[0].name.replace(/\.[^/.]+$/, '')
+  const mergedName = files.length > 1 ? `${baseName}_+_${files.length - 1}_pages.pdf` : `${baseName}.pdf`
+  return new File([mergedBytes], mergedName, { type: 'application/pdf' })
+}
+
