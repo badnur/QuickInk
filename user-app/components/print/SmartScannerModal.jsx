@@ -20,7 +20,8 @@ import {
   CreditCard,
   Layers,
   Sparkle,
-  Sliders
+  Sliders,
+  Move
 } from 'lucide-react'
 import {
   perspectiveWarp,
@@ -30,7 +31,13 @@ import {
   composeToA4
 } from '@/lib/scanner-utils'
 
-export default function SmartScannerModal({ isOpen, onClose, onComplete, initialDocMode = null }) {
+export default function SmartScannerModal({
+  isOpen,
+  onClose,
+  onComplete,
+  initialDocMode = null,
+  initialImageSrc = null
+}) {
   // Navigation: 'mode-select' | 'source-select' | 'camera' | 'crop' | 'review'
   const [stage, setStage] = useState('mode-select')
   const [docMode, setDocMode] = useState('idCard') // 'idCard' | 'certificate' | 'halfSheet' | 'auto'
@@ -55,23 +62,22 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
 
   // Crop / Corner Pin state
   const cropContainerRef = useRef(null)
-  const [corners, setCorners] = useState([]) // [{x, y}, ...] in image coordinate space
+  const [corners, setCorners] = useState([]) // [{x, y}, ...] in image natural pixel coordinate space
   const [imageDims, setImageDims] = useState({ width: 0, height: 0 })
-  const [activeCornerIdx, setActiveCornerIdx] = useState(null)
-  const [loupePos, setLoupePos] = useState({ x: 0, y: 0 }) // position for magnifying glass
+  const [activeDrag, setActiveDrag] = useState(null) // null | { type: 'corner', idx } | { type: 'edge', edge } | { type: 'quad' }
+  const [cropAspectPreset, setCropAspectPreset] = useState('idCard') // 'free' | 'idCard' | 'a4' | 'halfSheet' | 'square'
+  const dragStartRef = useRef({ startX: 0, startY: 0, initialCorners: [] })
   const fileInputRef = useRef(null)
   const imageElementRef = useRef(null)
 
   // Reset modal state upon opening
   useEffect(() => {
     if (isOpen) {
-      if (initialDocMode) {
-        setDocMode(initialDocMode)
-        setStage('source-select')
-      } else {
-        setDocMode('idCard')
-        setStage('mode-select')
-      }
+      const mode = initialDocMode || 'idCard'
+      setDocMode(mode)
+      setCropAspectPreset(
+        mode === 'certificate' ? 'a4' : mode === 'idCard' ? 'idCard' : mode === 'halfSheet' ? 'halfSheet' : 'free'
+      )
       setActiveSide('front')
       setRawImageSrc(null)
       setFrontWarpedCanvas(null)
@@ -79,11 +85,20 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
       setCurrentWarpedCanvas(null)
       setRotationDeg(0)
       setFilterMode('magic')
+      setActiveDrag(null)
       stopCamera()
+
+      if (initialImageSrc) {
+        loadImageForCrop(initialImageSrc)
+      } else if (initialDocMode) {
+        setStage('source-select')
+      } else {
+        setStage('mode-select')
+      }
     } else {
       stopCamera()
     }
-  }, [isOpen])
+  }, [isOpen, initialDocMode, initialImageSrc])
 
   // Stop camera helper
   const stopCamera = useCallback(() => {
@@ -153,52 +168,100 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
       imageElementRef.current = img
       setImageDims({ width: img.naturalWidth, height: img.naturalHeight })
       setCorners(getInitialCorners(img.naturalWidth, img.naturalHeight))
+      // Explicitly enter interactive crop stage
       setStage('crop')
     }
     img.src = src
   }
 
-  // Convert client viewport point to image natural coordinate space
-  const clientToImageCoords = (clientX, clientY) => {
-    if (!cropContainerRef.current || !imageDims.width) return { x: 0, y: 0 }
-    const rect = cropContainerRef.current.getBoundingClientRect()
-    const scaleX = imageDims.width / rect.width
-    const scaleY = imageDims.height / rect.height
-
-    const x = Math.max(0, Math.min(imageDims.width, (clientX - rect.left) * scaleX))
-    const y = Math.max(0, Math.min(imageDims.height, (clientY - rect.top) * scaleY))
-    return { x: Math.round(x), y: Math.round(y) }
-  }
-
-  // Pointer down on a corner handle
-  const handleCornerPointerDown = (idx, e) => {
+  // Start dragging a corner pin, edge, or entire quad
+  const startDrag = (dragType, e) => {
     e.preventDefault()
     e.stopPropagation()
-    setActiveCornerIdx(idx)
-    setLoupePos({ x: e.clientX, y: e.clientY })
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialCorners: corners.map((c) => ({ ...c }))
+    }
+    setActiveDrag(dragType)
   }
 
-  // Pointer move to update corner position
-  const handleContainerPointerMove = (e) => {
-    if (activeCornerIdx === null) return
-    e.preventDefault()
-    const pt = clientToImageCoords(e.clientX, e.clientY)
-    setCorners((prev) => {
-      const next = [...prev]
-      next[activeCornerIdx] = pt
-      return next
-    })
-    setLoupePos({ x: e.clientX, y: e.clientY })
-  }
+  // Window-level drag event listener guarantees smooth, unbroken dragging across the entire viewport
+  useEffect(() => {
+    if (!activeDrag) return
 
-  // Pointer up to release handle
-  const handleContainerPointerUp = () => {
-    setActiveCornerIdx(null)
-  }
+    const handlePointerMove = (e) => {
+      e.preventDefault()
+      if (!cropContainerRef.current || !imageDims.width || !imageDims.height) return
+      const rect = cropContainerRef.current.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+
+      const deltaClientX = e.clientX - dragStartRef.current.startX
+      const deltaClientY = e.clientY - dragStartRef.current.startY
+      const deltaImgX = deltaClientX * (imageDims.width / rect.width)
+      const deltaImgY = deltaClientY * (imageDims.height / rect.height)
+      const init = dragStartRef.current.initialCorners
+
+      if (activeDrag.type === 'corner') {
+        const idx = activeDrag.idx
+        const newX = Math.max(0, Math.min(imageDims.width, Math.round(init[idx].x + deltaImgX)))
+        const newY = Math.max(0, Math.min(imageDims.height, Math.round(init[idx].y + deltaImgY)))
+        setCorners((prev) => {
+          const next = [...prev]
+          next[idx] = { x: newX, y: newY }
+          return next
+        })
+      } else if (activeDrag.type === 'edge') {
+        const edge = activeDrag.edge
+        const [i1, i2] = edge === 'top' ? [0, 1] : edge === 'right' ? [1, 2] : edge === 'bottom' ? [2, 3] : [3, 0]
+        setCorners((prev) => {
+          const next = [...prev]
+          next[i1] = {
+            x: Math.max(0, Math.min(imageDims.width, Math.round(init[i1].x + deltaImgX))),
+            y: Math.max(0, Math.min(imageDims.height, Math.round(init[i1].y + deltaImgY)))
+          }
+          next[i2] = {
+            x: Math.max(0, Math.min(imageDims.width, Math.round(init[i2].x + deltaImgX))),
+            y: Math.max(0, Math.min(imageDims.height, Math.round(init[i2].y + deltaImgY)))
+          }
+          return next
+        })
+      } else if (activeDrag.type === 'quad') {
+        let shiftX = deltaImgX
+        let shiftY = deltaImgY
+        init.forEach((c) => {
+          if (c.x + shiftX < 0) shiftX = -c.x
+          if (c.x + shiftX > imageDims.width) shiftX = imageDims.width - c.x
+          if (c.y + shiftY < 0) shiftY = -c.y
+          if (c.y + shiftY > imageDims.height) shiftY = imageDims.height - c.y
+        })
+        setCorners(
+          init.map((c) => ({
+            x: Math.max(0, Math.min(imageDims.width, Math.round(c.x + shiftX))),
+            y: Math.max(0, Math.min(imageDims.height, Math.round(c.y + shiftY)))
+          }))
+        )
+      }
+    }
+
+    const handlePointerUp = () => {
+      setActiveDrag(null)
+    }
+
+    window.addEventListener('pointermove', handlePointerMove, { passive: false })
+    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointercancel', handlePointerUp)
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove)
+      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointercancel', handlePointerUp)
+    }
+  }, [activeDrag, imageDims])
 
   // Reset corners to full photo boundaries
   const handleResetCorners = () => {
-    if (!imageDims.width) return
+    if (!imageDims.width || !imageDims.height) return
     setCorners([
       { x: 0, y: 0 },
       { x: imageDims.width, y: 0 },
@@ -215,12 +278,16 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
     setTimeout(() => {
       try {
         let targetAspect = null
-        if (docMode === 'idCard') {
+        if (cropAspectPreset === 'idCard') {
           targetAspect = 85.6 / 53.98 // Standard ISO/IEC 7810 ID-1 card aspect ratio (~1.586)
-        } else if (docMode === 'certificate') {
-          targetAspect = 210 / 297 // A4 portrait (1 / 1.414)
-        } else if (docMode === 'halfSheet') {
+        } else if (cropAspectPreset === 'a4' || cropAspectPreset === 'certificate') {
+          targetAspect = 210 / 297 // A4 standard (1 / 1.414)
+        } else if (cropAspectPreset === 'halfSheet') {
           targetAspect = 210 / 148.5 // Half A4 landscape (1.414)
+        } else if (cropAspectPreset === 'square') {
+          targetAspect = 1.0
+        } else {
+          targetAspect = null // Free quad aspect
         }
 
         const warped = perspectiveWarp(imageElementRef.current, corners, targetAspect)
@@ -311,24 +378,28 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
 
   if (!isOpen) return null
 
+
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[92vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-slate-900/80 backdrop-blur-2xl border border-white/10 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[92vh] text-slate-100 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.1)]">
         {/* Modal Top Header */}
-        <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/90 backdrop-blur">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-[#00bf63]/20 text-[#00bf63] flex items-center justify-center font-bold text-sm">
-              📸
+        <div className="px-5 py-3.5 border-b border-white/[0.08] flex items-center justify-between bg-white/[0.02] backdrop-blur-md">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-white/[0.05] border border-white/10 text-emerald-400 flex items-center justify-center">
+              <Crop className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white leading-tight">Smart Scanner</h3>
-                <Badge className="bg-[#00bf63] hover:bg-[#00bf63] text-black text-[9px] px-1.5 py-0 font-extrabold uppercase">
-                  Auto-Align
-                </Badge>
+                <h3 className="text-sm font-semibold text-white tracking-tight leading-none">Smart Scanner</h3>
+                <span className="text-[10px] font-medium text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full backdrop-blur-sm">
+                  {stage === 'mode-select' ? 'Format' : stage === 'source-select' ? 'Source' : stage === 'crop' ? 'Perspective Crop' : stage === 'review' ? 'Enhance' : 'Live'}
+                </span>
               </div>
-              <p className="text-[11px] text-slate-400">
-                {activeSide === 'front' ? 'Scanning Front Side' : 'Scanning Back Side'}
+              <p className="text-[11px] text-slate-400 mt-1">
+                {stage === 'crop'
+                  ? (activeSide === 'front' ? 'Front Side • Drag corners to fit' : 'Back Side • Drag corners to fit')
+                  : (activeSide === 'front' ? 'Scanning Front Side' : 'Scanning Back Side')}
               </p>
             </div>
           </div>
@@ -337,117 +408,85 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
               stopCamera()
               onClose()
             }}
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+            className="w-7 h-7 rounded-full bg-white/[0.05] hover:bg-white/10 border border-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3.5 h-3.5" />
           </button>
         </div>
 
         {/* Modal Body Stages */}
-        <div className="p-5 flex-1 overflow-y-auto">
+        <div className="p-4 sm:p-5 flex-1 overflow-y-auto">
           {/* ========================================================================= */}
           {/* STAGE 1: DOCUMENT TYPE SELECTION */}
           {/* ========================================================================= */}
           {stage === 'mode-select' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div className="text-center space-y-1 mb-2">
-                <h4 className="text-base font-bold text-white">What are you scanning?</h4>
+                <h4 className="text-base font-semibold text-white tracking-tight">What are you scanning?</h4>
                 <p className="text-xs text-slate-400 max-w-xs mx-auto">
                   Selecting the right type locks ideal proportions and automatically fits your document onto standard paper.
                 </p>
               </div>
 
-              <div className="grid gap-2.5">
-                {/* 1. ID Card */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDocMode('idCard')
-                    setStage('source-select')
-                  }}
-                  className="p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-[#00bf63] text-left flex items-center gap-3.5 transition-all group"
-                >
-                  <div className="w-12 h-10 rounded-xl bg-slate-700/60 border border-slate-600 flex items-center justify-center gap-1 flex-shrink-0 group-hover:border-[#00bf63]/50">
-                    <div className="w-4 h-6 rounded bg-[#00bf63]/60" />
-                    <div className="w-4 h-6 rounded bg-[#00bf63]/30" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <b className="text-xs font-bold text-white">ID Card Photocopy</b>
-                      <span className="text-[10px] text-[#00bf63] font-bold">2-on-1 A4</span>
-                    </div>
-                    <span className="text-[11px] text-slate-400 block mt-0.5">
-                      Aadhaar, PAN, Voter, Driving License, National ID — Front & Back on one page.
-                    </span>
-                  </div>
-                </button>
-
-                {/* 2. Certificate / Full Document */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDocMode('certificate')
-                    setStage('source-select')
-                  }}
-                  className="p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-[#00bf63] text-left flex items-center gap-3.5 transition-all group"
-                >
-                  <div className="w-12 h-10 rounded-xl bg-slate-700/60 border border-slate-600 flex items-center justify-center flex-shrink-0 group-hover:border-[#00bf63]/50">
-                    <div className="w-6 h-8 rounded bg-[#00bf63]/50" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <b className="text-xs font-bold text-white">Certificate / Full Document</b>
-                      <span className="text-[10px] text-slate-400 font-medium">Full A4</span>
-                    </div>
-                    <span className="text-[11px] text-slate-400 block mt-0.5">
-                      Full-page certificate, letter, transcript, or single document page.
-                    </span>
-                  </div>
-                </button>
-
-                {/* 3. Admit Card / Marksheet 2-in-1 */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDocMode('halfSheet')
-                    setStage('source-select')
-                  }}
-                  className="p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-[#00bf63] text-left flex items-center gap-3.5 transition-all group"
-                >
-                  <div className="w-12 h-10 rounded-xl bg-slate-700/60 border border-slate-600 flex flex-col items-center justify-center gap-0.5 flex-shrink-0 group-hover:border-[#00bf63]/50">
-                    <div className="w-8 h-3.5 rounded-xs bg-[#00bf63]/60" />
-                    <div className="w-8 h-3.5 rounded-xs bg-[#00bf63]/30" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <b className="text-xs font-bold text-white">Admit Card / Marksheet</b>
-                      <span className="text-[10px] text-[#00bf63] font-bold">Top & Bottom</span>
-                    </div>
-                    <span className="text-[11px] text-slate-400 block mt-0.5">
-                      Half page: Front on top, Back on bottom on a single A4 sheet.
-                    </span>
-                  </div>
-                </button>
-
-                {/* 4. Auto */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDocMode('auto')
-                    setStage('source-select')
-                  }}
-                  className="p-3.5 rounded-2xl bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-[#00bf63] text-left flex items-center gap-3.5 transition-all group"
-                >
-                  <div className="w-12 h-10 rounded-xl bg-slate-700/60 border border-slate-600 border-dashed flex items-center justify-center flex-shrink-0 group-hover:border-[#00bf63]/50">
-                    <span className="text-xs font-bold text-slate-400">?</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <b className="text-xs font-bold text-white">Auto / Custom Dimensions</b>
-                    <span className="text-[11px] text-slate-400 block mt-0.5">
-                      System automatically detects proportions and aligns cleanly on paper.
-                    </span>
-                  </div>
-                </button>
+              <div className="grid gap-2">
+                {[
+                  {
+                    id: 'idCard',
+                    title: 'ID Card Photocopy',
+                    badge: '2-on-1 A4',
+                    desc: 'Aadhaar, PAN, Voter, Driving License, National ID — Front & Back on one page',
+                    icon: CreditCard
+                  },
+                  {
+                    id: 'certificate',
+                    title: 'Certificate / Full Document',
+                    badge: 'Full A4',
+                    desc: 'Full-page certificate, letter, transcript, or single document page',
+                    icon: FileText
+                  },
+                  {
+                    id: 'halfSheet',
+                    title: 'Admit Card / Marksheet',
+                    badge: 'Top & Bottom',
+                    desc: 'Half page: Front on top, Back on bottom on a single A4 sheet',
+                    icon: Layers
+                  },
+                  {
+                    id: 'auto',
+                    title: 'Auto / Custom Dimensions',
+                    badge: 'Adaptive',
+                    desc: 'System automatically detects proportions and aligns cleanly on paper',
+                    icon: Sliders
+                  }
+                ].map((item) => {
+                  const Icon = item.icon
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => {
+                        setDocMode(item.id)
+                        setStage('source-select')
+                      }}
+                      className="p-3.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/20 text-left flex items-center gap-3.5 transition-all group backdrop-blur-sm"
+                    >
+                      <div className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-center flex-shrink-0 text-slate-300 group-hover:text-emerald-400 group-hover:border-emerald-500/30 transition-colors">
+                        <Icon className="w-4.5 h-4.5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-white group-hover:text-white transition-colors">{item.title}</span>
+                          <span className="text-[10px] font-medium text-slate-300 bg-white/[0.05] border border-white/10 px-2 py-0.5 rounded-md group-hover:text-emerald-300 group-hover:bg-emerald-500/10 group-hover:border-emerald-500/20 transition-colors flex-shrink-0">
+                            {item.badge}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5 truncate">
+                          {item.desc}
+                        </p>
+                      </div>
+                    </button>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -458,49 +497,47 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
           {stage === 'source-select' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div className="text-center space-y-1 mb-2">
-                <h4 className="text-base font-bold text-white">How would you like to capture?</h4>
+                <h4 className="text-base font-semibold text-white tracking-tight">How would you like to capture?</h4>
                 <p className="text-xs text-slate-400">
                   {activeSide === 'front' ? 'Capture or upload Front side' : 'Capture or upload Back side'}
                 </p>
               </div>
 
               {cameraError && (
-                <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl text-amber-300 text-xs">
+                <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-xs">
                   {cameraError}
                 </div>
               )}
 
-              <div className="grid gap-3">
-                {/* Option 1: Live Camera */}
+              <div className="grid gap-2.5">
                 <button
                   type="button"
                   onClick={startCamera}
-                  className="p-4 rounded-2xl bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-[#00bf63] text-left flex items-center gap-4 transition-colors group"
+                  className="p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/20 text-left flex items-center gap-4 transition-all group backdrop-blur-sm"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-[#00bf63]/20 text-[#00bf63] flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-105 transition-transform">
-                    📸
+                  <div className="w-11 h-11 rounded-xl bg-white/[0.04] border border-white/10 text-slate-300 group-hover:text-emerald-400 flex items-center justify-center flex-shrink-0 transition-colors">
+                    <Camera className="w-5 h-5" />
                   </div>
-                  <div>
-                    <b className="text-xs font-bold text-white block">Camera Live Capture</b>
+                  <div className="flex-1">
+                    <span className="text-xs font-semibold text-white block">Camera Live Capture</span>
                     <span className="text-[11px] text-slate-400 block mt-0.5">
-                      Point at your document — fastest with live framing guides.
+                      Point at document with real-time framing guides
                     </span>
                   </div>
                 </button>
 
-                {/* Option 2: Upload Files / Gallery */}
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="p-4 rounded-2xl bg-slate-800 hover:bg-slate-750 border border-slate-700 hover:border-[#00bf63] text-left flex items-center gap-4 transition-colors group"
+                  className="p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/20 text-left flex items-center gap-4 transition-all group backdrop-blur-sm"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-slate-700 text-slate-200 flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-105 transition-transform">
-                    📁
+                  <div className="w-11 h-11 rounded-xl bg-white/[0.04] border border-white/10 text-slate-300 group-hover:text-emerald-400 flex items-center justify-center flex-shrink-0 transition-colors">
+                    <Upload className="w-5 h-5" />
                   </div>
-                  <div>
-                    <b className="text-xs font-bold text-white block">Choose from Files / Gallery</b>
+                  <div className="flex-1">
+                    <span className="text-xs font-semibold text-white block">Choose from Files / Gallery</span>
                     <span className="text-[11px] text-slate-400 block mt-0.5">
-                      Select photo already saved on your phone or computer.
+                      Select photo already saved on device
                     </span>
                   </div>
                 </button>
@@ -514,15 +551,14 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
                 onChange={handleFileChange}
               />
 
-              <div className="pt-3 flex justify-start">
-                <Button
-                  variant="ghost"
-                  size="sm"
+              <div className="pt-2 flex justify-start">
+                <button
+                  type="button"
                   onClick={() => setStage('mode-select')}
-                  className="text-xs text-slate-400 hover:text-white"
+                  className="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] flex items-center gap-1.5 transition-colors"
                 >
-                  <ChevronLeft className="w-4 h-4 mr-1" /> Back
-                </Button>
+                  <ChevronLeft className="w-3.5 h-3.5" /> Back
+                </button>
               </div>
             </div>
           )}
@@ -532,7 +568,7 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
           {/* ========================================================================= */}
           {stage === 'camera' && (
             <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-slate-700 shadow-inner flex items-center justify-center">
+              <div className="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden border border-white/10 flex items-center justify-center">
                 <video
                   ref={videoRef}
                   autoPlay
@@ -541,59 +577,56 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
                   className="w-full h-full object-cover"
                 />
 
-                {/* Document Viewfinder Overlay Guidelines */}
-                <div className="absolute inset-6 sm:inset-8 border-2 border-[#00bf63]/80 rounded-xl pointer-events-none flex flex-col justify-between p-2">
+                {/* Minimal Document Viewfinder Overlay */}
+                <div className="absolute inset-6 sm:inset-8 border border-white/30 rounded-xl pointer-events-none flex flex-col justify-between p-2">
                   <div className="flex justify-between">
-                    <div className="w-4 h-4 border-t-2 border-l-2 border-[#00bf63]" />
-                    <div className="w-4 h-4 border-t-2 border-r-2 border-[#00bf63]" />
+                    <div className="w-3.5 h-3.5 border-t-2 border-l-2 border-emerald-400" />
+                    <div className="w-3.5 h-3.5 border-t-2 border-r-2 border-emerald-400" />
                   </div>
                   <div className="text-center">
-                    <span className="bg-black/70 text-[#00bf63] text-[10px] font-bold px-2 py-0.5 rounded-full backdrop-blur-xs">
-                      ✓ Align document inside frame
+                    <span className="bg-black/60 text-white/90 text-[10px] font-medium px-2.5 py-0.5 rounded-full backdrop-blur-md border border-white/10">
+                      Align document within frame
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <div className="w-4 h-4 border-b-2 border-l-2 border-[#00bf63]" />
-                    <div className="w-4 h-4 border-b-2 border-r-2 border-[#00bf63]" />
+                    <div className="w-3.5 h-3.5 border-b-2 border-l-2 border-emerald-400" />
+                    <div className="w-3.5 h-3.5 border-b-2 border-r-2 border-emerald-400" />
                   </div>
                 </div>
               </div>
 
               {/* Shutter & Controls */}
               <div className="flex items-center justify-between px-4 pt-1">
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={() => {
                     stopCamera()
                     setStage('source-select')
                   }}
-                  className="text-xs text-slate-400 hover:text-white"
+                  className="text-xs text-slate-400 hover:text-white px-3 py-1.5 rounded-xl bg-white/[0.04] border border-white/10 transition-colors"
                 >
                   Cancel
-                </Button>
+                </button>
 
-                {/* Big Camera Shutter Button */}
+                {/* Glass Shutter Button */}
                 <button
                   type="button"
                   onClick={captureFromCamera}
-                  className="w-16 h-16 rounded-full border-4 border-white bg-slate-900 p-1 flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg"
+                  className="w-14 h-14 rounded-full border border-white/40 bg-white/10 backdrop-blur-md p-1 flex items-center justify-center hover:scale-105 active:scale-95 transition-all"
                 >
-                  <div className="w-full h-full rounded-full bg-[#00bf63]" />
+                  <div className="w-full h-full rounded-full bg-emerald-500" />
                 </button>
 
-                {/* Flip camera */}
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={() => {
                     setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'))
                     startCamera()
                   }}
-                  className="text-xs text-slate-400 hover:text-white"
+                  className="w-9 h-9 rounded-xl bg-white/[0.04] border border-white/10 text-slate-300 hover:text-white flex items-center justify-center transition-colors"
                 >
                   <RotateCw className="w-4 h-4" />
-                </Button>
+                </button>
               </div>
             </div>
           )}
@@ -603,121 +636,199 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
           {/* ========================================================================= */}
           {stage === 'crop' && (
             <div className="space-y-3 animate-in fade-in duration-150 select-none">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
-                    <Crop className="w-4 h-4 text-[#00bf63]" /> Perspective Crop & Straighten
-                  </h4>
-                  <p className="text-[11px] text-slate-400">
-                    Drag the 4 corner pins to match the document's edges — even tilted photos become perfectly straight!
-                  </p>
+              {/* Minimal Glassmorphic Presets Toolbar */}
+              <div className="flex items-center justify-between gap-1.5 bg-black/40 backdrop-blur-xl px-2.5 py-1.5 rounded-xl border border-white/10 text-[11px]">
+                <div className="flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  <span className="text-[10px] text-slate-400 font-medium mr-0.5 flex-shrink-0">Proportions:</span>
+                  {[
+                    { id: 'free', label: 'Free' },
+                    { id: 'idCard', label: 'ID Card' },
+                    { id: 'a4', label: 'A4' },
+                    { id: 'halfSheet', label: 'Half A4' },
+                  ].map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => setCropAspectPreset(preset.id)}
+                      className={`px-2 py-0.5 rounded-lg text-[10px] font-medium transition-all whitespace-nowrap ${
+                        cropAspectPreset === preset.id
+                          ? 'bg-white/15 text-white border border-white/20 backdrop-blur-sm'
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 border border-transparent'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
                 </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleResetCorners}
-                  className="h-7 text-[10px] font-bold border-slate-700 bg-slate-800 text-slate-300 hover:text-white"
-                >
-                  Full Photo
-                </Button>
+
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleResetCorners}
+                    className="text-[10px] text-slate-400 hover:text-white px-2 py-0.5 rounded-lg hover:bg-white/5 transition-colors"
+                  >
+                    Full
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCorners(getInitialCorners(imageDims.width, imageDims.height))}
+                    className="text-[10px] text-slate-400 hover:text-white px-2 py-0.5 rounded-lg hover:bg-white/5 transition-colors"
+                  >
+                    Auto
+                  </button>
+                </div>
               </div>
 
-              {/* Interactive Crop Canvas Container */}
-              <div
-                ref={cropContainerRef}
-                onPointerMove={handleContainerPointerMove}
-                onPointerUp={handleContainerPointerUp}
-                className="relative w-full aspect-[4/3] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800 touch-none flex items-center justify-center"
-              >
-                {rawImageSrc && (
-                  <img
-                    src={rawImageSrc}
-                    alt="Scan Target"
-                    className="w-full h-full object-contain pointer-events-none"
-                  />
-                )}
-
-                {/* SVG Polygon connecting the 4 corners */}
-                {corners.length === 4 && cropContainerRef.current && (
-                  <svg className="absolute inset-0 w-full h-full pointer-events-none">
-                    {/* Translucent Polygon Mask */}
-                    <polygon
-                      points={corners
-                        .map((c) => {
-                          const rect = cropContainerRef.current.getBoundingClientRect()
-                          const px = (c.x / imageDims.width) * rect.width
-                          const py = (c.y / imageDims.height) * rect.height
-                          return `${px},${py}`
-                        })
-                        .join(' ')}
-                      fill="rgba(0, 191, 99, 0.15)"
-                      stroke="#00bf63"
-                      strokeWidth="2.5"
-                      strokeDasharray="4 2"
-                    />
-                  </svg>
-                )}
-
-                {/* 4 Interactive Corner Pins */}
-                {corners.map((corner, idx) => {
-                  if (!cropContainerRef.current || !imageDims.width) return null
-                  const rect = cropContainerRef.current.getBoundingClientRect()
-                  const px = (corner.x / imageDims.width) * rect.width
-                  const py = (corner.y / imageDims.height) * rect.height
-
-                  return (
-                    <div
-                      key={idx}
-                      onPointerDown={(e) => handleCornerPointerDown(idx, e)}
-                      style={{
-                        transform: `translate(${px - 14}px, ${py - 14}px)`
-                      }}
-                      className="absolute top-0 left-0 w-7 h-7 rounded-full bg-white border-3 border-[#00bf63] shadow-md cursor-grab active:cursor-grabbing flex items-center justify-center hover:scale-125 transition-transform z-30"
-                    >
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#00bf63]" />
-                    </div>
-                  )
-                })}
-
-                {/* Corner Magnifying Loupe (Floating Zoom Bubble) */}
-                {activeCornerIdx !== null && cropContainerRef.current && (
+              {/* Image Container with Glassmorphic Frame */}
+              <div className="relative w-full flex items-center justify-center bg-black/50 backdrop-blur-xl rounded-2xl p-2.5 border border-white/10 overflow-hidden min-h-[220px]">
+                {rawImageSrc && imageDims.width > 0 && (
                   <div
+                    ref={cropContainerRef}
                     style={{
-                      left: Math.max(10, Math.min(cropContainerRef.current.clientWidth - 90, (corners[activeCornerIdx].x / imageDims.width) * cropContainerRef.current.clientWidth - 45)),
-                      top: Math.max(10, (corners[activeCornerIdx].y / imageDims.height) * cropContainerRef.current.clientHeight - 100)
+                      aspectRatio: `${imageDims.width} / ${imageDims.height}`,
+                      maxWidth: '100%',
+                      maxHeight: '48vh',
+                      width: imageDims.width >= imageDims.height ? '100%' : 'auto',
+                      height: imageDims.height > imageDims.width ? '48vh' : 'auto',
+                      position: 'relative'
                     }}
-                    className="absolute pointer-events-none z-40 w-22 h-22 rounded-full border-2 border-white shadow-2xl overflow-hidden bg-black flex items-center justify-center animate-in zoom-in-75 duration-75"
+                    className="relative rounded-xl overflow-hidden touch-none mx-auto select-none flex items-center justify-center"
                   >
-                    {/* Zoomed portion of original image */}
-                    <div
-                      style={{
-                        width: cropContainerRef.current.clientWidth * 2.5,
-                        height: cropContainerRef.current.clientHeight * 2.5,
-                        transform: `translate(${
-                          -(corners[activeCornerIdx].x / imageDims.width) * cropContainerRef.current.clientWidth * 2.5 + 44
-                        }px, ${
-                          -(corners[activeCornerIdx].y / imageDims.height) * cropContainerRef.current.clientHeight * 2.5 + 44
-                        }px)`
-                      }}
-                      className="absolute top-0 left-0 origin-top-left"
-                    >
-                      <img src={rawImageSrc} alt="Zoom" className="w-full h-full object-contain" />
-                    </div>
-                    {/* Precision Crosshairs */}
-                    <div className="absolute w-full h-[1px] bg-[#00bf63]/80" />
-                    <div className="absolute h-full w-[1px] bg-[#00bf63]/80" />
-                    <div className="absolute w-2 h-2 rounded-full border border-white" />
+                    {/* Underlying Document Image */}
+                    <img
+                      src={rawImageSrc}
+                      alt="Crop Target"
+                      className="w-full h-full object-contain block pointer-events-none select-none rounded-xl"
+                    />
+
+                    {/* SVG Polygon Overlay & Clean Scrim Mask */}
+                    {corners.length === 4 && (
+                      (() => {
+                        const svgPoints = corners
+                          .map((c) => `${Math.round((c.x / imageDims.width) * 1000)},${Math.round((c.y / imageDims.height) * 1000)}`)
+                          .join(' ')
+
+                        return (
+                          <svg
+                            className="absolute inset-0 w-full h-full pointer-events-none z-10"
+                            viewBox="0 0 1000 1000"
+                            preserveAspectRatio="none"
+                          >
+                            <defs>
+                              <mask id="smart-crop-mask">
+                                <rect width="1000" height="1000" fill="#ffffff" />
+                                <polygon points={svgPoints} fill="#000000" />
+                              </mask>
+                            </defs>
+                            {/* Frosted dark scrim outside document quad */}
+                            <rect width="1000" height="1000" fill="rgba(0, 0, 0, 0.45)" mask="url(#smart-crop-mask)" />
+                            {/* Refined clean boundary line without glow */}
+                            <polygon
+                              points={svgPoints}
+                              fill="transparent"
+                              stroke="rgba(0, 191, 99, 0.9)"
+                              strokeWidth="1.5"
+                              vectorEffect="non-scaling-stroke"
+                              strokeDasharray="5 3"
+                            />
+                            {/* Transparent interactive polygon to move whole frame on drag */}
+                            <polygon
+                              points={svgPoints}
+                              fill="transparent"
+                              className="cursor-move pointer-events-auto"
+                              onPointerDown={(e) => startDrag({ type: 'quad' }, e)}
+                            />
+                          </svg>
+                        )
+                      })()
+                    )}
+
+                    {/* 4 Interactive Draggable Corner Pins */}
+                    {corners.map((corner, idx) => {
+                      const isBeingDragged = activeDrag?.type === 'corner' && activeDrag.idx === idx
+                      const leftPct = (corner.x / imageDims.width) * 100
+                      const topPct = (corner.y / imageDims.height) * 100
+
+                      return (
+                        <div
+                          key={idx}
+                          onPointerDown={(e) => startDrag({ type: 'corner', idx }, e)}
+                          style={{
+                            left: `${leftPct}%`,
+                            top: `${topPct}%`,
+                            touchAction: 'none'
+                          }}
+                          className="absolute -translate-x-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center cursor-grab active:cursor-grabbing z-30 group"
+                        >
+                          {/* Sleek, minimal circular pin handle without glow */}
+                          <div
+                            className={`w-4.5 h-4.5 rounded-full bg-white border-[1.5px] border-[#00bf63] shadow-md transition-transform flex items-center justify-center ${
+                              isBeingDragged ? 'scale-125 ring-2 ring-white/40' : 'hover:scale-110'
+                            }`}
+                          >
+                            <div className="w-1.5 h-1.5 rounded-full bg-[#00bf63]" />
+                          </div>
+                        </div>
+                      )
+                    })}
+
+                    {/* Minimal Circular Loupe */}
+                    {activeDrag?.type === 'corner' && cropContainerRef.current && (
+                      (() => {
+                        const idx = activeDrag.idx
+                        const activeCorner = corners[idx]
+                        if (!activeCorner) return null
+                        const rect = cropContainerRef.current.getBoundingClientRect()
+                        const px = (activeCorner.x / imageDims.width) * rect.width
+                        const py = (activeCorner.y / imageDims.height) * rect.height
+                        const loupeSize = 96
+                        const zoomFactor = 2.4
+
+                        const loupeLeft = Math.max(8, Math.min(rect.width - loupeSize - 8, px - loupeSize / 2))
+                        const loupeTop = py > loupeSize + 25 ? py - loupeSize - 16 : py + 24
+
+                        return (
+                          <div
+                            style={{
+                              left: `${loupeLeft}px`,
+                              top: `${loupeTop}px`,
+                              width: `${loupeSize}px`,
+                              height: `${loupeSize}px`
+                            }}
+                            className="absolute pointer-events-none z-40 rounded-full border border-white/30 bg-black/90 shadow-2xl backdrop-blur-md overflow-hidden ring-1 ring-white/10 flex items-center justify-center animate-in zoom-in-75 duration-75"
+                          >
+                            <div
+                              style={{
+                                width: `${rect.width * zoomFactor}px`,
+                                height: `${rect.height * zoomFactor}px`,
+                                transform: `translate(${
+                                  -px * zoomFactor + loupeSize / 2
+                                }px, ${
+                                  -py * zoomFactor + loupeSize / 2
+                                }px)`
+                              }}
+                              className="absolute top-0 left-0 origin-top-left"
+                            >
+                              <img src={rawImageSrc} alt="Zoom" className="w-full h-full object-fill" />
+                            </div>
+                            <div className="absolute w-full h-[1px] bg-[#00bf63] opacity-80" />
+                            <div className="absolute h-full w-[1px] bg-[#00bf63] opacity-80" />
+                            <div className="absolute w-2.5 h-2.5 rounded-full border border-white/80" />
+                          </div>
+                        )
+                      })()
+                    )}
                   </div>
                 )}
               </div>
 
               {/* Action Buttons */}
-              <div className="flex gap-2 pt-1">
+              <div className="flex gap-2.5 pt-1">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setStage('source-select')}
-                  className="flex-1 text-xs border-slate-700 bg-slate-800 text-slate-300 hover:text-white"
+                  className="flex-1 text-xs border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-slate-300 hover:text-white py-2.5 rounded-xl shadow-none font-medium transition-colors"
                 >
                   Cancel
                 </Button>
@@ -725,14 +836,14 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
                   size="sm"
                   disabled={isProcessing}
                   onClick={handlePerformCrop}
-                  className="flex-1 bg-[#00bf63] hover:bg-[#00a656] text-black font-extrabold text-xs shadow-none"
+                  className="flex-1 bg-[#00bf63] hover:bg-[#00a855] active:scale-[0.99] text-slate-950 font-bold text-xs py-2.5 rounded-xl shadow-none transition-all flex items-center justify-center gap-1.5"
                 >
                   {isProcessing ? (
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin mr-1" />
+                    <RefreshCw className="w-4 h-4 animate-spin" />
                   ) : (
-                    <Crop className="w-3.5 h-3.5 mr-1" />
+                    <Crop className="w-4 h-4" />
                   )}
-                  Straighten & Crop
+                  Straighten & Crop →
                 </Button>
               </div>
             </div>
@@ -744,18 +855,18 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
           {stage === 'review' && currentWarpedCanvas && (
             <div className="space-y-4 animate-in fade-in duration-150">
               <div className="text-center">
-                <h4 className="text-xs font-bold text-white">Review Straightened Document</h4>
-                <p className="text-[11px] text-slate-400">
+                <h4 className="text-xs font-semibold text-white">Review Straightened Document</h4>
+                <p className="text-[11px] text-slate-400 mt-0.5">
                   {docMode === 'idCard' || docMode === 'halfSheet'
                     ? activeSide === 'front'
-                      ? 'Front side ready! You can now add the back side or proceed.'
+                      ? 'Front side ready! You can now add the back side or proceed to print.'
                       : 'Back side ready! Both sides will be merged into standard A4.'
                     : 'Your document is straightened and ready for high-resolution printing.'}
                 </p>
               </div>
 
-              {/* Live Filter & Rotation Canvas Preview Box */}
-              <div className="bg-slate-950 border border-slate-800 rounded-2xl p-3 flex items-center justify-center min-h-[220px] max-h-[280px] overflow-hidden">
+              {/* Preview Box with Glassmorphism */}
+              <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-2xl p-3 flex items-center justify-center min-h-[220px] max-h-[280px] overflow-hidden">
                 <img
                   src={
                     applyDocumentFilter(
@@ -764,27 +875,27 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
                     ).toDataURL('image/jpeg', 0.9)
                   }
                   alt="Warped Scan Result"
-                  className="max-h-[240px] max-w-full rounded shadow-lg object-contain bg-white"
+                  className="max-h-[240px] max-w-full rounded-lg shadow-md object-contain bg-white"
                 />
               </div>
 
               {/* Filter Chips & Rotate 90° */}
               <div className="flex items-center justify-between gap-2">
-                <div className="flex items-center gap-1 overflow-x-auto py-1">
+                <div className="flex items-center gap-1.5 overflow-x-auto py-1 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                   {[
-                    { id: 'magic', label: '✨ Magic Clean', desc: 'Whitened paper' },
-                    { id: 'bw', label: '⬛ B&W Copy', desc: 'High contrast' },
-                    { id: 'original', label: '🌈 Original', desc: 'Natural color' },
-                    { id: 'grayscale', label: '🔘 Grayscale', desc: 'Smooth B&W' }
+                    { id: 'magic', label: 'Magic Clean' },
+                    { id: 'bw', label: 'B&W Copy' },
+                    { id: 'original', label: 'Original' },
+                    { id: 'grayscale', label: 'Grayscale' }
                   ].map((f) => (
                     <button
                       key={f.id}
                       type="button"
                       onClick={() => setFilterMode(f.id)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-colors whitespace-nowrap ${
+                      className={`px-2.5 py-1 rounded-xl text-xs font-medium transition-colors whitespace-nowrap ${
                         filterMode === f.id
-                          ? 'bg-[#00bf63] text-black'
-                          : 'bg-slate-800 text-slate-400 hover:text-white border border-slate-700'
+                          ? 'bg-white/15 text-white border border-white/20 shadow-sm backdrop-blur-md font-semibold'
+                          : 'bg-white/[0.04] text-slate-300 hover:text-white border border-white/10 hover:bg-white/[0.08]'
                       }`}
                     >
                       {f.label}
@@ -796,28 +907,28 @@ export default function SmartScannerModal({ isOpen, onClose, onComplete, initial
                   size="sm"
                   variant="outline"
                   onClick={() => setRotationDeg((r) => (r + 90) % 360)}
-                  className="h-8 rounded-lg text-xs border-slate-700 bg-slate-800 text-slate-200 hover:text-white flex-shrink-0"
+                  className="h-7 rounded-xl text-xs border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 hover:text-white flex-shrink-0 font-medium px-2.5"
                 >
                   <RotateCw className="w-3.5 h-3.5 mr-1" /> 90°
                 </Button>
               </div>
 
-              {/* Action Buttons: Add Back Side or Complete */}
-              <div className="space-y-2 pt-2 border-t border-slate-800">
+              {/* Action Buttons */}
+              <div className="space-y-2 pt-2 border-t border-white/10">
                 {(docMode === 'idCard' || docMode === 'halfSheet') && activeSide === 'front' && (
                   <Button
                     variant="outline"
                     onClick={handleAddBackSide}
-                    className="w-full border-amber-500/50 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold text-xs py-5 rounded-xl flex items-center justify-center gap-2"
+                    className="w-full border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 font-medium text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-none"
                   >
-                    <span>➕</span> Add Back Side (Photo of reverse)
+                    <span>➕</span> Add Back Side (Reverse)
                   </Button>
                 )}
 
                 <Button
                   disabled={isProcessing}
                   onClick={handleCompleteAndPrint}
-                  className="w-full bg-[#00bf63] hover:bg-[#00a656] text-black font-extrabold text-xs py-5 rounded-xl shadow-lg shadow-[#00bf63]/20 flex items-center justify-center gap-2"
+                  className="w-full bg-[#00bf63] hover:bg-[#00a855] text-slate-950 font-bold text-xs py-2.5 rounded-xl shadow-none flex items-center justify-center gap-2 transition-colors"
                 >
                   {isProcessing ? (
                     <RefreshCw className="w-4 h-4 animate-spin" />

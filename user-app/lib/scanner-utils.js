@@ -20,14 +20,33 @@ export function distance(p1, p2) {
 export function perspectiveWarp(sourceImg, corners, targetAspectRatio = null) {
   const [tl, tr, br, bl] = corners
 
-  // Calculate destination dimensions
+  // Calculate destination dimensions from natural edge distances
   const topW = distance(tl, tr)
   const botW = distance(bl, br)
   const leftH = distance(tl, bl)
   const rightH = distance(tr, br)
 
+  const avgW = (topW + botW) / 2
+  const avgH = (leftH + rightH) / 2
+  const isQuadLandscape = avgW >= avgH
+
   let destW = Math.round(Math.max(topW, botW))
   let destH = Math.round(Math.max(leftH, rightH))
+
+  // Smart aspect ratio application that preserves orientation (portrait vs landscape)
+  if (targetAspectRatio && targetAspectRatio > 0) {
+    const targetIsLandscape = targetAspectRatio >= 1
+    let effectiveAspect = targetAspectRatio
+    if (isQuadLandscape !== targetIsLandscape) {
+      effectiveAspect = 1 / targetAspectRatio
+    }
+
+    if (effectiveAspect >= 1) {
+      destW = Math.round(destH * effectiveAspect)
+    } else {
+      destH = Math.round(destW / effectiveAspect)
+    }
+  }
 
   // Enforce reasonable bounds to prevent massive canvas memory issues
   const maxDim = 2400
@@ -35,10 +54,6 @@ export function perspectiveWarp(sourceImg, corners, targetAspectRatio = null) {
     const s = maxDim / Math.max(destW, destH)
     destW = Math.round(destW * s)
     destH = Math.round(destH * s)
-  }
-
-  if (targetAspectRatio && targetAspectRatio > 0) {
-    destW = Math.round(destH * targetAspectRatio)
   }
 
   destW = Math.max(100, destW)
@@ -54,8 +69,8 @@ export function perspectiveWarp(sourceImg, corners, targetAspectRatio = null) {
   ctx.imageSmoothingEnabled = true
   ctx.imageSmoothingQuality = 'high'
 
-  // Mesh subdivision grid for smooth non-linear perspective mapping
-  const subdivisions = 16
+  // Mesh subdivision grid for smooth non-linear perspective mapping (12x12 = 144 cells, 288 triangles)
+  const subdivisions = 12
   const stepU = destW / subdivisions
   const stepV = destH / subdivisions
 
@@ -80,13 +95,13 @@ export function perspectiveWarp(sourceImg, corners, targetAspectRatio = null) {
       const v0 = j / subdivisions
       const v1 = (j + 1) / subdivisions
 
-      // Destination quad points
+      // Destination quad points in output canvas
       const dx0 = i * stepU
       const dy0 = j * stepV
       const dx1 = (i + 1) * stepU
       const dy1 = (j + 1) * stepV
 
-      // Source quadrilateral points
+      // Source quadrilateral points in natural image
       const p00 = mapUV(u0, v0)
       const p10 = mapUV(u1, v0)
       const p11 = mapUV(u1, v1)
@@ -122,6 +137,24 @@ export function perspectiveWarp(sourceImg, corners, targetAspectRatio = null) {
 }
 
 /**
+ * Calculates 2D affine transformation matrix mapping (x, y) -> (u, v) for 3 points
+ */
+function getAffineTransform(x0, y0, x1, y1, x2, y2, u0, v0, u1, v1, u2, v2) {
+  const D = x0 * (y1 - y2) + x1 * (y2 - y0) + x2 * (y0 - y1)
+  if (Math.abs(D) < 1e-8) return null
+
+  const a = ((y1 - y2) * u0 + (y2 - y0) * u1 + (y0 - y1) * u2) / D
+  const c = ((x2 - x1) * u0 + (x0 - x2) * u1 + (x1 - x0) * u2) / D
+  const e = ((x1 * y2 - x2 * y1) * u0 + (x2 * y0 - x0 * y2) * u1 + (x0 * y1 - x1 * y0) * u2) / D
+
+  const b = ((y1 - y2) * v0 + (y2 - y0) * v1 + (y0 - y1) * v2) / D
+  const d = ((x2 - x1) * v0 + (x0 - x2) * v1 + (x1 - x0) * v2) / D
+  const f = ((x1 * y2 - x2 * y1) * v0 + (x2 * y0 - x0 * y2) * v1 + (x0 * y1 - x1 * y0) * v2) / D
+
+  return { a, b, c, d, e, f }
+}
+
+/**
  * Maps a textured source triangle to a destination triangle using canvas 2D affine transform.
  */
 function drawAffineTriangle(
@@ -134,6 +167,9 @@ function drawAffineTriangle(
   dx1, dy1,
   dx2, dy2
 ) {
+  const T = getAffineTransform(sx0, sy0, sx1, sy1, sx2, sy2, dx0, dy0, dx1, dy1, dx2, dy2)
+  if (!T) return
+
   ctx.save()
 
   // Clip destination triangle with a slight bleed margin (0.5px) to eliminate hairline seam gaps
@@ -144,21 +180,8 @@ function drawAffineTriangle(
   ctx.closePath()
   ctx.clip()
 
-  // Calculate 2D affine matrix mapping (sx, sy) -> (dx, dy)
-  const denom = (sx0 * (sy1 - sy2) - sx1 * sy0 + sx2 * sy0 + sx1 * sy2 - sx2 * sy1)
-  if (Math.abs(denom) < 1e-8) {
-    ctx.restore()
-    return
-  }
-
-  const m11 = - (sy0 * (dx1 - dx2) - sy1 * dx0 + sy2 * dx0 + sy1 * dx2 - sy2 * dx1) / denom
-  const m12 = (sy1 * dy0 - sy2 * dy0 - sy0 * dy1 + sy2 * dy1 + sy0 * dy2 - sy1 * dy2) / denom
-  const m21 = (sx0 * (dx1 - dx2) - sx1 * dx0 + sx2 * dx0 + sx1 * dx2 - sx2 * dx1) / denom
-  const m22 = - (sx1 * dy0 - sx2 * dy0 - sx0 * dy1 + sx2 * dy1 + sx0 * dy2 - sx1 * dy2) / denom
-  const dx = (sx0 * (sy2 * dx1 - sy1 * dx2) + sy0 * (sx1 * dx2 - sx2 * dx1) + (sx2 * sy1 - sx1 * sy2) * dx0) / denom
-  const dy = (sx0 * (sy2 * dy1 - sy1 * dy2) + sy0 * (sx1 * dy2 - sx2 * dy1) + (sx2 * sy1 - sx1 * sy2) * dy0) / denom
-
-  ctx.transform(m11, m12, m21, m22, dx, dy)
+  // Transform destination canvas coordinate space to align with source image
+  ctx.transform(T.a, T.b, T.c, T.d, T.e, T.f)
   ctx.drawImage(img, 0, 0)
   ctx.restore()
 }
@@ -257,14 +280,14 @@ export function rotateCanvas(canvas, degrees) {
  * with a safe inset margin inside the image frame.
  */
 export function getInitialCorners(width, height) {
-  const insetX = width * 0.08
-  const insetY = height * 0.08
+  const insetX = Math.round(width * 0.03)
+  const insetY = Math.round(height * 0.03)
 
   return [
-    { x: Math.round(insetX), y: Math.round(insetY) },                       // Top-Left
-    { x: Math.round(width - insetX), y: Math.round(insetY) },               // Top-Right
-    { x: Math.round(width - insetX), y: Math.round(height - insetY) },      // Bottom-Right
-    { x: Math.round(insetX), y: Math.round(height - insetY) },              // Bottom-Left
+    { x: insetX, y: insetY },                  // Top-Left
+    { x: width - insetX, y: insetY },          // Top-Right
+    { x: width - insetX, y: height - insetY }, // Bottom-Right
+    { x: insetX, y: height - insetY },         // Bottom-Left
   ]
 }
 
@@ -290,19 +313,23 @@ export function composeToA4(mode, frontCanvas, backCanvas = null) {
 
   if (mode === 'idCard') {
     // ID Card: Standard card dimensions ~85.6mm x 53.98mm
-    const cardW = Math.round(A4_W * 0.52) // ~11 cm on A4
+    // Check orientation (portrait vs landscape) to size appropriately on A4
+    const isPortrait = frontCanvas && frontCanvas.height > frontCanvas.width
+    const cardW = isPortrait ? Math.round(A4_W * 0.38) : Math.round(A4_W * 0.52)
 
     if (frontCanvas && backCanvas) {
       // Front on upper center, Back on lower center
       const h1 = Math.round(cardW * (frontCanvas.height / frontCanvas.width))
       const x1 = Math.round((A4_W - cardW) / 2)
-      const y1 = Math.round(A4_H * 0.22)
+      const y1 = Math.round(A4_H * 0.18)
       ctx.drawImage(frontCanvas, x1, y1, cardW, h1)
 
-      const h2 = Math.round(cardW * (backCanvas.height / backCanvas.width))
-      const x2 = Math.round((A4_W - cardW) / 2)
-      const y2 = Math.round(A4_H * 0.52)
-      ctx.drawImage(backCanvas, x2, y2, cardW, h2)
+      const backIsPortrait = backCanvas.height > backCanvas.width
+      const backW = backIsPortrait ? Math.round(A4_W * 0.38) : Math.round(A4_W * 0.52)
+      const h2 = Math.round(backW * (backCanvas.height / backCanvas.width))
+      const x2 = Math.round((A4_W - backW) / 2)
+      const y2 = Math.round(A4_H * 0.54)
+      ctx.drawImage(backCanvas, x2, y2, backW, h2)
     } else if (frontCanvas) {
       // Single card centered
       const h = Math.round(cardW * (frontCanvas.height / frontCanvas.width))

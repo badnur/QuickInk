@@ -45,7 +45,8 @@ import {
   RotateCcw,
   Sun,
   Contrast,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Crop
 } from 'lucide-react'
 
 // Helper to parse page range expressions like "1, 3, 5-8"
@@ -99,6 +100,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
   // Modals state
   const [isScannerOpen, setIsScannerOpen] = useState(false)
   const [scannerInitialMode, setScannerInitialMode] = useState(null)
+  const [scannerInitialImage, setScannerInitialImage] = useState(null)
   const [isPassportModalOpen, setIsPassportModalOpen] = useState(false)
   const [isIdCardModalOpen, setIsIdCardModalOpen] = useState(false)
 
@@ -157,6 +159,12 @@ function PrintOrderPageContent({ initialDeviceId }) {
       setSelectedFile(new File(['Sample QuickInk Document Content'], 'QuickInk_Sample.pdf', { type: 'application/pdf' }))
       setTicketOtp({ code: '582914', otp_type: 'type_a' })
       setStep(4)
+    } else if (searchParams.get('scanner') === 'test') {
+      const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900"><rect width="600" height="900" fill="#f8fafc" stroke="#e2e8f0" stroke-width="4"/><rect x="40" y="40" width="520" height="80" rx="12" fill="#0f172a"/><text x="300" y="90" fill="#ffffff" font-size="24" font-weight="bold" text-anchor="middle" font-family="sans-serif">STUDENT IDENTITY CARD</text><rect x="200" y="160" width="200" height="240" rx="12" fill="#cbd5e1"/><text x="300" y="285" fill="#475569" font-size="16" text-anchor="middle" font-family="sans-serif">[ Photo ]</text><text x="300" y="450" fill="#0f172a" font-size="22" font-weight="bold" text-anchor="middle" font-family="sans-serif">MD. SHAMSUZZAMAN NUR</text><text x="300" y="490" fill="#475569" font-size="16" text-anchor="middle" font-family="sans-serif">ID No : 2025227041</text><text x="300" y="525" fill="#475569" font-size="15" text-anchor="middle" font-family="sans-serif">Department of Physics</text><rect x="80" y="620" width="440" height="50" rx="6" fill="#0f172a"/></svg>`
+      const sampleImg = `data:image/svg+xml;utf8,${encodeURIComponent(sampleSvg)}`
+      setScannerInitialImage(sampleImg)
+      setScannerInitialMode('idCard')
+      setIsScannerOpen(true)
     }
   }, [searchParams])
 
@@ -786,6 +794,21 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 >
                   ✏️ Edit & Adjust (Rotate / Brightness / Range)
                 </Button>
+
+                {selectedFile?.type?.startsWith('image/') && filePreviewUrl && (
+                  <Button
+                    disabled={isMergingFiles || isAnalyzingPdf}
+                    variant="outline"
+                    onClick={() => {
+                      setScannerInitialMode('auto')
+                      setScannerInitialImage(filePreviewUrl)
+                      setIsScannerOpen(true)
+                    }}
+                    className="w-full bg-[#00bf63]/10 hover:bg-[#00bf63]/20 border border-[#00bf63]/30 text-[#00bf63] py-3.5 rounded-xl font-bold text-xs shadow-none flex items-center justify-center gap-1.5"
+                  >
+                    <Crop className="w-3.5 h-3.5" /> 📐 Interactive Perspective Crop & Straighten
+                  </Button>
+                )}
               </div>
             </Card>
           </div>
@@ -1146,6 +1169,21 @@ function PrintOrderPageContent({ initialDeviceId }) {
                     >
                       <RotateCw className="w-3 h-3" /> +90°
                     </Button>
+
+                    {selectedFile?.type?.startsWith('image/') && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setScannerInitialMode('auto')
+                          setScannerInitialImage(pagePreviewUrls[previewPageIndex] || filePreviewUrl)
+                          setIsScannerOpen(true)
+                        }}
+                        className="h-7 rounded-lg text-xs flex items-center gap-1 px-2.5 border-[#00bf63]/30 text-[#00bf63] hover:bg-[#00bf63]/10 font-bold shadow-none"
+                      >
+                        <Crop className="w-3 h-3" /> Crop
+                      </Button>
+                    )}
                   </div>
 
                   <Button
@@ -1759,7 +1797,11 @@ function PrintOrderPageContent({ initialDeviceId }) {
       <SmartScannerModal
         isOpen={isScannerOpen}
         initialDocMode={scannerInitialMode}
-        onClose={() => setIsScannerOpen(false)}
+        initialImageSrc={scannerInitialImage}
+        onClose={() => {
+          setIsScannerOpen(false)
+          setScannerInitialImage(null)
+        }}
         onComplete={handleScannerComplete}
       />
 
