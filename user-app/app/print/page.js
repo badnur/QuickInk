@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import DocumentScannerModal from '@/components/scanner/DocumentScannerModal'
+import SmartScannerModal from '@/components/print/SmartScannerModal'
 import PassportPhotoModal from '@/components/print/PassportPhotoModal'
 import IdCardScannerModal from '@/components/print/IdCardScannerModal'
 import { playCompletionChime } from '@/lib/audio-chime'
@@ -97,6 +98,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
 
   // Modals state
   const [isScannerOpen, setIsScannerOpen] = useState(false)
+  const [scannerInitialMode, setScannerInitialMode] = useState(null)
   const [isPassportModalOpen, setIsPassportModalOpen] = useState(false)
   const [isIdCardModalOpen, setIsIdCardModalOpen] = useState(false)
 
@@ -444,14 +446,14 @@ function PrintOrderPageContent({ initialDeviceId }) {
   }, [previewPageIndex, pagesPerSheet, pdfDoc, pdfLibDoc, totalPages, selectedFile])
 
   // Handle scanner completion
-  const handleScannerComplete = ({ file, pageCount: scannedPages, previewUrl }) => {
+  const handleScannerComplete = ({ file, pageCount: scannedPages, previewUrl, mode }) => {
     setSelectedFile(file)
-    setTotalPages(scannedPages)
+    setTotalPages(scannedPages || 1)
     setFilePreviewUrl(previewUrl)
     setSubmitError(null)
     setPreviewPageIndex(1)
-    setServiceType('scanner')
-    setShowChoiceScreen(true)
+    setServiceType(mode === 'idCard' ? 'idCard' : 'scanner')
+    setStep(2)
   }
 
   // Handle passport photo completion
@@ -811,10 +813,11 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 <span className="text-[10px] text-gray-500 block mt-1">PDF, Word, Images</span>
               </Card>
 
-              {/* 2. Smart CamScanner */}
+              {/* 2. Smart Scanner */}
               <Card
                 onClick={() => {
                   setServiceType('scanner')
+                  setScannerInitialMode(null)
                   setIsScannerOpen(true)
                 }}
                 className="border border-gray-200 hover:border-[#00bf63] hover:bg-[#00bf63]/5 transition-colors cursor-pointer bg-white rounded-2xl p-4 text-center shadow-none"
@@ -822,8 +825,8 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 <div className="w-10 h-10 rounded-xl bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center mx-auto mb-2 text-xl font-bold">
                   📸
                 </div>
-                <b className="text-xs font-bold text-gray-900 block leading-tight">Smart CamScanner</b>
-                <span className="text-[10px] text-gray-500 block mt-1">Camera snap with Clean B&W</span>
+                <b className="text-xs font-bold text-gray-900 block leading-tight">Smart Scanner</b>
+                <span className="text-[10px] text-gray-500 block mt-1">Perspective crop & auto-straighten</span>
               </Card>
 
               {/* 3. Mini Print (N-in-1 Paper Saver) */}
@@ -860,7 +863,8 @@ function PrintOrderPageContent({ initialDeviceId }) {
               <Card
                 onClick={() => {
                   setServiceType('idCard')
-                  setIsIdCardModalOpen(true)
+                  setScannerInitialMode('idCard')
+                  setIsScannerOpen(true)
                 }}
                 className="col-span-2 border border-gray-200 hover:border-[#00bf63] hover:bg-[#00bf63]/5 transition-colors cursor-pointer bg-white rounded-2xl p-3.5 flex items-center gap-3.5 text-left shadow-none"
               >
@@ -870,7 +874,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 <div className="min-w-0 flex-1">
                   <b className="text-xs font-bold text-gray-900 block">ID Card 2-in-1 Photocopy</b>
                   <span className="text-[11px] text-gray-500 block mt-0.5">
-                    Combine Front & Back of ID on a single A4 page
+                    Combine Front & Back with perspective crop on 1 A4 page
                   </span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -1751,9 +1755,10 @@ function PrintOrderPageContent({ initialDeviceId }) {
         )}
       </div>
 
-      {/* CamScanner Camera Modal */}
-      <DocumentScannerModal
+      {/* Smart Scanner Modal with 4-Corner Perspective Crop, Loupe & Multi-side Chaining */}
+      <SmartScannerModal
         isOpen={isScannerOpen}
+        initialDocMode={scannerInitialMode}
         onClose={() => setIsScannerOpen(false)}
         onComplete={handleScannerComplete}
       />
