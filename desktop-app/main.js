@@ -34,6 +34,21 @@ try {
 
 let mainWindow = null
 
+// In development, watch main.js so edits take effect immediately
+if (!app.isPackaged) {
+  try {
+    let reloadDebounce = null
+    fs.watch(__filename, () => {
+      clearTimeout(reloadDebounce)
+      reloadDebounce = setTimeout(() => {
+        console.log('[Dev] main.js modified, restarting Electron app...')
+        app.relaunch()
+        app.exit(0)
+      }, 300)
+    })
+  } catch (e) {}
+}
+
 // Config file path in app userData directory
 const getConfigPath = () => path.join(app.getPath('userData'), 'quickink-desktop-config.json')
 
