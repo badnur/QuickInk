@@ -991,7 +991,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
 
                           {/* N-up Grid Slots */}
                           <div className={`w-full h-full pt-4 grid gap-1.5 ${
-                            pagesPerSheet === 2 ? 'grid-cols-2 grid-rows-1' :
+                            pagesPerSheet === 2 ? 'grid-rows-2 grid-cols-1' :
                             pagesPerSheet === 4 ? 'grid-rows-2 grid-cols-2' :
                             'grid-rows-3 grid-cols-2'
                           }`}>
@@ -1013,9 +1013,16 @@ function PrintOrderPageContent({ initialDeviceId }) {
                                       <img
                                         src={slotImg}
                                         alt={`Page ${slotPageNum}`}
-                                        className="w-full h-full object-contain p-0.5"
+                                        style={pagesPerSheet === 2 ? {
+                                          transform: 'rotate(90deg)',
+                                          width: '106px',
+                                          height: '154px',
+                                          maxWidth: 'none',
+                                          maxHeight: 'none',
+                                        } : undefined}
+                                        className={pagesPerSheet === 2 ? 'object-contain' : 'w-full h-full object-contain p-0.5'}
                                       />
-                                      <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white font-mono text-[7px] px-1 py-0.2 rounded font-bold">
+                                      <span className="absolute bottom-0.5 right-0.5 bg-black/70 text-white font-mono text-[7px] px-1 py-0.2 rounded font-bold z-10">
                                         P.{slotPageNum}
                                       </span>
                                     </>

@@ -512,9 +512,12 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange, nup = 
       const embeddedPages = await outDoc.embedPages(srcPagesToEmbed)
 
       if (parsedNup > 1) {
-        // Mini Print N-up Layout (2-in-1: 2 cols x 1 row vertical; 4-in-1: 2x2; 6-in-1: 2x3)
-        const cols = 2
-        const rows = parsedNup === 2 ? 1 : parsedNup === 4 ? 2 : 3
+        // Mini Print N-up Layout:
+        // For 2-in-1: 1 col x 2 rows (Top & Bottom halves), rotated 90° so portrait pages fill each half without cutoff
+        // For 4-in-1: 2 cols x 2 rows (2x2 grid)
+        // For 6-in-1: 2 cols x 3 rows (2x3 grid)
+        const cols = parsedNup === 2 ? 1 : 2
+        const rows = parsedNup === 2 ? 2 : parsedNup === 4 ? 2 : 3
         const gap = parsedNup === 6 ? 6 : 8
 
         const availW = a4W - margin * 2
@@ -536,13 +539,34 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange, nup = 
             const padding = 4
             const innerW = cellW - padding * 2
             const innerH = cellH - padding * 2
-            const scale = Math.min(innerW / ep.width, innerH / ep.height)
-            const w = ep.width * scale
-            const h = ep.height * scale
-            const drawX = cellX + (cellW - w) / 2
-            const drawY = cellY + (cellH - h) / 2
 
-            page.drawPage(ep, { x: drawX, y: drawY, width: w, height: h })
+            // If 2-in-1 and page is portrait, rotate 90° to fill the horizontal half-sheet cell perfectly
+            if (parsedNup === 2 && ep.height >= ep.width) {
+              const scale = Math.min(innerW / ep.height, innerH / ep.width)
+              const finalW = ep.width * scale
+              const finalH = ep.height * scale
+              const centerX = cellX + cellW / 2
+              const centerY = cellY + cellH / 2
+
+              const x = centerX - finalH / 2
+              const y = centerY + finalW / 2
+
+              page.drawPage(ep, {
+                x,
+                y,
+                width: finalW,
+                height: finalH,
+                rotate: PDFLib.degrees(270)
+              })
+            } else {
+              const scale = Math.min(innerW / ep.width, innerH / ep.height)
+              const w = ep.width * scale
+              const h = ep.height * scale
+              const drawX = cellX + (cellW - w) / 2
+              const drawY = cellY + (cellH - h) / 2
+
+              page.drawPage(ep, { x: drawX, y: drawY, width: w, height: h })
+            }
           })
 
           // Draw optional thin dividing cutting borders
