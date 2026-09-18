@@ -525,10 +525,16 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange, nup = 
         const cellW = (availW - (cols - 1) * gap) / cols
         const cellH = (availH - (rows - 1) * gap) / rows
 
-        const totalSheets = Math.ceil(embeddedPages.length / parsedNup)
+        // If a single page is targeted in Mini Print (e.g. 1-page document with 2-in-1),
+        // tile that single page across all slots of the sheet (e.g. 2 copies per sheet, matching Image 1)
+        const pagesToTile = (embeddedPages.length === 1)
+          ? Array(parsedNup).fill(embeddedPages[0])
+          : embeddedPages
+
+        const totalSheets = Math.ceil(pagesToTile.length / parsedNup)
         for (let sh = 0; sh < totalSheets; sh++) {
           const page = outDoc.addPage([a4W, a4H])
-          const sheetPages = embeddedPages.slice(sh * parsedNup, sh * parsedNup + parsedNup)
+          const sheetPages = pagesToTile.slice(sh * parsedNup, sh * parsedNup + parsedNup)
 
           sheetPages.forEach((ep, slotIdx) => {
             const col = slotIdx % cols

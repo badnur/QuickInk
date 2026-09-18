@@ -997,9 +997,10 @@ function PrintOrderPageContent({ initialDeviceId }) {
                           }`}>
                             {Array.from({ length: pagesPerSheet }).map((_, slotIdx) => {
                               const currentSheetIdx = Math.floor((previewPageIndex - 1) / pagesPerSheet)
-                              const slotPageNum = currentSheetIdx * pagesPerSheet + slotIdx + 1
-                              const hasPage = slotPageNum <= totalPages
-                              const slotImg = hasPage ? pagePreviewUrls[slotPageNum] : null
+                              const isSinglePageDoc = totalPages === 1
+                              const slotPageNum = isSinglePageDoc ? 1 : (currentSheetIdx * pagesPerSheet + slotIdx + 1)
+                              const hasPage = isSinglePageDoc ? true : (slotPageNum <= totalPages)
+                              const slotImg = hasPage ? (pagePreviewUrls[slotPageNum] || filePreviewUrl) : null
 
                               return (
                                 <div
