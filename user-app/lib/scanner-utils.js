@@ -298,7 +298,7 @@ export function getInitialCorners(width, height) {
  * @param {HTMLCanvasElement | null} backCanvas - Scanned back side (if present)
  * @returns {HTMLCanvasElement}
  */
-export function composeToA4(mode, frontCanvas, backCanvas = null) {
+export function composeToA4(mode, frontCanvas, backCanvas = null, idCardLayout = 'vertical') {
   const A4_W = 2480
   const A4_H = 3508
   const out = document.createElement('canvas')
@@ -313,12 +313,25 @@ export function composeToA4(mode, frontCanvas, backCanvas = null) {
 
   if (mode === 'idCard') {
     // ID Card: Standard card dimensions ~85.6mm x 53.98mm
-    // Check orientation (portrait vs landscape) to size appropriately on A4
     const isPortrait = frontCanvas && frontCanvas.height > frontCanvas.width
-    const cardW = isPortrait ? Math.round(A4_W * 0.38) : Math.round(A4_W * 0.52)
 
-    if (frontCanvas && backCanvas) {
-      // Front on upper center, Back on lower center
+    if (idCardLayout === 'horizontal' && frontCanvas && backCanvas) {
+      // Side-by-Side horizontally (Front on Left, Back on Right)
+      const cardW = isPortrait ? Math.round(A4_W * 0.42) : Math.round(A4_W * 0.45)
+      const gap = Math.round(A4_W * 0.04) // ~100px gap
+      const totalW = cardW * 2 + gap
+      const startX = Math.round((A4_W - totalW) / 2)
+
+      const h1 = Math.round(cardW * (frontCanvas.height / frontCanvas.width))
+      const h2 = Math.round(cardW * (backCanvas.height / backCanvas.width))
+      const maxH = Math.max(h1, h2)
+      const startY = Math.round((A4_H - maxH) * 0.40)
+
+      ctx.drawImage(frontCanvas, startX, startY, cardW, h1)
+      ctx.drawImage(backCanvas, startX + cardW + gap, startY, cardW, h2)
+    } else if (frontCanvas && backCanvas) {
+      // Stacked vertically (Top & Bottom)
+      const cardW = isPortrait ? Math.round(A4_W * 0.38) : Math.round(A4_W * 0.52)
       const h1 = Math.round(cardW * (frontCanvas.height / frontCanvas.width))
       const x1 = Math.round((A4_W - cardW) / 2)
       const y1 = Math.round(A4_H * 0.18)
@@ -332,44 +345,75 @@ export function composeToA4(mode, frontCanvas, backCanvas = null) {
       ctx.drawImage(backCanvas, x2, y2, backW, h2)
     } else if (frontCanvas) {
       // Single card centered
+      const cardW = isPortrait ? Math.round(A4_W * 0.38) : Math.round(A4_W * 0.52)
       const h = Math.round(cardW * (frontCanvas.height / frontCanvas.width))
       const x = Math.round((A4_W - cardW) / 2)
       const y = Math.round((A4_H - h) / 2)
       ctx.drawImage(frontCanvas, x, y, cardW, h)
     }
   } else if (mode === 'halfSheet') {
-    // Admit Card / Marksheet 2-in-1: Top Half and Bottom Half
+    // Admit Card / Marksheet 2-in-1: Top/Bottom or Side-by-Side
     const pad = 120
-    const cellW = A4_W - pad * 2
-    const cellH = Math.round((A4_H - pad * 3) / 2)
 
-    if (frontCanvas) {
+    if (idCardLayout === 'horizontal' && frontCanvas && backCanvas) {
+      const cellW = Math.round((A4_W - pad * 3) / 2)
+      const cellH = A4_H - pad * 2
+
       const scale1 = Math.min(cellW / frontCanvas.width, cellH / frontCanvas.height)
       const w1 = Math.round(frontCanvas.width * scale1)
       const h1 = Math.round(frontCanvas.height * scale1)
       const x1 = Math.round(pad + (cellW - w1) / 2)
       const y1 = Math.round(pad + (cellH - h1) / 2)
       ctx.drawImage(frontCanvas, x1, y1, w1, h1)
-    }
 
-    if (backCanvas) {
       const scale2 = Math.min(cellW / backCanvas.width, cellH / backCanvas.height)
       const w2 = Math.round(backCanvas.width * scale2)
       const h2 = Math.round(backCanvas.height * scale2)
-      const x2 = Math.round(pad + (cellW - w2) / 2)
-      const y2 = Math.round(pad * 2 + cellH + (cellH - h2) / 2)
+      const x2 = Math.round(pad * 2 + cellW + (cellW - w2) / 2)
+      const y2 = Math.round(pad + (cellH - h2) / 2)
       ctx.drawImage(backCanvas, x2, y2, w2, h2)
-    }
 
-    // Optional dividing line across the middle
-    ctx.strokeStyle = '#e2e8f0'
-    ctx.lineWidth = 4
-    ctx.setLineDash([24, 16])
-    ctx.beginPath()
-    ctx.moveTo(pad, Math.round(A4_H / 2))
-    ctx.lineTo(A4_W - pad, Math.round(A4_H / 2))
-    ctx.stroke()
-    ctx.setLineDash([])
+      // Vertical dividing line across the middle
+      ctx.strokeStyle = '#e2e8f0'
+      ctx.lineWidth = 4
+      ctx.setLineDash([24, 16])
+      ctx.beginPath()
+      ctx.moveTo(Math.round(A4_W / 2), pad)
+      ctx.lineTo(Math.round(A4_W / 2), A4_H - pad)
+      ctx.stroke()
+      ctx.setLineDash([])
+    } else {
+      const cellW = A4_W - pad * 2
+      const cellH = Math.round((A4_H - pad * 3) / 2)
+
+      if (frontCanvas) {
+        const scale1 = Math.min(cellW / frontCanvas.width, cellH / frontCanvas.height)
+        const w1 = Math.round(frontCanvas.width * scale1)
+        const h1 = Math.round(frontCanvas.height * scale1)
+        const x1 = Math.round(pad + (cellW - w1) / 2)
+        const y1 = Math.round(pad + (cellH - h1) / 2)
+        ctx.drawImage(frontCanvas, x1, y1, w1, h1)
+      }
+
+      if (backCanvas) {
+        const scale2 = Math.min(cellW / backCanvas.width, cellH / backCanvas.height)
+        const w2 = Math.round(backCanvas.width * scale2)
+        const h2 = Math.round(backCanvas.height * scale2)
+        const x2 = Math.round(pad + (cellW - w2) / 2)
+        const y2 = Math.round(pad * 2 + cellH + (cellH - h2) / 2)
+        ctx.drawImage(backCanvas, x2, y2, w2, h2)
+      }
+
+      // Horizontal dividing line across the middle
+      ctx.strokeStyle = '#e2e8f0'
+      ctx.lineWidth = 4
+      ctx.setLineDash([24, 16])
+      ctx.beginPath()
+      ctx.moveTo(pad, Math.round(A4_H / 2))
+      ctx.lineTo(A4_W - pad, Math.round(A4_H / 2))
+      ctx.stroke()
+      ctx.setLineDash([])
+    }
   } else {
     // Certificate / Full Document / Auto: Fill the A4 page with clean margins
     const pad = 90

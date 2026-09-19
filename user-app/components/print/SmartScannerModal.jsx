@@ -53,6 +53,8 @@ export default function SmartScannerModal({
   const [filterMode, setFilterMode] = useState('magic') // 'original' | 'magic' | 'bw' | 'grayscale'
   const [rotationDeg, setRotationDeg] = useState(0)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [idCardLayout, setIdCardLayout] = useState('vertical') // 'vertical' (Top & Bottom) | 'horizontal' (Side by Side)
+  const [composedPreviewUrl, setComposedPreviewUrl] = useState(null)
 
   // Camera state
   const videoRef = useRef(null)
@@ -68,6 +70,7 @@ export default function SmartScannerModal({
   const [cropAspectPreset, setCropAspectPreset] = useState('idCard') // 'free' | 'idCard' | 'a4' | 'halfSheet' | 'square'
   const dragStartRef = useRef({ startX: 0, startY: 0, initialCorners: [] })
   const fileInputRef = useRef(null)
+  const cameraInputRef = useRef(null)
   const imageElementRef = useRef(null)
 
   // Reset modal state upon opening
@@ -79,6 +82,7 @@ export default function SmartScannerModal({
         mode === 'certificate' ? 'a4' : mode === 'idCard' ? 'idCard' : mode === 'halfSheet' ? 'halfSheet' : 'free'
       )
       setActiveSide('front')
+      setIdCardLayout('vertical')
       setRawImageSrc(null)
       setFrontWarpedCanvas(null)
       setBackWarpedCanvas(null)
@@ -86,6 +90,7 @@ export default function SmartScannerModal({
       setRotationDeg(0)
       setFilterMode('magic')
       setActiveDrag(null)
+      setComposedPreviewUrl(null)
       stopCamera()
 
       if (initialImageSrc) {
@@ -158,6 +163,7 @@ export default function SmartScannerModal({
       loadImageForCrop(ev.target.result)
     }
     reader.readAsDataURL(file)
+    e.target.value = '' // Reset so user can capture/select again
   }
 
   // Load selected/captured image and initialize perspective crop corners
@@ -322,13 +328,56 @@ export default function SmartScannerModal({
     }
   }
 
-  // Start scanning back side
+  // Start scanning back side via source menu
   const handleAddBackSide = () => {
     finalizeCurrentSide()
     setActiveSide('back')
     setRawImageSrc(null)
     setStage('source-select')
   }
+
+  // Quick direct capture for Back Side via Full Camera
+  const handleSnapBackSideCamera = () => {
+    finalizeCurrentSide()
+    setActiveSide('back')
+    setRawImageSrc(null)
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = ''
+      cameraInputRef.current.click()
+    } else {
+      setStage('source-select')
+    }
+  }
+
+  // Quick direct capture for Back Side via Gallery / File Picker
+  const handleSnapBackSideGallery = () => {
+    finalizeCurrentSide()
+    setActiveSide('back')
+    setRawImageSrc(null)
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+      fileInputRef.current.click()
+    } else {
+      setStage('source-select')
+    }
+  }
+
+  // Live preview update for single or merged multi-side documents
+  useEffect(() => {
+    if (stage === 'review' && currentWarpedCanvas) {
+      const processedCurrent = applyDocumentFilter(
+        rotateCanvas(currentWarpedCanvas, rotationDeg),
+        filterMode
+      )
+      if (activeSide === 'back' && frontWarpedCanvas) {
+        // Live composed A4 sheet preview with both sides placed in selected layout
+        const a4 = composeToA4(docMode, frontWarpedCanvas, processedCurrent, idCardLayout)
+        setComposedPreviewUrl(a4.toDataURL('image/jpeg', 0.88))
+      } else {
+        setComposedPreviewUrl(processedCurrent.toDataURL('image/jpeg', 0.9))
+      }
+    }
+  }, [stage, currentWarpedCanvas, rotationDeg, filterMode, activeSide, frontWarpedCanvas, docMode, idCardLayout])
 
   // Final PDF compilation & completion
   const handleCompleteAndPrint = async () => {
@@ -338,8 +387,8 @@ export default function SmartScannerModal({
       const front = activeSide === 'front' ? currentFinal : frontWarpedCanvas
       const back = activeSide === 'back' ? currentFinal : backWarpedCanvas
 
-      // Compose onto clean standard A4 page
-      const a4Canvas = composeToA4(docMode, front, back)
+      // Compose onto clean standard A4 page with chosen ID card layout
+      const a4Canvas = composeToA4(docMode, front, back, idCardLayout)
       const dataUrl = a4Canvas.toDataURL('image/jpeg', 0.94)
 
       // Create standard A4 PDF document
@@ -512,23 +561,38 @@ export default function SmartScannerModal({
               <div className="grid gap-2.5">
                 <button
                   type="button"
-                  onClick={startCamera}
-                  className="p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/20 text-left flex items-center gap-4 transition-all group backdrop-blur-sm"
+                  onClick={() => {
+                    if (cameraInputRef.current) {
+                      cameraInputRef.current.value = ''
+                      cameraInputRef.current.click()
+                    } else {
+                      startCamera()
+                    }
+                  }}
+                  className="p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-emerald-500/30 text-left flex items-center gap-4 transition-all group backdrop-blur-sm"
                 >
                   <div className="w-11 h-11 rounded-xl bg-white/[0.04] border border-white/10 text-slate-300 group-hover:text-emerald-400 flex items-center justify-center flex-shrink-0 transition-colors">
                     <Camera className="w-5 h-5" />
                   </div>
                   <div className="flex-1">
-                    <span className="text-xs font-semibold text-white block">Camera Live Capture</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-white block">Camera (Full Display)</span>
+                      <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded">Native</span>
+                    </div>
                     <span className="text-[11px] text-slate-400 block mt-0.5">
-                      Point at document with real-time framing guides
+                      Open device camera in full screen to snap {activeSide === 'front' ? 'Front side' : 'Back side'}
                     </span>
                   </div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current?.click()}
+                  onClick={() => {
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = ''
+                      fileInputRef.current.click()
+                    }
+                  }}
                   className="p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] hover:border-white/20 text-left flex items-center gap-4 transition-all group backdrop-blur-sm"
                 >
                   <div className="w-11 h-11 rounded-xl bg-white/[0.04] border border-white/10 text-slate-300 group-hover:text-emerald-400 flex items-center justify-center flex-shrink-0 transition-colors">
@@ -543,6 +607,26 @@ export default function SmartScannerModal({
                 </button>
               </div>
 
+              <div className="text-center pt-0.5">
+                <button
+                  type="button"
+                  onClick={startCamera}
+                  className="text-[11px] text-slate-400 hover:text-emerald-300 transition-colors inline-flex items-center gap-1.5"
+                >
+                  <span>💻</span> Laptop / Desktop live webcam mode
+                </button>
+              </div>
+
+              {/* Native Mobile Camera Input (Full display) */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              {/* File / Gallery Input */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -574,23 +658,23 @@ export default function SmartScannerModal({
                   autoPlay
                   playsInline
                   muted
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain bg-black"
                 />
 
-                {/* Minimal Document Viewfinder Overlay */}
-                <div className="absolute inset-6 sm:inset-8 border border-white/30 rounded-xl pointer-events-none flex flex-col justify-between p-2">
+                {/* Minimal Document Viewfinder Overlay (Spans entire sensor viewport) */}
+                <div className="absolute inset-2 sm:inset-3 border border-white/20 rounded-xl pointer-events-none flex flex-col justify-between p-2">
                   <div className="flex justify-between">
-                    <div className="w-3.5 h-3.5 border-t-2 border-l-2 border-emerald-400" />
-                    <div className="w-3.5 h-3.5 border-t-2 border-r-2 border-emerald-400" />
+                    <div className="w-4 h-4 border-t-2 border-l-2 border-emerald-400 rounded-tl-sm" />
+                    <div className="w-4 h-4 border-t-2 border-r-2 border-emerald-400 rounded-tr-sm" />
                   </div>
                   <div className="text-center">
-                    <span className="bg-black/60 text-white/90 text-[10px] font-medium px-2.5 py-0.5 rounded-full backdrop-blur-md border border-white/10">
-                      Align document within frame
+                    <span className="bg-black/70 text-white/90 text-[10px] font-medium px-2.5 py-0.5 rounded-full backdrop-blur-md border border-white/10">
+                      Full Sensor View • Align document
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <div className="w-3.5 h-3.5 border-b-2 border-l-2 border-emerald-400" />
-                    <div className="w-3.5 h-3.5 border-b-2 border-r-2 border-emerald-400" />
+                    <div className="w-4 h-4 border-b-2 border-l-2 border-emerald-400 rounded-bl-sm" />
+                    <div className="w-4 h-4 border-b-2 border-r-2 border-emerald-400 rounded-br-sm" />
                   </div>
                 </div>
               </div>
@@ -866,17 +950,23 @@ export default function SmartScannerModal({
               </div>
 
               {/* Preview Box with Glassmorphism */}
-              <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-2xl p-3 flex items-center justify-center min-h-[220px] max-h-[280px] overflow-hidden">
-                <img
-                  src={
-                    applyDocumentFilter(
-                      rotateCanvas(currentWarpedCanvas, rotationDeg),
-                      filterMode
-                    ).toDataURL('image/jpeg', 0.9)
-                  }
-                  alt="Warped Scan Result"
-                  className="max-h-[240px] max-w-full rounded-lg shadow-md object-contain bg-white"
-                />
+              <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-2xl p-3 flex flex-col items-center justify-center min-h-[220px] max-h-[290px] overflow-hidden relative">
+                {composedPreviewUrl ? (
+                  <img
+                    src={composedPreviewUrl}
+                    alt="Scan Result"
+                    className="max-h-[240px] max-w-full rounded-lg shadow-md object-contain bg-white"
+                  />
+                ) : (
+                  <div className="text-xs text-slate-400 flex items-center gap-1.5">
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Rendering preview...
+                  </div>
+                )}
+                {activeSide === 'back' && frontWarpedCanvas && (docMode === 'idCard' || docMode === 'halfSheet') && (
+                  <span className="mt-2 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-0.5 rounded-full">
+                    A4 Preview: {idCardLayout === 'vertical' ? 'Top & Bottom Stacked' : 'Side-by-Side'}
+                  </span>
+                )}
               </div>
 
               {/* Filter Chips & Rotate 90° */}
@@ -913,16 +1003,77 @@ export default function SmartScannerModal({
                 </Button>
               </div>
 
+              {/* ID Card Arrangement on A4 Sheet */}
+              {(docMode === 'idCard' || docMode === 'halfSheet') && (
+                <div className="bg-white/[0.03] backdrop-blur-sm border border-white/[0.08] rounded-2xl p-3 space-y-2">
+                  <div className="flex items-center justify-between px-0.5">
+                    <span className="text-xs font-semibold text-white">Arrangement on A4 Sheet</span>
+                    <span className="text-[10px] text-emerald-400 font-medium">
+                      {idCardLayout === 'vertical' ? 'Stacked (Top & Bottom)' : 'Side-by-Side'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIdCardLayout('vertical')}
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                        idCardLayout === 'vertical'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
+                          : 'bg-white/[0.04] text-slate-400 border border-white/10 hover:text-white hover:bg-white/[0.08]'
+                      }`}
+                    >
+                      <span>↕</span> Top & Bottom
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setIdCardLayout('horizontal')}
+                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+                        idCardLayout === 'horizontal'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-xs'
+                          : 'bg-white/[0.04] text-slate-400 border border-white/10 hover:text-white hover:bg-white/[0.08]'
+                      }`}
+                    >
+                      <span>↔</span> Side by Side
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons */}
               <div className="space-y-2 pt-2 border-t border-white/10">
                 {(docMode === 'idCard' || docMode === 'halfSheet') && activeSide === 'front' && (
-                  <Button
-                    variant="outline"
-                    onClick={handleAddBackSide}
-                    className="w-full border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 font-medium text-xs py-2.5 rounded-xl flex items-center justify-center gap-2 transition-colors shadow-none"
-                  >
-                    <span>➕</span> Add Back Side (Reverse)
-                  </Button>
+                  <div className="space-y-1.5">
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSnapBackSideCamera}
+                        className="border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 font-semibold text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-none"
+                      >
+                        <Camera className="w-3.5 h-3.5" /> Snap Back (Full Camera)
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleSnapBackSideGallery}
+                        className="border-white/10 bg-white/[0.04] hover:bg-white/[0.08] text-slate-200 font-medium text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition-colors shadow-none"
+                      >
+                        <Upload className="w-3.5 h-3.5" /> Back from Files
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                {(docMode === 'idCard' || docMode === 'halfSheet') && activeSide === 'back' && (
+                  <div className="flex justify-center pb-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setStage('source-select')}
+                      className="text-[11px] text-slate-400 hover:text-slate-200 transition-colors flex items-center gap-1"
+                    >
+                      <RotateCw className="w-3 h-3" /> Retake back side photo
+                    </button>
+                  </div>
                 )}
 
                 <Button
