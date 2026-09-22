@@ -12,14 +12,13 @@ export default function Footer() {
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-6">
               <img 
-                src="/images/quickink-logo.png" 
-                alt="QuickInk Logo" 
-                className="w-auto"
-                style={{ height: '100px' }}
+                src="/images/printkoro-logo-dark.png" 
+                alt="PrintKoro Logo" 
+                className="h-9 w-auto"
               />
             </div>
             <p className="text-gray-400 mb-6 max-w-sm leading-relaxed">
-              Making printing accessible, affordable, and convenient for everyone. Print anything, anytime, anywhere.
+              PrintKoro is Bangladesh's premier smart self-service printing network. Upload from your phone, pay securely, and print in 60 seconds.
             </p>
             <div className="flex gap-4">
               {[Globe, Share2, Send, AtSign].map((Icon, index) => (
@@ -86,7 +85,7 @@ export default function Footer() {
             <ul className="space-y-4">
               <li className="flex items-start gap-3 text-gray-400 hover:text-[#00bf63] transition-colors group">
                 <Mail className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                <span className="text-sm">support@quickink.online</span>
+                <span className="text-sm">help@printkoro.com</span>
               </li>
               <li className="flex items-start gap-3 text-gray-400 hover:text-[#00bf63] transition-colors group">
                 <Phone className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
@@ -94,7 +93,7 @@ export default function Footer() {
               </li>
               <li className="flex items-start gap-3 text-gray-400 hover:text-[#00bf63] transition-colors group">
                 <MapPin className="h-5 w-5 mt-1 flex-shrink-0 group-hover:scale-110 transition-transform" />
-                <span className="text-sm">Bagha, Rajshahi, Bangladesh</span>
+                <span className="text-sm">Dhaka & Rajshahi, Bangladesh</span>
               </li>
             </ul>
           </div>
@@ -104,7 +103,7 @@ export default function Footer() {
         <div className="border-t border-gray-800 pt-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-sm text-gray-400">
-              © {year} QuickInk. All rights reserved.
+              © {year} PrintKoro.com. All rights reserved.
             </p>
             <div className="flex gap-6 text-sm text-gray-400">
               <Link href="#" className="hover:text-[#00bf63] transition-colors">Terms</Link>

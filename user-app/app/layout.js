@@ -5,8 +5,11 @@ import Navbar from '@/components/Navbar'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'QuickInk - Print Anything, Anytime, Near You',
-  description: 'Fast, simple, and affordable printing. Upload from phone, print at nearby kiosk in 60 seconds. ৳2 per page. Available across Bangladesh.',
+  title: 'PrintKoro — Print Anything, Anytime, Near You in Bangladesh',
+  description: 'Fast, simple, and affordable self-service printing with PrintKoro. Upload from your phone, print at a nearby kiosk or partner shop in 60 seconds. ৳2 per page.',
+  icons: {
+    icon: '/icon.png',
+  },
 }
 
 export default function RootLayout({ children }) {

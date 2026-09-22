@@ -29,7 +29,7 @@ export async function GET(request, { params }) {
       // Default demo lookup
       device = {
         id,
-        name: id.startsWith('222') ? 'QuickInk Kiosk — Central Mall' : 'QuickInk Partner Shop — Dhanmondi',
+        name: id.startsWith('222') ? 'PrintKoro Kiosk — Central Mall' : 'PrintKoro Partner Shop — Dhanmondi',
         type: id.startsWith('222') ? 'kiosk' : 'shop',
         status: 'online',
         location: {

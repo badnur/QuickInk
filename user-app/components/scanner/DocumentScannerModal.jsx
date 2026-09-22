@@ -184,7 +184,7 @@ export default function DocumentScannerModal({ isOpen, onClose, onComplete }) {
 
       const file = new File(
         [pdfBlob],
-        `QuickInk_Scan_${new Date().toISOString().slice(0, 10)}.pdf`,
+        `PrintKoro_Scan_${new Date().toISOString().slice(0, 10)}.pdf`,
         { type: 'application/pdf' }
       )
 

@@ -1,6 +1,6 @@
 const { contextBridge, ipcRenderer } = require('electron')
 
-contextBridge.exposeInMainWorld('quickinkDesktop', {
+const desktopBridge = {
   // System Printers
   getPrinters: () => ipcRenderer.invoke('printers:get-all'),
   testPrint: (printerName, mode) => ipcRenderer.invoke('printers:print-test', { printerName, mode }),
@@ -25,4 +25,7 @@ contextBridge.exposeInMainWorld('quickinkDesktop', {
     ipcRenderer.on('updater:status', handler)
     return () => ipcRenderer.removeListener('updater:status', handler)
   }
-})
+}
+
+contextBridge.exposeInMainWorld('printkoroDesktop', desktopBridge)
+contextBridge.exposeInMainWorld('quickinkDesktop', desktopBridge)

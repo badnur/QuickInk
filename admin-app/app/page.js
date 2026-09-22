@@ -77,7 +77,7 @@ export default function AdminDashboardPage() {
   return (
     <div className="flex-1 flex flex-col min-h-screen bg-[#090d16]">
       <AdminHeader
-        title="QuickInk Executive Dashboard"
+        title="PrintKoro Executive Dashboard"
         subtitle="Real-time platform metrics, hardware status, and print volumes"
         onRefresh={fetchStats}
         isRefreshing={refreshing}

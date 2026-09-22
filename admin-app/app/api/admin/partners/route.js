@@ -67,7 +67,7 @@ export async function GET(request) {
             reference_id: d.location.reference_id || d.location.registration_reference || `QIK-REG-${(cleanPhone || '').slice(-6) || '729410'}`,
             type: d.type || d.location.type || 'shop',
             name: d.location.owner_name || d.location.contact_person || 'Partner Owner',
-            shop_name: d.location.shop_name || d.name?.replace(/^QuickInk (Shop|Kiosk) — /, '') || 'Partner Shop',
+            shop_name: d.location.shop_name || d.name?.replace(/^PrintKoro (Shop|Kiosk) — /, '') || d.name?.replace(/^QuickInk (Shop|Kiosk) — /, '') || 'Partner Shop',
             phone: d.location.phone || '',
             location: d.location.address || 'Bangladesh',
             operating_hours: d.location?.operating_hours || (d.type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM'),
@@ -169,7 +169,7 @@ export async function POST(request) {
         .from('devices')
         .insert([
           {
-            name: type === 'kiosk' ? `QuickInk Kiosk — ${shopName}` : `QuickInk Shop — ${shopName}`,
+            name: type === 'kiosk' ? `PrintKoro Kiosk — ${shopName}` : `PrintKoro Shop — ${shopName}`,
             type: type === 'kiosk' ? 'kiosk' : 'shop',
             location: locationObj,
             status: 'online',
@@ -180,7 +180,7 @@ export async function POST(request) {
 
       provisionedDevice = newDev || {
         id: `dev-${Date.now()}`,
-        name: `QuickInk Shop — ${shopName}`,
+        name: `PrintKoro Shop — ${shopName}`,
         type,
         location: locationObj,
         status: 'online',

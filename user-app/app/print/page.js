@@ -77,7 +77,7 @@ function parsePageRange(rangeStr, totalPages) {
 
 export default function PrintOrderPage({ initialDeviceId = null }) {
   return (
-    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-500 font-medium">Loading QuickInk Print Station...</div>}>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-500 font-medium">Loading PrintKoro Print Station...</div>}>
       <PrintOrderPageContent initialDeviceId={initialDeviceId} />
     </Suspense>
   )
@@ -153,10 +153,10 @@ function PrintOrderPageContent({ initialDeviceId }) {
   // Direct step navigation helper for preview/testing
   useEffect(() => {
     if (searchParams.get('step') === '3') {
-      setSelectedFile(new File(['Sample QuickInk Document Content'], 'QuickInk_Sample.pdf', { type: 'application/pdf' }))
+      setSelectedFile(new File(['Sample PrintKoro Document Content'], 'PrintKoro_Sample.pdf', { type: 'application/pdf' }))
       setStep(3)
     } else if (searchParams.get('step') === '4') {
-      setSelectedFile(new File(['Sample QuickInk Document Content'], 'QuickInk_Sample.pdf', { type: 'application/pdf' }))
+      setSelectedFile(new File(['Sample PrintKoro Document Content'], 'PrintKoro_Sample.pdf', { type: 'application/pdf' }))
       setTicketOtp({ code: '582914', otp_type: 'type_a' })
       setStep(4)
     } else if (searchParams.get('scanner') === 'test') {
@@ -1742,7 +1742,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 <div className="mt-4 pt-3 border-t border-gray-100 text-left space-y-2">
                   <div className="flex items-center gap-2 text-[11px] text-gray-600">
                     <span className="w-4 h-4 rounded-full bg-gray-100 text-gray-700 font-bold flex items-center justify-center text-[10px] flex-shrink-0">1</span>
-                    <span>Go to any nearby QuickInk station</span>
+                    <span>Go to any nearby PrintKoro station</span>
                   </div>
                   <div className="flex items-center gap-2 text-[11px] text-gray-600">
                     <span className="w-4 h-4 rounded-full bg-gray-100 text-gray-700 font-bold flex items-center justify-center text-[10px] flex-shrink-0">2</span>

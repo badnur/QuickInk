@@ -77,7 +77,7 @@ export default function AdminLayoutClient({ children }) {
       <div className="min-h-screen bg-[#090d16] flex items-center justify-center text-slate-400 text-xs font-semibold">
         <div className="flex flex-col items-center gap-3">
           <div className="w-8 h-8 rounded-xl border-2 border-[#00bf63] border-t-transparent animate-spin" />
-          <span>Verifying QuickInk Admin Credentials...</span>
+          <span>Verifying PrintKoro Admin Credentials...</span>
         </div>
       </div>
     )

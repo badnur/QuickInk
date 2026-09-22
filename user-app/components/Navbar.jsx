@@ -35,10 +35,9 @@ export default function Navbar() {
           {/* Logo */}
           <Link href="/" className="flex items-center group">
             <img 
-              src="/images/quickink-logo.png" 
-              alt="QuickInk Logo" 
-              className="w-auto transition-all duration-300 group-hover:scale-105"
-              style={{ height: '180px' }}
+              src="/images/printkoro-logo.png" 
+              alt="PrintKoro Logo" 
+              className="h-8 sm:h-9 md:h-10 w-auto transition-all duration-300 group-hover:scale-105"
             />
           </Link>
 

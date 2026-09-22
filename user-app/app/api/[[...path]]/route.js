@@ -8,7 +8,7 @@ let contactMessages = []
 const mockMachines = [
   {
     id: 'machine_1',
-    name: 'QuickInk - Central Mall',
+    name: 'PrintKoro - Central Mall',
     latitude: 19.0760,
     longitude: 72.8777,
     address: 'Shop 12, Central Mall, Andheri West, Mumbai',
@@ -18,7 +18,7 @@ const mockMachines = [
   },
   {
     id: 'machine_2',
-    name: 'QuickInk - University Campus',
+    name: 'PrintKoro - University Campus',
     latitude: 19.1136,
     longitude: 72.8697,
     address: 'Near Library, Mumbai University, Kalina Campus',
@@ -28,7 +28,7 @@ const mockMachines = [
   },
   {
     id: 'machine_3',
-    name: 'QuickInk - Business Hub',
+    name: 'PrintKoro - Business Hub',
     latitude: 19.0896,
     longitude: 72.8656,
     address: 'Ground Floor, Business Hub, BKC, Mumbai',
@@ -38,7 +38,7 @@ const mockMachines = [
   },
   {
     id: 'machine_4',
-    name: 'QuickInk - Railway Station',
+    name: 'PrintKoro - Railway Station',
     latitude: 19.0545,
     longitude: 72.8428,
     address: 'Platform 1, Bandra Railway Station, Mumbai',
@@ -48,7 +48,7 @@ const mockMachines = [
   },
   {
     id: 'machine_5',
-    name: 'QuickInk - Coffee Corner',
+    name: 'PrintKoro - Coffee Corner',
     latitude: 19.1197,
     longitude: 72.9089,
     address: '15, Linking Road, Coffee Corner Cafe, Mumbai',
@@ -58,7 +58,7 @@ const mockMachines = [
   },
   {
     id: 'machine_6',
-    name: 'QuickInk - Tech Park',
+    name: 'PrintKoro - Tech Park',
     latitude: 19.1075,
     longitude: 72.8263,
     address: 'Building A, Tech Park, Goregaon East, Mumbai',
@@ -68,7 +68,7 @@ const mockMachines = [
   },
   {
     id: 'machine_7',
-    name: 'QuickInk - Medical College',
+    name: 'PrintKoro - Medical College',
     latitude: 19.0330,
     longitude: 72.8569,
     address: 'Block 2, Medical College Campus, Parel, Mumbai',
@@ -78,7 +78,7 @@ const mockMachines = [
   },
   {
     id: 'machine_8',
-    name: 'QuickInk - Shopping Plaza',
+    name: 'PrintKoro - Shopping Plaza',
     latitude: 19.1197,
     longitude: 72.8464,
     address: 'Shop 45, Phoenix Mall, Lower Parel, Mumbai',

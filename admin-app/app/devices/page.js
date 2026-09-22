@@ -245,7 +245,7 @@ export default function AdminDevicesPage() {
 
   // Reinstate partnership & reactivate desktop
   const handleReinstatePartnership = async (device) => {
-    if (!confirm(`Reinstate QuickInk partnership for "${device.name}"? This will immediately reactivate their desktop app terminal.`)) return
+    if (!confirm(`Reinstate PrintKoro partnership for "${device.name}"? This will immediately reactivate their desktop app terminal.`)) return
     try {
       const loc = typeof device.location === 'object' ? device.location : {}
       const updatedLocation = {
@@ -702,7 +702,7 @@ export default function AdminDevicesPage() {
             <div>
               <label className="text-xs font-bold text-slate-300 block mb-1">Station Name</label>
               <Input
-                placeholder="e.g. QuickInk Kiosk - Central Mall L1"
+                placeholder="e.g. PrintKoro Kiosk - Central Mall L1"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 className="text-xs bg-slate-900 border-slate-800 text-white h-9 rounded-xl focus-visible:border-[#00bf63]"
@@ -791,7 +791,7 @@ export default function AdminDevicesPage() {
               </div>
               <DialogTitle className="text-base font-bold text-white">Cancel Partnership & Lock Desktop</DialogTitle>
               <DialogDescription className="text-xs text-slate-400">
-                Revoking this partnership immediately halts this station. The shop owner will be locked out of the QuickInk desktop app, and print job redemptions will be rejected.
+                Revoking this partnership immediately halts this station. The shop owner will be locked out of the PrintKoro desktop app, and print job redemptions will be rejected.
               </DialogDescription>
             </DialogHeader>
 

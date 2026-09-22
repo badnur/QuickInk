@@ -100,8 +100,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-gray-900">Email</h3>
-                    <a href="mailto:support@quickink.online" className="text-xs text-[#00bf63] hover:underline font-medium">
-                      support@quickink.online
+                    <a href="mailto:help@printkoro.com" className="text-xs text-[#00bf63] hover:underline font-medium">
+                      help@printkoro.com
                     </a>
                   </div>
                 </div>

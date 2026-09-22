@@ -1,15 +1,15 @@
-# QuickInk - Self-Service Printing Kiosk Platform
+# PrintKoro - Self-Service Printing Kiosk Platform
 
-> **Print Anything, Anytime — Near You**  
+> **Print Anything, Anytime — Near You in Bangladesh**  
 > Upload → Pay → Print in 60 seconds
 
-QuickInk is a modern, production-ready MVP website for a self-service printing kiosk startup. Users can find nearby printing kiosks, and shop owners can become partners to earn passive income.
+PrintKoro (`printkoro.com`) is a modern self-service printing kiosk & partner shop POS platform for Bangladesh. Users can upload documents from their phones, pay securely, and collect prints in 60 seconds. Shop owners can become partners to earn passive income with our desktop terminal.
 
 ---
 
-## 🚀 Live Demo
+## 🚀 Live Platform
 
-Visit: **https://instant-print-hub-2.preview.emergentagent.com**
+Visit: **https://printkoro.com**
 
 ---
 

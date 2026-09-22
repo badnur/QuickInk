@@ -77,7 +77,7 @@ export async function GET(request) {
 
   // Fallback direct URL
   return NextResponse.redirect(
-    `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download/QuickInk-Station-Setup-1.0.0.exe`,
+    `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download/PrintKoro-Station-Setup-1.1.0.exe`,
     302
   )
 }

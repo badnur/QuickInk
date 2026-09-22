@@ -445,7 +445,7 @@ export default function AdminPartnersPage() {
                 <div>
                   <span className="text-[10px] text-slate-500 uppercase font-semibold">Hardware / Printer Details</span>
                   <div className="text-xs text-white font-medium">
-                    {selectedPartner.printer_model || 'Self-Service Unit Provided by QuickInk'}
+                    {selectedPartner.printer_model || 'Self-Service Unit Provided by PrintKoro'}
                   </div>
                 </div>
                 <div>

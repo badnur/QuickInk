@@ -1,5 +1,5 @@
 // =============================================================================
-// QuickInk Desktop POS & Kiosk Terminal — Client Logic
+// PrintKoro Desktop POS & Kiosk Terminal — Client Logic
 // Shop & Kiosk Registration, Mobile OTP Verification & Authentication
 // =============================================================================
 
@@ -7,7 +7,7 @@
 const state = {
   config: {
     deviceId: '',
-    apiBaseUrl: '', // empty or URL. When empty or unreachable, defaults to QuickInk Cloud
+    apiBaseUrl: '', // empty or URL. When empty or unreachable, defaults to PrintKoro Cloud
     bwPrinterName: '',
     colorPrinterName: '',
     isKiosk: false
@@ -36,7 +36,7 @@ const state = {
 }
 
 // Check if running inside Electron desktop container
-const isElectron = Boolean(window.quickinkDesktop)
+const isElectron = Boolean(window.printkoroDesktop || window.quickinkDesktop)
 
 // Audio Synthesizer Chime (Web Audio API)
 function playSuccessChime() {
@@ -87,15 +87,15 @@ function phonesMatch(p1, p2) {
 }
 
 // =============================================================================
-// QUICKINK DIRECT CLOUD CLIENT
+// PRINTKORO DIRECT CLOUD CLIENT
 // Connects directly to Supabase cloud across all devices
 // Automatically used when standalone or when local dev server is unreachable
 // =============================================================================
-const QuickInkCloud = {
+const PrintKoroCloud = {
   SUPABASE_URL: 'https://xhzfrmpbhasnipirccnt.supabase.co',
   SUPABASE_KEY: 'sb_publishable_5QRgqfQTgNnpH3PN2wfz1g_4wwy5k8I',
   SMS_API_KEY: '42fc1e917497409da3d3ffc7622e566e',
-  ADMIN_CONTACT: { phone: '01733398911', email: 'help@quickink.net' },
+  ADMIN_CONTACT: { phone: '01733398911', email: 'help@printkoro.com' },
 
   otpCache: new Map(),
 
@@ -117,7 +117,7 @@ const QuickInkCloud = {
       this.rest('devices?select=*'),
       this.rest('partners?select=*')
     ])
-    if (!devRes.ok) throw new Error('Could not connect to QuickInk cloud database')
+    if (!devRes.ok) throw new Error('Could not connect to PrintKoro cloud database')
     const devices = await devRes.json()
     const partners = partRes.ok ? await partRes.json() : []
 
@@ -158,7 +158,7 @@ const QuickInkCloud = {
           suspended: true,
           shop_name: loc.shop_name || candidateDev.name,
           deviceId: candidateDev.id,
-          reason: loc.suspension_reason || 'Partnership suspended by QuickInk administration.',
+          reason: loc.suspension_reason || 'Partnership suspended by PrintKoro administration.',
           suspended_at: candidateDev.updated_at || new Date().toISOString()
         }
       }
@@ -387,7 +387,7 @@ const QuickInkCloud = {
     const code = Math.floor(100000 + Math.random() * 900000).toString()
     this.otpCache.set(cleanPhone, { code, expiresAt: Date.now() + 10 * 60 * 1000 })
 
-    const msg = encodeURIComponent(`Your QuickInk verification code is: ${code}. Valid for 10 minutes.`)
+    const msg = encodeURIComponent(`Your PrintKoro verification code is: ${code}. Valid for 10 minutes.`)
     const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${this.SMS_API_KEY}&number=${cleanPhone}&message=${msg}`
     fetch(smsUrl).catch(() => {})
     return { ok: true, data: { success: true, message: `Verification code sent to ${cleanPhone}`, phone: cleanPhone } }
@@ -433,7 +433,7 @@ const QuickInkCloud = {
     const insRes = await this.rest('devices', {
       method: 'POST',
       body: JSON.stringify({
-        name: draft.type === 'kiosk' ? `QuickInk Kiosk — ${draft.shop_name}` : `QuickInk Shop — ${draft.shop_name}`,
+        name: draft.type === 'kiosk' ? `PrintKoro Kiosk — ${draft.shop_name}` : `PrintKoro Shop — ${draft.shop_name}`,
         type: draft.type === 'kiosk' ? 'kiosk' : 'shop',
         location: locationObj,
         status: 'offline'
@@ -507,6 +507,8 @@ const QuickInkCloud = {
   }
 }
 
+const QuickInkCloud = PrintKoroCloud
+
 // Universal API POST wrapper with transparent auto-fallback to Cloud
 async function apiPost(endpoint, body, fallbackCloudFn) {
   const customUrl = state.config.apiBaseUrl?.trim()
@@ -528,8 +530,8 @@ async function apiPost(endpoint, body, fallbackCloudFn) {
     const data = await res.json().catch(() => null)
     return { ok: res.ok, status: res.status, data }
   } catch (err) {
-    console.warn(`[QuickInk] API request to ${customUrl}${endpoint} failed (${err.message}). Auto-switching to QuickInk Cloud...`)
-    setConnectionStatus('cloud', 'QuickInk Cloud: Connected (Auto-fallback)')
+    console.warn(`[PrintKoro] API request to ${customUrl}${endpoint} failed (${err.message}). Auto-switching to PrintKoro Cloud...`)
+    setConnectionStatus('cloud', 'PrintKoro Cloud: Connected (Auto-fallback)')
     return fallbackCloudFn()
   }
 }
@@ -550,8 +552,8 @@ async function apiGet(endpoint, fallbackCloudFn) {
     const data = await res.json().catch(() => null)
     return { ok: res.ok, status: res.status, data }
   } catch (err) {
-    console.warn(`[QuickInk] API request to ${customUrl}${endpoint} failed (${err.message}). Auto-switching to QuickInk Cloud...`)
-    setConnectionStatus('cloud', 'QuickInk Cloud: Connected (Auto-fallback)')
+    console.warn(`[PrintKoro] API request to ${customUrl}${endpoint} failed (${err.message}). Auto-switching to PrintKoro Cloud...`)
+    setConnectionStatus('cloud', 'PrintKoro Cloud: Connected (Auto-fallback)')
     return fallbackCloudFn()
   }
 }
@@ -581,7 +583,7 @@ function updateConnectionBadge() {
     }
     el.authConnDot.classList.remove('offline')
   } else {
-    el.authConnLabel.textContent = 'QuickInk Cloud: Connected'
+    el.authConnLabel.textContent = 'PrintKoro Cloud: Connected'
     el.authConnDot.classList.remove('offline')
   }
 }
@@ -962,10 +964,10 @@ function setupAutoUpdaterClient() {
       const res = await window.quickinkDesktop.checkForUpdates()
       if (res?.success) {
         if (res.isLatest) {
-          alert('QuickInk Station is up to date! (v' + (res.version || '') + ')')
+          alert('PrintKoro Station is up to date! (v' + (res.version || '') + ')')
         } else {
           if (el.updateBanner) el.updateBanner.classList.remove('hidden')
-          if (el.updateBannerTitle) el.updateBannerTitle.textContent = 'QuickInk Updater'
+          if (el.updateBannerTitle) el.updateBannerTitle.textContent = 'PrintKoro Updater'
           if (el.updateBannerDesc) el.updateBannerDesc.textContent = res.version ? `New version v${res.version} found! Downloading in background...` : 'Checking GitHub releases...'
         }
       } else {
@@ -1097,7 +1099,7 @@ function setupServerSettingsModal() {
       try {
         const res = await QuickInkCloud.rest('devices?limit=1')
         if (res.ok) {
-          el.serverPingResult.innerHTML = '<span style="color: #4ade80;">✓ QuickInk Cloud is online & accessible!</span>'
+          el.serverPingResult.innerHTML = '<span style="color: #4ade80;">✓ PrintKoro Cloud is online & accessible!</span>'
         } else {
           el.serverPingResult.innerHTML = `<span style="color: #f87171;">✗ Cloud returned HTTP ${res.status}</span>`
         }
@@ -1364,7 +1366,7 @@ async function verifyAndFetchJob() {
   }
 
   el.verifySpinner.classList.remove('hidden')
-  el.verifyBtnText.textContent = 'Verifying with QuickInk Server...'
+  el.verifyBtnText.textContent = 'Verifying with PrintKoro Server...'
   el.btnVerifyOtp.disabled = true
 
   try {
@@ -1785,7 +1787,7 @@ function setupAuthSystem() {
         alert('🎉 Partnership Reinstated!\n\nYour Quick Ink partnership is active. You may now sign in.')
         showScreen('login')
       } else {
-        alert(`⚠️ Station is still suspended by administration.\n\nReason: ${data.reason || 'Pending operational review'}\n\nEmergency Phone: 01733398911\nEmail: help@quickink.net`)
+        alert(`⚠️ Station is still suspended by administration.\n\nReason: ${data.reason || 'Pending operational review'}\n\nEmergency Phone: 01733398911\nEmail: help@printkoro.com`)
       }
     } catch (e) {
       alert('Could not verify status with Quick Ink server. Please check your network connection.')

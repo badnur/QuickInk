@@ -179,7 +179,7 @@ export default function PartnerPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl text-center">
           <Badge className="mb-4 bg-[#00bf63]/15 text-[#00bf63] border border-[#00bf63]/30 font-semibold px-3 py-1 text-xs">
             <Sparkles className="h-3.5 w-3.5 mr-1.5 inline" />
-            QuickInk Network Expansion
+            PrintKoro Network Expansion
           </Badge>
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4 text-white">
             Register Your Shop or Host a Kiosk
@@ -213,7 +213,7 @@ export default function PartnerPage() {
               className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#00bf63] hover:bg-[#00a855] text-black font-extrabold text-sm shadow-xl shadow-[#00bf63]/20 transition-all hover:scale-[1.02]"
             >
               <Download className="w-5 h-5 text-black" />
-              <span>Download QuickInk Desktop App (.exe)</span>
+              <span>Download PrintKoro Desktop App (.exe)</span>
             </a>
             <span className="text-xs text-slate-400">Windows 10 / 11 • Version 1.0.0 • Auto-Updating</span>
           </div>
@@ -233,7 +233,7 @@ export default function PartnerPage() {
               <div>
                 <h3 className="text-sm font-bold text-white">Already Approved or Setting Up Your Counter PC?</h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Download the QuickInk Desktop Terminal on your shop computer and log in with your registered phone number.
+                  Download the PrintKoro Desktop Terminal on your shop computer and log in with your registered phone number.
                 </p>
               </div>
             </div>
@@ -293,7 +293,7 @@ export default function PartnerPage() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900">Application Submitted Successfully!</h3>
                   <p className="text-xs text-slate-600 mt-1">
-                    Your registration has been forwarded to the QuickInk Admin Team for verification and provisioning.
+                    Your registration has been forwarded to the PrintKoro Admin Team for verification and provisioning.
                   </p>
                   <div className="mt-2.5 flex items-center gap-2">
                     <span className="text-xs text-slate-500 font-medium">Your Reference ID:</span>
@@ -748,7 +748,7 @@ export default function PartnerPage() {
                           Congratulations! Your Station has been Approved & Provisioned
                         </div>
                         <p className="text-xs text-slate-700 leading-relaxed">
-                          Your QuickInk Desktop terminal profile has been set up. Our operations team is contacting you at{' '}
+                          Your PrintKoro Desktop terminal profile has been set up. Our operations team is contacting you at{' '}
                           <strong>{trackResult.phone}</strong> to deliver your pairing key or dispatch our field technician with the self-service hardware.
                         </p>
                         <div className="pt-2">
@@ -757,7 +757,7 @@ export default function PartnerPage() {
                             className="inline-flex items-center gap-2 px-4 py-2 bg-[#00bf63] hover:bg-[#00a855] text-white font-semibold text-xs rounded-lg transition-colors shadow-sm"
                           >
                             <Download className="w-4 h-4" />
-                            Download QuickInk Desktop App (.exe)
+                            Download PrintKoro Desktop App (.exe)
                           </a>
                         </div>
                       </div>

@@ -60,19 +60,15 @@ export default function AdminSidebar({ user, isConnected = true, pendingJobsCoun
       {/* Brand Header */}
       <div>
         <div className="p-5 border-b border-slate-800/80 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-xl bg-[#00bf63]/15 border border-[#00bf63]/30 flex items-center justify-center text-[#00bf63] font-black text-lg transition-transform group-hover:scale-105">
-              Q
-            </div>
-            <div>
-              <div className="font-extrabold text-white text-base tracking-tight flex items-center gap-1.5">
-                QuickInk
-                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#00bf63] text-slate-950 uppercase tracking-wider">
-                  Admin
-                </span>
-              </div>
-              <div className="text-[10px] text-slate-400 font-medium">Station Fleet Ops</div>
-            </div>
+          <Link href="/" className="flex items-center gap-2 group">
+            <img 
+              src="/images/printkoro-logo-dark.png" 
+              alt="PrintKoro Admin" 
+              className="h-7 w-auto transition-transform group-hover:scale-105"
+            />
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-[#00bf63] text-slate-950 uppercase tracking-wider">
+              Admin
+            </span>
           </Link>
         </div>
 
@@ -148,7 +144,7 @@ export default function AdminSidebar({ user, isConnected = true, pendingJobsCoun
             </div>
             <div className="min-w-0 flex-1">
               <div className="text-xs font-bold text-white truncate">{user?.name || 'Administrator'}</div>
-              <div className="text-[10px] text-slate-400 truncate">{user?.email || 'admin@quickink.com'}</div>
+              <div className="text-[10px] text-slate-400 truncate">{user?.email || 'admin@printkoro.com'}</div>
             </div>
           </div>
           <button

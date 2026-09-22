@@ -95,7 +95,7 @@ function createWindow() {
     height: 820,
     minWidth: 1024,
     minHeight: 680,
-    title: 'Quick Ink',
+    title: 'PrintKoro Station',
     backgroundColor: '#09090b',
     autoHideMenuBar: true,
     show: true,
@@ -366,7 +366,7 @@ async function generateTestPdf(printerName, isColor) {
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
   const regFont = await pdfDoc.embedFont(StandardFonts.Helvetica)
 
-  page.drawText('QuickInk Print Station', {
+  page.drawText('PrintKoro Print Station', {
     x: 50,
     y: 780,
     size: 22,
@@ -397,7 +397,7 @@ async function generateTestPdf(printerName, isColor) {
     color: rgb(0.07, 0.09, 0.15)
   })
 
-  page.drawText('If this page printed, your hardware printer is communicating correctly with QuickInk.', {
+  page.drawText('If this page printed, your hardware printer is communicating correctly with PrintKoro.', {
     x: 50,
     y: 695,
     size: 10,
@@ -431,7 +431,7 @@ async function generateTestPdf(printerName, isColor) {
     })
   }
 
-  page.drawText('QuickInk Smart Cloud Print POS — Direct Windows Spooler Engine', {
+  page.drawText('PrintKoro Smart Cloud Print POS — Direct Windows Spooler Engine', {
     x: 50,
     y: 50,
     size: 9,
@@ -738,17 +738,16 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange, nup = 
         </head>
         <body>
           <div class="header">
-            <div class="logo">QuickInk Print Station</div>
-            <div class="badge">${isColor ? 'COLOR TEST PAGE' : 'BLACK & WHITE TEST PAGE'}</div>
+            <div class="logo">PrintKoro Print Station</div>
+            <div class="badge">TEST RECEIPT</div>
           </div>
-          <p style="font-size: 16px; margin-bottom: 5px;"><strong>Hardware Alignment & Spooler Test</strong></p>
-          <p style="font-size: 13px; color: #64748b;">If you can read this document, your physical printer is communicating with QuickInk.</p>
-          <table class="meta-table">
-            <tr><td><strong>Target Device:</strong></td><td>${printerName}</td></tr>
-            <tr><td><strong>Output Mode:</strong></td><td>${isColor ? 'Full Color (Inkjet/Laser)' : 'Black & White (Monochrome)'}</td></tr>
-            <tr><td><strong>Timestamp:</strong></td><td>${new Date().toLocaleString()}</td></tr>
-          </table>
-          <div class="footer">QuickInk Smart Cloud Print POS</div>
+          <p style="font-size: 13px; color: #64748b;">If you can read this document, your physical printer is communicating with PrintKoro.</p>
+          <div class="divider"></div>
+          <div class="kv-row"><span>TERMINAL:</span> <b>${printerName}</b></div>
+          <div class="kv-row"><span>MODE:</span> <b>${mode === 'color' ? 'Color Driver' : 'Monochrome (B&W)'}</b></div>
+          <div class="kv-row"><span>TIMESTAMP:</span> <b>${new Date().toLocaleString()}</b></div>
+          <div class="divider"></div>
+          <div class="footer">PrintKoro Smart Cloud Print POS</div>
         </body>
         </html>
       `

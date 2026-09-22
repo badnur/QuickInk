@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase'
 export const DEFAULT_DEVICES = [
   {
     id: '11111111-1111-1111-1111-111111111111',
-    name: 'QuickInk Partner Shop - Dhanmondi',
+    name: 'PrintKoro Partner Shop - Dhanmondi',
     type: 'shop',
     location: {
       address: 'House 23, Road 5, Dhanmondi, Dhaka-1205',
@@ -14,7 +14,7 @@ export const DEFAULT_DEVICES = [
   },
   {
     id: '22222222-2222-2222-2222-222222222222',
-    name: 'QuickInk Kiosk - Central Mall',
+    name: 'PrintKoro Kiosk - Central Mall',
     type: 'kiosk',
     location: {
       address: 'Level 1, Central Shopping Mall, Dhanmondi, Dhaka',
@@ -24,7 +24,7 @@ export const DEFAULT_DEVICES = [
   },
   {
     id: '33333333-3333-3333-3333-333333333333',
-    name: 'QuickInk Partner Shop - University Campus',
+    name: 'PrintKoro Partner Shop - University Campus',
     type: 'shop',
     location: {
       address: 'Near Central Library, University Campus, Dhaka',

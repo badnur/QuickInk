@@ -19,7 +19,7 @@ export default function DeviceQrModal({ isOpen, onClose, device }) {
 
   const printUrl = typeof window !== 'undefined'
     ? `${window.location.origin}/print?device=${device?.id}`
-    : `https://quickink.app/print?device=${device?.id}`
+    : `https://printkoro.com/print?device=${device?.id}`
 
   useEffect(() => {
     if (!device?.id) return
@@ -45,7 +45,7 @@ export default function DeviceQrModal({ isOpen, onClose, device }) {
   const handleDownload = () => {
     if (!qrDataUrl) return
     const link = document.createElement('a')
-    link.download = `QuickInk_Kiosk_QR_${device?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'Device'}.png`
+    link.download = `PrintKoro_Kiosk_QR_${device?.name?.replace(/[^a-zA-Z0-9]/g, '_') || 'Device'}.png`
     link.href = qrDataUrl
     link.click()
   }
@@ -74,10 +74,7 @@ export default function DeviceQrModal({ isOpen, onClose, device }) {
         {/* Printable Card Area */}
         <div ref={printRef} className="bg-white text-slate-900 p-5 rounded-2xl text-center shadow-inner my-2">
           <div className="flex items-center justify-center gap-1.5 mb-2">
-            <div className="w-6 h-6 rounded-lg bg-[#00bf63] text-slate-950 font-black text-xs flex items-center justify-center">
-              Q
-            </div>
-            <span className="font-extrabold text-sm tracking-tight text-slate-900">QuickInk</span>
+            <img src="/images/printkoro-logo.png" alt="PrintKoro" className="h-6 w-auto" />
             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-900 text-white uppercase">
               {device.type}
             </span>

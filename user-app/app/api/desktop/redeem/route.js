@@ -41,7 +41,7 @@ export async function POST(request) {
     if (error && error.message?.includes('Device with ID')) {
       const { error: seedErr } = await supabase.from('devices').upsert({
         id: device_id,
-        name: 'QuickInk Partner Shop - Dhanmondi',
+        name: 'PrintKoro Partner Shop - Dhanmondi',
         type: 'shop',
         status: 'online',
       })
@@ -86,7 +86,7 @@ export async function POST(request) {
       data = {
         success: true,
         print_job: otpRec.print_jobs || {},
-        device: { id: device_id, name: 'QuickInk Partner Shop' },
+        device: { id: device_id, name: 'PrintKoro Partner Shop' },
       }
       error = null
     }

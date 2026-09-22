@@ -57,10 +57,14 @@ export default function AdminLoginPage() {
 
       <div className="w-full max-w-md relative z-10">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-[#00bf63]/15 border border-[#00bf63]/30 flex items-center justify-center text-[#00bf63] font-black text-2xl mx-auto mb-3 shadow-lg shadow-[#00bf63]/10">
-            Q
+          <div className="flex justify-center mb-4">
+            <img 
+              src="/images/printkoro-logo-dark.png" 
+              alt="PrintKoro" 
+              className="h-9 w-auto"
+            />
           </div>
-          <h1 className="text-2xl font-black text-white tracking-tight">QuickInk Admin Portal</h1>
+          <h1 className="text-2xl font-black text-white tracking-tight">PrintKoro Admin Portal</h1>
           <p className="text-xs text-slate-400 mt-1">
             Fleet Operations & Kiosk Station Management
           </p>
@@ -138,7 +142,7 @@ export default function AdminLoginPage() {
                       <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
                       <Input
                         type="email"
-                        placeholder="admin@quickink.com"
+                        placeholder="admin@printkoro.com"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="pl-10 text-xs bg-slate-900 border-slate-800 text-white placeholder:text-slate-600 focus-visible:border-[#00bf63] rounded-xl h-11 shadow-inner"
@@ -185,7 +189,7 @@ export default function AdminLoginPage() {
                 href="/"
                 className="text-xs text-slate-400 hover:text-white transition-colors"
               >
-                ← Return to QuickInk Customer Site
+                ← Return to PrintKoro Customer Site
               </Link>
             </div>
           </CardContent>

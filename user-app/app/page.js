@@ -70,7 +70,7 @@ export default function HomePage() {
                       🖨️
                     </div>
                     <div>
-                      <h3 className="font-bold text-sm text-white">QuickInk Terminal</h3>
+                      <h3 className="font-bold text-sm text-white">PrintKoro Terminal</h3>
                       <p className="text-xs text-gray-400">Self-Service Station</p>
                     </div>
                   </div>
@@ -259,7 +259,7 @@ export default function HomePage() {
             Partner Program
           </span>
           <h2 className="text-3xl sm:text-4xl font-extrabold mb-3">
-            Host a QuickInk Station in Your Shop
+            Host a PrintKoro Station in Your Shop
           </h2>
           <p className="text-sm text-gray-400 mb-8 max-w-xl mx-auto">
             Zero equipment cost, automatic maintenance, and revenue share on every print order placed at your location.

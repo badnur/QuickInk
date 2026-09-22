@@ -5,8 +5,11 @@ import AdminLayoutClient from './AdminLayoutClient'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'QuickInk Admin Portal — Fleet & Kiosk Operations',
-  description: 'Manage QuickInk printing hardware, monitor live print orders, and analyze platform revenue.',
+  title: 'PrintKoro Admin Portal — Fleet & Kiosk Operations',
+  description: 'Manage PrintKoro printing hardware, monitor live print orders, and analyze platform revenue.',
+  icons: {
+    icon: '/icon.png',
+  },
 }
 
 export default function RootLayout({ children }) {

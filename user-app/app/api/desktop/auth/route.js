@@ -9,7 +9,7 @@ let memoryShopAccounts = []
 
 export const ADMIN_CONTACT = {
   phone: '01733398911',
-  email: 'help@quickink.net'
+  email: 'help@printkoro.com'
 }
 
 export function normalizePhone(p) {
@@ -56,7 +56,7 @@ export async function POST(request) {
 
       // Fire-and-forget: Send SMS without blocking the response
       const smsApiKey = '42fc1e917497409da3d3ffc7622e566e'
-      const smsMessage = encodeURIComponent(`Your QuickInk verification code is: ${code}. Valid for 10 minutes.`)
+      const smsMessage = encodeURIComponent(`Your PrintKoro verification code is: ${code}. Valid for 10 minutes.`)
       const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
 
       fetch(smsUrl)
@@ -164,7 +164,7 @@ export async function POST(request) {
           const { data: upDev, error: upErr } = await supabase
             .from('devices')
             .update({
-              name: type === 'kiosk' ? `QuickInk Kiosk — ${shop_name}` : `QuickInk Shop — ${shop_name}`,
+              name: type === 'kiosk' ? `PrintKoro Kiosk — ${shop_name}` : `PrintKoro Shop — ${shop_name}`,
               type: type === 'kiosk' ? 'kiosk' : 'shop',
               location: locationObj,
               status: 'offline',
@@ -179,7 +179,7 @@ export async function POST(request) {
             .from('devices')
             .insert([
               {
-                name: type === 'kiosk' ? `QuickInk Kiosk — ${shop_name}` : `QuickInk Shop — ${shop_name}`,
+                name: type === 'kiosk' ? `PrintKoro Kiosk — ${shop_name}` : `PrintKoro Shop — ${shop_name}`,
                 type: type === 'kiosk' ? 'kiosk' : 'shop',
                 location: locationObj,
                 status: 'offline', // Valid enum value
@@ -197,7 +197,7 @@ export async function POST(request) {
       if (!provisionedDevice) {
         provisionedDevice = {
           id: `dev-${Date.now()}`,
-          name: type === 'kiosk' ? `QuickInk Kiosk — ${shop_name}` : `QuickInk Shop — ${shop_name}`,
+          name: type === 'kiosk' ? `PrintKoro Kiosk — ${shop_name}` : `PrintKoro Shop — ${shop_name}`,
           type: type === 'kiosk' ? 'kiosk' : 'shop',
           location: locationObj,
           status: 'offline',
@@ -440,7 +440,7 @@ export async function POST(request) {
 
           if (dbDev && (dbDev.status === 'suspended' || dbDev.status === 'cancelled')) {
             isSuspended = true
-            suspensionReason = dbDev.location?.suspension_reason || 'Partnership cancelled by QuickInk administration due to policy compliance or account review.'
+            suspensionReason = dbDev.location?.suspension_reason || 'Partnership cancelled by PrintKoro administration due to policy compliance or account review.'
             suspendedAt = dbDev.location?.suspended_at || new Date().toISOString()
           }
         } catch (e) {
@@ -556,7 +556,7 @@ export async function POST(request) {
 
       // Send SMS
       const smsApiKey = '42fc1e917497409da3d3ffc7622e566e'
-      const smsMessage = encodeURIComponent(`QuickInk Password Reset: Your verification code is ${code}. Valid for 10 minutes. Do NOT share this code.`)
+      const smsMessage = encodeURIComponent(`PrintKoro Password Reset: Your verification code is ${code}. Valid for 10 minutes. Do NOT share this code.`)
       const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
       fetch(smsUrl)
         .then((r) => r.json())
@@ -679,7 +679,7 @@ async function resolveAccountStatus(phone, deviceId) {
 
       if (dev.status === 'suspended' || dev.status === 'cancelled') {
         currentStatus = 'suspended'
-        reason = dev.location?.suspension_reason || 'Partnership suspended by QuickInk administration'
+        reason = dev.location?.suspension_reason || 'Partnership suspended by PrintKoro administration'
         suspendedAt = dev.location?.suspended_at || ''
       } else if (partnerStatus === 'rejected') {
         currentStatus = 'rejected'
@@ -754,7 +754,7 @@ export async function GET(request) {
       return NextResponse.json(result)
     }
 
-    return NextResponse.json({ success: true, message: 'QuickInk Desktop Auth API Ready', contact: ADMIN_CONTACT })
+    return NextResponse.json({ success: true, message: 'PrintKoro Desktop Auth API Ready', contact: ADMIN_CONTACT })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

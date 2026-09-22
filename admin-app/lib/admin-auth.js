@@ -41,8 +41,8 @@ export async function authenticateAdmin({ email, password, pin }) {
   const MASTER_PIN = process.env.ADMIN_MASTER_PIN || process.env.NEXT_PUBLIC_ADMIN_PIN || '882314'
   if (pin && pin.trim() === MASTER_PIN) {
     const sessionUser = {
-      id: 'quickink-master-admin',
-      email: email || 'admin@quickink.net',
+      id: 'printkoro-master-admin',
+      email: email || 'admin@printkoro.com',
       name: 'System Administrator',
       role: 'superadmin',
       authMethod: 'master_pin',

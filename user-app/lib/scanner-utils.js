@@ -1,5 +1,5 @@
 /**
- * QuickInk Smart Scanner Utilities
+ * PrintKoro Smart Scanner Utilities
  * - 4-Point Perspective Transform (homography/triangle warp without heavy external libs)
  * - Document Image Clean & Enhancement Filters
  * - Multi-side Template Layout Compositors (ID Card, Admit Card 2-in-1, Full A4)

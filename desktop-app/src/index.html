@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quick Ink</title>
+  <title>PrintKoro Station POS & Kiosk Terminal</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 
@@ -28,7 +28,7 @@
             <path d="M3 5h4" />
             <path d="M17 19h4" />
           </svg>
-          <span>Quick Ink</span>
+          <span>PrintKoro</span>
         </div>
 
         <!-- Heading & Subtitle -->
@@ -107,7 +107,7 @@
         <!-- Connection / Cloud Status Indicator -->
         <div class="auth-conn-badge-wrap">
           <span class="auth-conn-dot" id="auth-conn-dot"></span>
-          <span class="auth-conn-label" id="auth-conn-label">QuickInk Cloud: Connected</span>
+          <span class="auth-conn-label" id="auth-conn-label">PrintKoro Cloud: Connected</span>
           <button type="button" id="btn-open-server-modal" class="auth-conn-gear-btn" title="Server / Cloud Connection Settings">⚙️</button>
         </div>
       </div>
@@ -450,7 +450,7 @@
         </div>
 
         <div class="auth-bottom-switch">
-          <span>Already registered with QuickInk?</span>
+          <span>Already registered with PrintKoro?</span>
           <button type="button" id="link-to-login" class="auth-switch-link">Sign In</button>
         </div>
       </div>
@@ -496,7 +496,7 @@
             <div class="lockdown-meta-item full-col">
               <span class="meta-label">Suspension Reason:</span>
               <div class="lockdown-reason-quote" id="lockdown-reason-text">
-                Partnership suspended by QuickInk administration due to compliance review or contract termination.
+                Partnership suspended by PrintKoro administration due to compliance review or contract termination.
               </div>
             </div>
             <div class="lockdown-meta-item full-col">
@@ -508,8 +508,8 @@
           <div class="lockdown-notice-box">
             <p><strong>Terminal Operating Rights Revoked:</strong> Customer OTP redemptions, direct document printing,
               and payout requests have been disabled for this terminal.</p>
-            <p class="mt-1">For reinstatement or contract inquiries, contact Quick Ink Partner Operations:
-              <strong>help@quickink.net</strong> or call Admin Emergency Contact: <strong>01733398911</strong>.</p>
+            <p class="mt-1">For reinstatement or contract inquiries, contact PrintKoro Partner Operations:
+              <strong>help@printkoro.com</strong> or call Admin Emergency Contact: <strong>01733398911</strong>.</p>
           </div>
 
           <div class="lockdown-actions-row">
@@ -604,7 +604,7 @@
               </div>
               <div class="contact-card">
                 <span class="contact-lbl">Support Email:</span>
-                <a href="mailto:help@quickink.net" class="contact-val email">help@quickink.net</a>
+                <a href="mailto:help@printkoro.com" class="contact-val email">help@printkoro.com</a>
               </div>
             </div>
           </div>
@@ -687,7 +687,7 @@
               </div>
               <div class="contact-card">
                 <span class="contact-lbl">Support Email:</span>
-                <a href="mailto:help@quickink.net" class="contact-val email">help@quickink.net</a>
+                <a href="mailto:help@printkoro.com" class="contact-val email">help@printkoro.com</a>
               </div>
             </div>
           </div>
@@ -712,13 +712,7 @@
       <header id="top-bar">
         <div class="brand-group">
           <div class="brand-logo">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00bf63" stroke-width="2.5"
-              stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 6 2 18 2 18 9"></polyline>
-              <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
-              <rect x="6" y="14" width="12" height="8"></rect>
-            </svg>
-            <span class="brand-title">QuickInk</span>
+            <img src="assets/printkoro-logo-dark.png" alt="PrintKoro" style="height: 22px; width: auto;" />
             <span class="badge-terminal">STATION POS</span>
           </div>
 
@@ -728,7 +722,7 @@
               <img id="header-avatar-img" class="hidden" alt="Logo" />
             </div>
             <div class="shop-meta" id="header-shop-meta">
-              <div class="shop-name-txt" id="header-shop-name">QuickInk Shop</div>
+              <div class="shop-name-txt" id="header-shop-name">PrintKoro Partner Shop</div>
               <div class="shop-owner-txt" id="header-owner-name">Partner</div>
             </div>
             <button id="btn-account-toggle" class="btn-account-chip" type="button">
@@ -765,7 +759,7 @@
             </svg>
           </div>
           <div class="update-info-text">
-            <span class="update-title" id="update-banner-title">QuickInk Update</span>
+            <span class="update-title" id="update-banner-title">PrintKoro Update</span>
             <span class="update-desc" id="update-banner-desc">Checking for updates...</span>
           </div>
           <div class="update-progress-bar hidden" id="update-progress-container">
@@ -1230,7 +1224,7 @@
                 <img id="modal-account-logo-img" class="hidden" alt="Logo" />
               </div>
               <div class="account-banner-meta">
-                <h3 id="modal-account-shop-name">QuickInk Shop</h3>
+                <h3 id="modal-account-shop-name">PrintKoro Partner Shop</h3>
                 <p id="modal-account-owner-name">Owner Name</p>
                 <span class="badge-pill" id="modal-account-type">Partner Shop</span>
               </div>
@@ -1285,13 +1279,13 @@
         <div class="modal-header">
           <div class="modal-title-group">
             <span class="badge-success">NETWORK CONFIGURATION</span>
-            <h2>QuickInk Server Connection</h2>
+            <h2>PrintKoro Server Connection</h2>
           </div>
           <button id="btn-close-server-modal" class="btn-close" type="button">✕</button>
         </div>
         <div class="modal-body" style="padding: 20px;">
           <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
-            QuickInk connects directly to the cloud for real-time authentication and printing across all devices.
+            PrintKoro connects directly to the cloud for real-time authentication and printing across all devices.
           </p>
 
           <div style="margin-bottom: 16px;">
