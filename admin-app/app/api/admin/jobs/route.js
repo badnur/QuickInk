@@ -1,24 +1,49 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
 
 export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/admin/jobs
- * List print jobs with filtering, search, and pagination
+ * List print jobs with filtering, search, and pagination.
+ * Fixed relation join on redeemed_by_device_id and valid columns.
  */
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status')
-    const search = searchParams.get('search')
+    const status = searchParams.get('status') || 'all'
+    const search = (searchParams.get('search') || '').trim()
     const limit = parseInt(searchParams.get('limit') || '50', 10)
+    const forceRefresh = searchParams.get('refresh') === 'true'
+
+    const cacheKey = `admin_jobs_${status}_${limit}`
+    if (!search && !forceRefresh) {
+      const cached = getCache(cacheKey)
+      if (cached) {
+        return NextResponse.json(cached)
+      }
+    }
 
     let query = supabase
       .from('print_jobs')
       .select(`
-        *,
-        devices (
+        id,
+        user_id,
+        file_path,
+        file_type,
+        copies,
+        color_mode,
+        duplex,
+        page_count,
+        status,
+        payment_type,
+        created_at,
+        expires_at,
+        redeemed_at,
+        redeemed_by_device_id,
+        printed_at,
+        devices:redeemed_by_device_id (
           id,
           name,
           type
@@ -33,28 +58,42 @@ export async function GET(request) {
       .order('created_at', { ascending: false })
       .limit(limit)
 
-    if (status && status !== 'all') {
+    if (status !== 'all') {
       query = query.eq('status', status)
     }
 
     const { data: jobs, error } = await query
 
     if (error) {
-      console.warn('Admin jobs query warning:', error.message)
-      // Fallback simple query without joins
+      console.warn('Admin jobs query warning, falling back:', error.message)
       const fallbackQuery = supabase
         .from('print_jobs')
-        .select('*')
+        .select('id, user_id, file_path, file_type, copies, color_mode, duplex, page_count, status, payment_type, created_at, expires_at, redeemed_at, redeemed_by_device_id, printed_at')
         .order('created_at', { ascending: false })
         .limit(limit)
       const { data: simpleJobs } = await fallbackQuery
-      return NextResponse.json({ success: true, jobs: simpleJobs || [] })
+      const formatted = (simpleJobs || []).map((j) => ({
+        ...j,
+        file_name: j.file_path ? j.file_path.split('/').pop().replace(/^[0-9]+_/, '') : 'Document.pdf',
+        amount: (j.page_count || 1) * (j.color_mode === 'color' ? 8 : 2) * (j.copies || 1),
+      }))
+      return NextResponse.json({ success: true, jobs: formatted, count: formatted.length })
     }
 
-    let filtered = jobs || []
+    const formattedJobs = (jobs || []).map((j) => {
+      const fileName = j.file_path ? j.file_path.split('/').pop().replace(/^[0-9]+_/, '') : 'Document.pdf'
+      const amount = (j.page_count || 1) * (j.color_mode === 'color' ? 8 : 2) * (j.copies || 1)
+      return {
+        ...j,
+        file_name: fileName,
+        amount,
+      }
+    })
 
-    if (search && search.trim()) {
-      const q = search.trim().toLowerCase()
+    let filtered = formattedJobs
+
+    if (search) {
+      const q = search.toLowerCase()
       filtered = filtered.filter((j) => {
         return (
           (j.id && j.id.toLowerCase().includes(q)) ||
@@ -65,7 +104,12 @@ export async function GET(request) {
       })
     }
 
-    return NextResponse.json({ success: true, jobs: filtered, count: filtered.length })
+    const payload = { success: true, jobs: filtered, count: filtered.length }
+    if (!search) {
+      setCache(cacheKey, payload, 5)
+    }
+
+    return NextResponse.json(payload)
   } catch (err) {
     console.error('Error fetching admin jobs:', err)
     return NextResponse.json({ error: 'Failed to fetch jobs', details: err.message }, { status: 500 })
@@ -102,6 +146,10 @@ export async function PATCH(request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    // Invalidate caches
+    invalidateCache('admin_jobs')
+    invalidateCache('admin_stats')
 
     return NextResponse.json({ success: true, job: data })
   } catch (err) {

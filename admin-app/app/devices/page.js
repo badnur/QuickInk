@@ -368,14 +368,14 @@ export default function AdminDevicesPage() {
 
           <Button
             onClick={() => setIsAddModalOpen(true)}
-            className="bg-[#00bf63] hover:bg-[#00a656] text-slate-950 font-bold text-xs h-9 px-4 rounded-xl shadow-lg shadow-[#00bf63]/20 flex items-center gap-1.5 self-start sm:self-auto"
+            className="bg-[#00bf63] hover:bg-[#00a656] text-slate-950 font-bold text-xs h-9 px-4 rounded-lg shadow-none flex items-center gap-1.5 self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" /> Provision New Station
           </Button>
         </div>
 
         {/* Pricing Zones Panel */}
-        <div className="bg-[#0d131f] border border-slate-800 rounded-2xl p-5">
+        <div className="bg-[#0d131f] border border-slate-800 rounded-xl p-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-[#00bf63]/15 border border-[#00bf63]/30 flex items-center justify-center">
@@ -461,7 +461,7 @@ export default function AdminDevicesPage() {
             return (
               <div
                 key={device.id}
-                className="bg-[#0d131f] border border-slate-800 rounded-2xl p-5 shadow-xl hover:border-slate-700 transition-all flex flex-col justify-between"
+                className="bg-[#0d131f] border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-colors flex flex-col justify-between"
               >
                 <div>
                   {/* Top Row: Type, Zone badge & Status Control */}
@@ -684,7 +684,7 @@ export default function AdminDevicesPage() {
       {/* Edit Station Modal */}
       {editingDevice && (
         <Dialog open={Boolean(editingDevice)} onOpenChange={() => setEditingDevice(null)}>
-          <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-md p-6 rounded-2xl shadow-2xl">
+          <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-md p-5 rounded-xl shadow-none">
             <DialogHeader>
               <DialogTitle className="text-base font-bold text-white">Configure Hardware Station</DialogTitle>
               <DialogDescription className="text-xs text-slate-400">
@@ -828,7 +828,7 @@ export default function AdminDevicesPage() {
 
       {/* Add New Device Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-md p-6 rounded-2xl shadow-2xl">
+        <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-md p-5 rounded-xl shadow-none">
           <DialogHeader>
             <DialogTitle className="text-lg font-bold text-white">Register Hardware Station</DialogTitle>
             <DialogDescription className="text-xs text-slate-400">
@@ -994,7 +994,7 @@ export default function AdminDevicesPage() {
                 type="button"
                 onClick={handleConfirmSuspension}
                 disabled={suspensionSubmitting || !suspensionReason.trim()}
-                className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs h-9 rounded-xl shadow-lg shadow-red-600/20"
+                className="bg-red-600 hover:bg-red-500 text-white font-bold text-xs h-9 rounded-lg shadow-none"
               >
                 {suspensionSubmitting ? 'Locking Station...' : 'Confirm Cancellation & Lock'}
               </Button>
@@ -1005,7 +1005,7 @@ export default function AdminDevicesPage() {
 
       {/* Pricing Zone Create / Edit Dialog */}
       <Dialog open={isTierModalOpen} onOpenChange={setIsTierModalOpen}>
-        <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-sm p-6 rounded-2xl shadow-2xl">
+        <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-sm p-5 rounded-xl shadow-none">
           <DialogHeader>
             <DialogTitle className="text-base font-bold text-white">
               {editingTier ? 'Edit Pricing Zone' : 'Create New Pricing Zone'}

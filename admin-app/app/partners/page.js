@@ -239,7 +239,7 @@ export default function AdminPartnersPage() {
         </div>
 
         {/* Applications List */}
-        <div className="bg-[#0d131f] border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="bg-[#0d131f] border border-slate-800 rounded-xl overflow-hidden">
           <div className="p-4 border-b border-slate-800 flex items-center justify-between">
             <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
               <FileCheck className="w-4 h-4 text-[#00bf63]" />
@@ -399,7 +399,7 @@ export default function AdminPartnersPage() {
       {/* Inspect Partner Application Modal */}
       {selectedPartner && (
         <Dialog open={Boolean(selectedPartner)} onOpenChange={() => setSelectedPartner(null)}>
-          <DialogContent className="max-w-xl bg-[#0d131f] border-slate-800 text-white p-6 rounded-2xl">
+          <DialogContent className="max-w-xl bg-[#0d131f] border border-slate-800 text-white p-5 rounded-xl shadow-none">
             <DialogHeader className="border-b border-slate-800 pb-3">
               <div className="flex items-center justify-between">
                 <div>
@@ -574,7 +574,7 @@ export default function AdminPartnersPage() {
       {/* Rejection Dialog */}
       {rejectingPartner && (
         <Dialog open={Boolean(rejectingPartner)} onOpenChange={() => setRejectingPartner(null)}>
-          <DialogContent className="max-w-md bg-[#0d131f] border-slate-800 text-white p-6 rounded-2xl">
+          <DialogContent className="max-w-md bg-[#0d131f] border border-slate-800 text-white p-5 rounded-xl shadow-none">
             <DialogHeader>
               <DialogTitle className="text-base font-bold text-white">Reject Application</DialogTitle>
               <DialogDescription className="text-xs text-slate-400">

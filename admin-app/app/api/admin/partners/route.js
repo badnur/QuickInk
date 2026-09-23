@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,8 +11,15 @@ export const dynamic = 'force-dynamic'
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url)
-    const status = searchParams.get('status')
-    const type = searchParams.get('type')
+    const status = searchParams.get('status') || 'all'
+    const type = searchParams.get('type') || 'all'
+    const forceRefresh = searchParams.get('refresh') === 'true'
+
+    const cacheKey = `admin_partners_${status}_${type}`
+    if (!forceRefresh) {
+      const cached = getCache(cacheKey)
+      if (cached) return NextResponse.json(cached)
+    }
 
     // Fetch both partners and devices in parallel for instant data availability
     const [{ data: partnersData }, { data: devicesData }] = await Promise.all([
@@ -95,7 +103,10 @@ export async function GET(request) {
     // Sort by created_at descending
     results.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
-    return NextResponse.json({ success: true, partners: results })
+    const payload = { success: true, partners: results }
+    setCache(cacheKey, payload, 8)
+
+    return NextResponse.json(payload)
   } catch (err) {
     console.error('Error fetching admin partners:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -196,6 +207,10 @@ export async function POST(request) {
       }
     }
 
+    invalidateCache('admin_partners')
+    invalidateCache('admin_devices')
+    invalidateCache('admin_stats')
+
     return NextResponse.json({
       success: true,
       message: `Station successfully provisioned & approved for ${shopName}`,
@@ -264,6 +279,10 @@ export async function PATCH(request) {
       }
     }
 
+    invalidateCache('admin_partners')
+    invalidateCache('admin_devices')
+    invalidateCache('admin_stats')
+
     return NextResponse.json({
       success: true,
       partner: {
@@ -294,6 +313,10 @@ export async function DELETE(request) {
       supabase.from('devices').delete().eq('id', id),
       supabase.from('partners').delete().eq('id', id),
     ])
+
+    invalidateCache('admin_partners')
+    invalidateCache('admin_devices')
+    invalidateCache('admin_stats')
 
     return NextResponse.json({ success: true, message: 'Application deleted successfully' })
   } catch (err) {

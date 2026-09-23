@@ -14,7 +14,7 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="scroll-smooth">
+    <html lang="en" className="dark scroll-smooth">
       <body className={`${inter.className} antialiased bg-[#090d16] text-slate-100`}>
         <AdminLayoutClient>
           {children}

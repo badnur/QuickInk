@@ -65,12 +65,12 @@ export default function DevicePerformanceModal({ device, isOpen, onClose }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-[#0d131f] border-slate-800 text-slate-100 p-6 rounded-2xl">
-        <DialogHeader className="border-b border-slate-800/80 pb-4">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-[#0d131f] border-slate-800 text-slate-100 p-5 rounded-xl shadow-none">
+        <DialogHeader className="border-b border-slate-800 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center flex-shrink-0">
-                {isKiosk ? <HardDrive className="w-5 h-5" /> : <Store className="w-5 h-5" />}
+              <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 text-[#00bf63] flex items-center justify-center flex-shrink-0">
+                {isKiosk ? <HardDrive className="w-4 h-4" /> : <Store className="w-4 h-4" />}
               </div>
               <div>
                 <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">

@@ -74,10 +74,10 @@ export default function AdminLayoutClient({ children }) {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#090d16] flex items-center justify-center text-slate-400 text-xs font-semibold">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-xl border-2 border-[#00bf63] border-t-transparent animate-spin" />
-          <span>Verifying PrintKoro Admin Credentials...</span>
+      <div className="min-h-screen bg-[#090d16] flex items-center justify-center text-slate-400 text-xs">
+        <div className="flex flex-col items-center gap-2">
+          <div className="w-5 h-5 rounded-full border-2 border-[#00bf63] border-t-transparent animate-spin" />
+          <span>Loading Admin Portal...</span>
         </div>
       </div>
     )
@@ -98,10 +98,10 @@ export default function AdminLayoutClient({ children }) {
       {isMobileMenuOpen && (
         <div className="fixed inset-0 z-50 md:hidden flex">
           <div
-            className="fixed inset-0 bg-black/70 backdrop-blur-xs"
+            className="fixed inset-0 bg-black/60"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="relative z-10 w-64 bg-[#0d131f] h-full shadow-2xl">
+          <div className="relative z-10 w-64 bg-[#0d131f] h-full border-r border-slate-800">
             <AdminSidebar
               user={adminUser}
               isConnected={isRealtimeConnected}

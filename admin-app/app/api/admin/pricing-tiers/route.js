@@ -1,14 +1,25 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
 
 export const dynamic = 'force-dynamic'
+
+const CACHE_KEY = 'admin_pricing_tiers'
 
 /**
  * GET /api/admin/pricing-tiers
  * Returns all pricing tiers ordered by name.
  */
-export async function GET() {
+export async function GET(request) {
   try {
+    const { searchParams } = new URL(request?.url || 'http://localhost')
+    const forceRefresh = searchParams.get('refresh') === 'true'
+
+    if (!forceRefresh) {
+      const cached = getCache(CACHE_KEY)
+      if (cached) return NextResponse.json(cached)
+    }
+
     const { data: tiers, error } = await supabase
       .from('pricing_tiers')
       .select('*')
@@ -18,7 +29,10 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, tiers: tiers || [] })
+    const payload = { success: true, tiers: tiers || [] }
+    setCache(CACHE_KEY, payload, 15)
+
+    return NextResponse.json(payload)
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
@@ -56,6 +70,9 @@ export async function POST(request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    invalidateCache('admin_pricing_tiers')
+    invalidateCache('admin_devices')
+
     return NextResponse.json({ success: true, tier: data }, { status: 201 })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -91,6 +108,9 @@ export async function PATCH(request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    invalidateCache('admin_pricing_tiers')
+    invalidateCache('admin_devices')
 
     return NextResponse.json({ success: true, tier: data })
   } catch (err) {
@@ -133,6 +153,9 @@ export async function DELETE(request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    invalidateCache('admin_pricing_tiers')
+    invalidateCache('admin_devices')
 
     return NextResponse.json({ success: true, message: 'Pricing tier deleted' })
   } catch (err) {

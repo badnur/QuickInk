@@ -58,12 +58,12 @@ export default function DeviceQrModal({ isOpen, onClose, device }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-md p-6 rounded-2xl shadow-2xl">
+      <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-md p-5 rounded-xl shadow-none">
         <DialogHeader>
-          <div className="w-10 h-10 rounded-xl bg-[#00bf63]/15 text-[#00bf63] flex items-center justify-center mb-2 border border-[#00bf63]/30">
-            <QrCode className="w-5 h-5" />
+          <div className="w-8 h-8 rounded-lg bg-slate-900 text-[#00bf63] flex items-center justify-center mb-1 border border-slate-800">
+            <QrCode className="w-4 h-4" />
           </div>
-          <DialogTitle className="text-lg font-bold text-white">
+          <DialogTitle className="text-base font-semibold text-white">
             Kiosk Print Station QR Code
           </DialogTitle>
           <DialogDescription className="text-xs text-slate-400">
@@ -72,7 +72,7 @@ export default function DeviceQrModal({ isOpen, onClose, device }) {
         </DialogHeader>
 
         {/* Printable Card Area */}
-        <div ref={printRef} className="bg-white text-slate-900 p-5 rounded-2xl text-center shadow-inner my-2">
+        <div ref={printRef} className="bg-white text-slate-900 p-5 rounded-xl text-center border border-slate-200 my-2">
           <div className="flex items-center justify-center gap-1.5 mb-2">
             <img src="/images/printkoro-logo.png" alt="PrintKoro" className="h-6 w-auto" />
             <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-slate-900 text-white uppercase">

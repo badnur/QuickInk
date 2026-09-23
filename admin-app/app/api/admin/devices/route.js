@@ -1,13 +1,24 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
 
 export const dynamic = 'force-dynamic'
+
+const CACHE_KEY = 'admin_devices'
 
 /**
  * GET /api/admin/devices
  */
-export async function GET() {
+export async function GET(request) {
   try {
+    const { searchParams } = new URL(request?.url || 'http://localhost')
+    const forceRefresh = searchParams.get('refresh') === 'true'
+
+    if (!forceRefresh) {
+      const cached = getCache(CACHE_KEY)
+      if (cached) return NextResponse.json(cached)
+    }
+
     const { data: devices, error } = await supabase
       .from('devices')
       .select(`
@@ -26,7 +37,10 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true, devices: devices || [] })
+    const payload = { success: true, devices: devices || [] }
+    setCache(CACHE_KEY, payload, 8)
+
+    return NextResponse.json(payload)
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
@@ -68,6 +82,9 @@ export async function POST(request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    invalidateCache('admin_devices')
+    invalidateCache('admin_stats')
+
     return NextResponse.json({ success: true, device: data }, { status: 201 })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -92,7 +109,6 @@ export async function PATCH(request) {
     if (status) updates.status = status
     if (type) updates.type = type
     if (location) updates.location = location
-    // Allow explicitly setting pricing_tier_id to null (removes zone assignment)
     if (pricing_tier_id !== undefined) updates.pricing_tier_id = pricing_tier_id || null
 
     const { data, error } = await supabase
@@ -105,6 +121,9 @@ export async function PATCH(request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    invalidateCache('admin_devices')
+    invalidateCache('admin_stats')
 
     return NextResponse.json({ success: true, device: data })
   } catch (err) {
@@ -132,6 +151,9 @@ export async function DELETE(request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    invalidateCache('admin_devices')
+    invalidateCache('admin_stats')
 
     return NextResponse.json({ success: true, message: 'Device removed successfully' })
   } catch (err) {
