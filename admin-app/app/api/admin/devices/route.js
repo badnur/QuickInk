@@ -10,7 +10,16 @@ export async function GET() {
   try {
     const { data: devices, error } = await supabase
       .from('devices')
-      .select('*')
+      .select(`
+        *,
+        pricing_tiers (
+          id,
+          name,
+          bw_price,
+          color_price,
+          is_default
+        )
+      `)
       .order('created_at', { ascending: false })
 
     if (error) {
@@ -30,7 +39,7 @@ export async function GET() {
 export async function POST(request) {
   try {
     const body = await request.json()
-    const { name, type = 'kiosk', address, phone, operating_hours = '24/7' } = body
+    const { name, type = 'kiosk', address, phone, operating_hours = '24/7', pricing_tier_id = null } = body
 
     if (!name || !address) {
       return NextResponse.json({ error: 'Name and address are required' }, { status: 400 })
@@ -45,14 +54,13 @@ export async function POST(request) {
 
     const { data, error } = await supabase
       .from('devices')
-      .insert([
-        {
-          name,
-          type: type === 'shop' ? 'shop' : 'kiosk',
-          location: locationObj,
-          status: 'online',
-        },
-      ])
+      .insert([{
+        name,
+        type: type === 'shop' ? 'shop' : 'kiosk',
+        location: locationObj,
+        status: 'online',
+        pricing_tier_id: pricing_tier_id || null,
+      }])
       .select()
       .single()
 
@@ -73,7 +81,7 @@ export async function POST(request) {
 export async function PATCH(request) {
   try {
     const body = await request.json()
-    const { id, name, status, type, location } = body
+    const { id, name, status, type, location, pricing_tier_id } = body
 
     if (!id) {
       return NextResponse.json({ error: 'Device ID is required' }, { status: 400 })
@@ -84,6 +92,8 @@ export async function PATCH(request) {
     if (status) updates.status = status
     if (type) updates.type = type
     if (location) updates.location = location
+    // Allow explicitly setting pricing_tier_id to null (removes zone assignment)
+    if (pricing_tier_id !== undefined) updates.pricing_tier_id = pricing_tier_id || null
 
     const { data, error } = await supabase
       .from('devices')

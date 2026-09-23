@@ -16,10 +16,19 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Please enter a valid 6-digit OTP code' }, { status: 400 })
     }
 
-    // Check if device is suspended by admin
+    // Check if device is suspended by admin; also fetch its pricing tier
     const { data: devCheck } = await supabase
       .from('devices')
-      .select('status, location')
+      .select(`
+        status,
+        location,
+        pricing_tiers (
+          id,
+          name,
+          bw_price,
+          color_price
+        )
+      `)
       .eq('id', device_id)
       .maybeSingle()
 
@@ -30,6 +39,12 @@ export async function POST(request) {
         reason: devCheck.location?.suspension_reason || 'Administrative partnership suspension'
       }, { status: 403 })
     }
+
+    // Resolve zone pricing (fall back to Standard if not assigned)
+    const zoneTier = devCheck?.pricing_tiers || null
+    const zoneBwPrice = zoneTier?.bw_price ?? 2.0
+    const zoneColorPrice = zoneTier?.color_price ?? 8.0
+    const zoneName = zoneTier?.name ?? 'Standard'
 
     // Call Supabase atomic redemption RPC
     let { data, error } = await supabase.rpc('redeem_otp', {
@@ -114,8 +129,8 @@ export async function POST(request) {
       }
     }
 
-    // Calculate display pricing if payment info missing
-    const unitPrice = colorMode === 'color' ? 8.0 : 2.0
+    // Calculate display pricing using zone-specific rates
+    const unitPrice = colorMode === 'color' ? zoneColorPrice : zoneBwPrice
     const calculatedAmount =
       paymentInfo?.amount ||
       ((data?.print_job?.page_count || 1) * unitPrice * (data?.print_job?.copies || 1)).toFixed(2)
@@ -201,6 +216,12 @@ export async function POST(request) {
         payment: paymentInfo || {
           method: data?.print_job?.payment_type,
           status: data?.print_job?.payment_type === 'online' ? 'completed' : 'pending',
+        },
+        // Zone pricing info — displayed on POS screen & used for cash collection
+        zone: {
+          name: zoneName,
+          bw_price: zoneBwPrice,
+          color_price: zoneColorPrice,
         },
       },
     })

@@ -91,6 +91,16 @@ function PrintOrderPageContent({ initialDeviceId }) {
   const [deviceInfo, setDeviceInfo] = useState(null)
   const [loadingDevice, setLoadingDevice] = useState(false)
 
+  // Zone/Tier pricing — updated when a device is selected via ?device= param
+  // Defaults to Standard pricing until a specific device zone is loaded
+  const [zonePrices, setZonePrices] = useState({
+    bw: 2.0,
+    color: 8.0,
+    tierName: 'Standard',
+    tierId: null,
+    isLoaded: false,  // false = using defaults (no device scanned yet)
+  })
+
   // Wizard Step: 1 = Hub & Upload, 2 = Preview & Range, 3 = Options, 4 = Ticket
   const [step, setStep] = useState(1)
 
@@ -168,10 +178,8 @@ function PrintOrderPageContent({ initialDeviceId }) {
     }
   }, [searchParams])
 
-  // Pricing constants (in BDT ৳)
-  const PRICE_BW = 2.0
-  const PRICE_COLOR = 8.0
-  const unitPrice = colorMode === 'color' ? PRICE_COLOR : PRICE_BW
+  // Dynamic zone pricing — falls back to Standard if no device selected
+  const unitPrice = colorMode === 'color' ? zonePrices.color : zonePrices.bw
 
   // Build effective page range string for API/print
   // Returns null when 'all pages', else a SumatraPDF-compatible range string like "2-20"
@@ -184,24 +192,41 @@ function PrintOrderPageContent({ initialDeviceId }) {
   const calculatedSheets = Math.max(1, Math.ceil(selectedPagesCount / pagesPerSheet))
   const totalPrice = (calculatedSheets * unitPrice * copies).toFixed(2)
 
-  // Fetch device details if visiting via kiosk QR code (?device=UUID)
+  // Fetch device details (+ zone pricing) if visiting via kiosk QR code (?device=UUID)
   useEffect(() => {
     if (!activeDeviceId) return
 
     async function fetchDevice() {
       setLoadingDevice(true)
       try {
-        const { data, error } = await supabase
-          .from('devices')
-          .select('*')
-          .eq('id', activeDeviceId)
-          .single()
+        // Use the machines API so we get the pricing tier join for free
+        const res = await fetch('/api/machines')
+        const json = await res.json()
+        const machine = json?.machines?.find((m) => m.id === activeDeviceId)
 
-        if (!error && data) {
-          setDeviceInfo(data)
-          // If kiosk terminal, force online payment (kiosk doesn't take cash)
-          if (data.type === 'kiosk') {
+        if (machine) {
+          setDeviceInfo(machine)
+          setZonePrices({
+            bw: parseFloat(machine.bw_price) || 2.0,
+            color: parseFloat(machine.color_price) || 8.0,
+            tierName: machine.tier_name || 'Standard',
+            tierId: machine.tier_id || null,
+            isLoaded: true,
+          })
+          // Kiosk terminals only accept online payment
+          if (machine.type === 'kiosk') {
             setPaymentMethod('online')
+          }
+        } else {
+          // Fallback: direct device query (no tier info)
+          const { data, error } = await supabase
+            .from('devices')
+            .select('*')
+            .eq('id', activeDeviceId)
+            .single()
+          if (!error && data) {
+            setDeviceInfo(data)
+            if (data.type === 'kiosk') setPaymentMethod('online')
           }
         }
       } catch (err) {
@@ -1468,6 +1493,28 @@ function PrintOrderPageContent({ initialDeviceId }) {
         {/* ========================================================================= */}
         {step === 3 && selectedFile && (
           <div className="space-y-3 animate-in fade-in duration-200">
+            {/* Pricing Zone Banner */}
+            <div className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs font-semibold ${
+              zonePrices.tierName === 'Campus'
+                ? 'bg-blue-50 border-blue-200 text-blue-700'
+                : zonePrices.tierName === 'Commercial'
+                ? 'bg-amber-50 border-amber-200 text-amber-700'
+                : 'bg-[#00bf63]/8 border-[#00bf63]/25 text-[#00bf63]'
+            }`}>
+              <span className="flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5" />
+                <span>
+                  {zonePrices.isLoaded
+                    ? <><strong>{zonePrices.tierName} Zone</strong> — ৳{zonePrices.bw.toFixed(2)} B&amp;W · ৳{zonePrices.color.toFixed(2)} Color</>  
+                    : <>Standard Rate — ৳{zonePrices.bw.toFixed(2)} B&amp;W · ৳{zonePrices.color.toFixed(2)} Color</>  
+                  }
+                </span>
+              </span>
+              {!zonePrices.isLoaded && (
+                <span className="text-[9px] font-normal opacity-70">Scan a QR to see shop pricing</span>
+              )}
+            </div>
+
             <Card className="bg-white border border-gray-200 rounded-2xl shadow-none p-5 space-y-4">
               {/* 1. Color Mode Toggle Cards */}
               <div>
@@ -1482,8 +1529,8 @@ function PrintOrderPageContent({ initialDeviceId }) {
                     }`}
                   >
                     <div className="text-xl mb-0.5">⬛</div>
-                    <b className="text-xs font-bold text-gray-900 block">Black & White</b>
-                    <span className="text-[11px] text-gray-500">৳{PRICE_BW.toFixed(2)}/page</span>
+                    <b className="text-xs font-bold text-gray-900 block">Black &amp; White</b>
+                    <span className="text-[11px] text-gray-500">৳{zonePrices.bw.toFixed(2)}/page</span>
                   </div>
 
                   <div
@@ -1499,7 +1546,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
                   >
                     <div className="text-xl mb-0.5">🌈</div>
                     <b className="text-xs font-bold text-gray-900 block">Color Print</b>
-                    <span className="text-[11px] text-gray-500">৳{PRICE_COLOR.toFixed(2)}/page</span>
+                    <span className="text-[11px] text-gray-500">৳{zonePrices.color.toFixed(2)}/page</span>
                   </div>
                 </div>
               </div>

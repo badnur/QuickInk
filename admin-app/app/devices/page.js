@@ -24,7 +24,10 @@ import {
   Settings,
   Ban,
   Unlock,
-  ShieldAlert
+  ShieldAlert,
+  Tag,
+  DollarSign,
+  Layers
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -57,12 +60,26 @@ export default function AdminDevicesPage() {
   const [suspensionReason, setSuspensionReason] = useState('')
   const [suspensionSubmitting, setSuspensionSubmitting] = useState(false)
 
+  const [pricingTiers, setPricingTiers] = useState([])
+  const [loadingTiers, setLoadingTiers] = useState(false)
+
+  // Tier management modal state
+  const [isTierModalOpen, setIsTierModalOpen] = useState(false)
+  const [editingTier, setEditingTier] = useState(null) // null = new, else existing tier
+  const [tierName, setTierName] = useState('')
+  const [tierDesc, setTierDesc] = useState('')
+  const [tierBw, setTierBw] = useState('2.00')
+  const [tierColor, setTierColor] = useState('8.00')
+  const [tierSubmitting, setTierSubmitting] = useState(false)
+  const [tierError, setTierError] = useState(null)
+
   // Form state for new device
   const [name, setName] = useState('')
   const [type, setType] = useState('kiosk')
   const [address, setAddress] = useState('')
   const [phone, setPhone] = useState('')
   const [hours, setHours] = useState('24/7 Automated')
+  const [newTierId, setNewTierId] = useState('')
   const [formSubmitting, setFormSubmitting] = useState(false)
   const [formError, setFormError] = useState(null)
 
@@ -75,6 +92,7 @@ export default function AdminDevicesPage() {
   const [editPhone, setEditPhone] = useState('')
   const [editSubPlan, setEditSubPlan] = useState('Pro SaaS')
   const [editSubStatus, setEditSubStatus] = useState('active')
+  const [editTierId, setEditTierId] = useState('')
   const [editSubmitting, setEditSubmitting] = useState(false)
 
   const fetchDevices = async () => {
@@ -93,8 +111,22 @@ export default function AdminDevicesPage() {
     }
   }
 
+  const fetchPricingTiers = async () => {
+    setLoadingTiers(true)
+    try {
+      const res = await fetch('/api/admin/pricing-tiers')
+      const data = await res.json()
+      if (data?.tiers) setPricingTiers(data.tiers)
+    } catch (err) {
+      console.error('Error fetching pricing tiers:', err)
+    } finally {
+      setLoadingTiers(false)
+    }
+  }
+
   useEffect(() => {
     fetchDevices()
+    fetchPricingTiers()
   }, [])
 
   const handleCreateDevice = async (e) => {
@@ -112,6 +144,7 @@ export default function AdminDevicesPage() {
           address,
           phone,
           operating_hours: hours,
+          pricing_tier_id: newTierId || null,
         }),
       })
       const data = await res.json()
@@ -122,6 +155,7 @@ export default function AdminDevicesPage() {
       setAddress('')
       setPhone('')
       setHours('24/7 Automated')
+      setNewTierId('')
       fetchDevices()
     } catch (err) {
       setFormError(err.message)
@@ -157,6 +191,7 @@ export default function AdminDevicesPage() {
     setEditPhone(loc.phone || '')
     setEditSubPlan(loc.subscription_plan || 'Pro SaaS')
     setEditSubStatus(loc.subscription_status || 'active')
+    setEditTierId(device.pricing_tier_id || '')
   }
 
   // Save device updates
@@ -184,6 +219,7 @@ export default function AdminDevicesPage() {
           status: editStatus,
           type: editType,
           location: updatedLocation,
+          pricing_tier_id: editTierId || null,
         }),
       })
 
@@ -338,6 +374,83 @@ export default function AdminDevicesPage() {
           </Button>
         </div>
 
+        {/* Pricing Zones Panel */}
+        <div className="bg-[#0d131f] border border-slate-800 rounded-2xl p-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-xl bg-[#00bf63]/15 border border-[#00bf63]/30 flex items-center justify-center">
+                <Tag className="w-4 h-4 text-[#00bf63]" />
+              </div>
+              <div>
+                <h2 className="text-sm font-bold text-white">Pricing Zones</h2>
+                <p className="text-[11px] text-slate-400">Each device can be assigned to a zone with custom BW &amp; Color rates</p>
+              </div>
+            </div>
+            <Button
+              onClick={() => {
+                setEditingTier(null)
+                setTierName('')
+                setTierDesc('')
+                setTierBw('2.00')
+                setTierColor('8.00')
+                setTierError(null)
+                setIsTierModalOpen(true)
+              }}
+              className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs h-8 px-3 rounded-xl flex items-center gap-1.5 shadow-none"
+            >
+              <Plus className="w-3.5 h-3.5" /> New Zone
+            </Button>
+          </div>
+
+          {loadingTiers ? (
+            <div className="text-xs text-slate-400 text-center py-4">Loading pricing zones...</div>
+          ) : pricingTiers.length === 0 ? (
+            <div className="text-xs text-slate-500 text-center py-4">No pricing zones configured yet. Run the migration SQL to seed default zones.</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {pricingTiers.map((tier) => (
+                <div key={tier.id} className={`rounded-xl border p-3.5 relative ${
+                  tier.is_default
+                    ? 'bg-[#00bf63]/8 border-[#00bf63]/30'
+                    : 'bg-slate-900/60 border-slate-800'
+                }`}>
+                  {tier.is_default && (
+                    <span className="absolute top-2 right-2 text-[9px] font-bold text-[#00bf63] bg-[#00bf63]/15 px-1.5 py-0.5 rounded uppercase">Default</span>
+                  )}
+                  <div className="font-bold text-white text-sm mb-0.5">{tier.name}</div>
+                  <div className="text-[10px] text-slate-400 mb-2 line-clamp-1">{tier.description || '—'}</div>
+                  <div className="flex gap-3 text-xs">
+                    <div>
+                      <span className="text-slate-500 text-[10px] block">B&W</span>
+                      <span className="font-bold text-white">৳{parseFloat(tier.bw_price).toFixed(2)}</span>
+                    </div>
+                    <div>
+                      <span className="text-slate-500 text-[10px] block">Color</span>
+                      <span className="font-bold text-white">৳{parseFloat(tier.color_price).toFixed(2)}</span>
+                    </div>
+                    <div className="ml-auto flex items-end gap-1">
+                      <button
+                        onClick={() => {
+                          setEditingTier(tier)
+                          setTierName(tier.name)
+                          setTierDesc(tier.description || '')
+                          setTierBw(String(tier.bw_price))
+                          setTierColor(String(tier.color_price))
+                          setTierError(null)
+                          setIsTierModalOpen(true)
+                        }}
+                        className="text-[10px] text-slate-400 hover:text-white px-1.5 py-0.5 rounded border border-slate-700 hover:border-slate-600"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Devices Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
           {devices.map((device) => {
@@ -351,18 +464,32 @@ export default function AdminDevicesPage() {
                 className="bg-[#0d131f] border border-slate-800 rounded-2xl p-5 shadow-xl hover:border-slate-700 transition-all flex flex-col justify-between"
               >
                 <div>
-                  {/* Top Row: Type & Status Control */}
+                  {/* Top Row: Type, Zone badge & Status Control */}
                   <div className="flex items-center justify-between mb-3">
-                    <span
-                      className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
-                        isKiosk
-                          ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
-                          : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
-                      }`}
-                    >
-                      {isKiosk ? <HardDrive className="w-2.5 h-2.5" /> : <Store className="w-2.5 h-2.5" />}
-                      {device.type}
-                    </span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span
+                        className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
+                          isKiosk
+                            ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
+                            : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                        }`}
+                      >
+                        {isKiosk ? <HardDrive className="w-2.5 h-2.5" /> : <Store className="w-2.5 h-2.5" />}
+                        {device.type}
+                      </span>
+                      {/* Zone pricing badge */}
+                      {device.pricing_tiers?.name && (
+                        <span className={`inline-flex items-center gap-0.5 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider border ${
+                          device.pricing_tiers.name === 'Campus'
+                            ? 'bg-blue-500/10 text-blue-300 border-blue-500/25'
+                            : device.pricing_tiers.name === 'Commercial'
+                            ? 'bg-amber-500/10 text-amber-300 border-amber-500/25'
+                            : 'bg-[#00bf63]/10 text-[#00bf63] border-[#00bf63]/25'
+                        }`}>
+                          <Tag className="w-2 h-2" /> {device.pricing_tiers.name}
+                        </span>
+                      )}
+                    </div>
 
                     <button
                       onClick={() => handleToggleStatus(device)}
@@ -660,6 +787,23 @@ export default function AdminDevicesPage() {
                 </div>
               </div>
 
+              {/* Pricing Zone */}
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Pricing Zone</label>
+                <select
+                  value={editTierId}
+                  onChange={(e) => setEditTierId(e.target.value)}
+                  className="w-full text-xs h-9 bg-slate-900 border border-slate-800 rounded-xl text-white px-2.5 outline-none"
+                >
+                  <option value="">Standard (Platform Default)</option>
+                  {pricingTiers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.name} — ৳{parseFloat(t.bw_price).toFixed(2)} B&W / ৳{parseFloat(t.color_price).toFixed(2)} Color
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="pt-2 flex justify-end gap-2">
                 <Button
                   type="button"
@@ -770,6 +914,23 @@ export default function AdminDevicesPage() {
               </div>
             </div>
 
+            {/* Pricing Zone */}
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1">Pricing Zone</label>
+              <select
+                value={newTierId}
+                onChange={(e) => setNewTierId(e.target.value)}
+                className="w-full text-xs h-9 bg-slate-900 border border-slate-800 rounded-xl text-white px-2.5 outline-none"
+              >
+                <option value="">Standard (Platform Default)</option>
+                {pricingTiers.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.name} — ৳{parseFloat(t.bw_price).toFixed(2)} B&W / ৳{parseFloat(t.color_price).toFixed(2)} Color
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <Button
               type="submit"
               disabled={formSubmitting}
@@ -841,6 +1002,132 @@ export default function AdminDevicesPage() {
           </DialogContent>
         </Dialog>
       )}
+
+      {/* Pricing Zone Create / Edit Dialog */}
+      <Dialog open={isTierModalOpen} onOpenChange={setIsTierModalOpen}>
+        <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-sm p-6 rounded-2xl shadow-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-white">
+              {editingTier ? 'Edit Pricing Zone' : 'Create New Pricing Zone'}
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-400">
+              Set the per-sheet B&W and Color rates for this zone. Changes apply immediately to all devices in this zone.
+            </DialogDescription>
+          </DialogHeader>
+
+          {tierError && (
+            <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs">{tierError}</div>
+          )}
+
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault()
+              setTierError(null)
+              setTierSubmitting(true)
+              try {
+                const payload = {
+                  name: tierName.trim(),
+                  description: tierDesc.trim(),
+                  bw_price: parseFloat(tierBw),
+                  color_price: parseFloat(tierColor),
+                }
+                const method = editingTier ? 'PATCH' : 'POST'
+                const body = editingTier ? { ...payload, id: editingTier.id } : payload
+                const res = await fetch('/api/admin/pricing-tiers', {
+                  method,
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(body),
+                })
+                const data = await res.json()
+                if (!res.ok) throw new Error(data.error || 'Failed to save pricing zone')
+                setIsTierModalOpen(false)
+                fetchPricingTiers()
+              } catch (err) {
+                setTierError(err.message)
+              } finally {
+                setTierSubmitting(false)
+              }
+            }}
+            className="space-y-3 mt-2"
+          >
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1">Zone Name</label>
+              <Input
+                placeholder="e.g. Campus, Commercial, Airport"
+                value={tierName}
+                onChange={(e) => setTierName(e.target.value)}
+                className="text-xs bg-slate-900 border-slate-800 text-white h-9 rounded-xl focus-visible:border-[#00bf63]"
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-slate-300 block mb-1">Description (optional)</label>
+              <Input
+                placeholder="e.g. Discounted rate for student zones"
+                value={tierDesc}
+                onChange={(e) => setTierDesc(e.target.value)}
+                className="text-xs bg-slate-900 border-slate-800 text-white h-9 rounded-xl"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">B&W Price (৳/sheet)</label>
+                <Input
+                  type="number"
+                  step="0.50"
+                  min="0.50"
+                  value={tierBw}
+                  onChange={(e) => setTierBw(e.target.value)}
+                  className="text-xs bg-slate-900 border-slate-800 text-white h-9 rounded-xl"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-300 block mb-1">Color Price (৳/sheet)</label>
+                <Input
+                  type="number"
+                  step="0.50"
+                  min="1"
+                  value={tierColor}
+                  onChange={(e) => setTierColor(e.target.value)}
+                  className="text-xs bg-slate-900 border-slate-800 text-white h-9 rounded-xl"
+                  required
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-1">
+              {editingTier && !editingTier.is_default && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-red-500/30 text-red-400 hover:bg-red-500/10 text-xs h-9 rounded-xl"
+                  onClick={async () => {
+                    if (!confirm(`Delete zone "${editingTier.name}"? Devices using it will revert to the default tier.`)) return
+                    try {
+                      await fetch(`/api/admin/pricing-tiers?id=${editingTier.id}`, { method: 'DELETE' })
+                      setIsTierModalOpen(false)
+                      fetchPricingTiers()
+                    } catch (err) {
+                      setTierError(err.message)
+                    }
+                  }}
+                >
+                  Delete Zone
+                </Button>
+              )}
+              <div className="flex-1" />
+              <Button type="button" variant="outline" onClick={() => setIsTierModalOpen(false)}
+                className="border-slate-800 text-slate-400 text-xs h-9 rounded-xl"
+              >Cancel</Button>
+              <Button type="submit" disabled={tierSubmitting}
+                className="bg-[#00bf63] hover:bg-[#00a656] text-slate-950 font-bold text-xs h-9 px-4 rounded-xl"
+              >
+                {tierSubmitting ? 'Saving...' : editingTier ? 'Save Zone' : 'Create Zone'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
