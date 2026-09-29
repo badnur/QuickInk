@@ -28,7 +28,11 @@ import {
   Download
 } from 'lucide-react'
 
+import Link from 'next/link'
+import { useLanguage } from '@/context/LanguageContext'
+
 export default function PartnerPage() {
+  const { t, lang } = useLanguage()
   const [activeTab, setActiveTab] = useState('shop') // 'shop' | 'kiosk' | 'track'
   
   // Shop form data
@@ -179,30 +183,30 @@ export default function PartnerPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-5xl text-center">
           <Badge className="mb-4 bg-[#00bf63]/15 text-[#00bf63] border border-[#00bf63]/30 font-semibold px-3 py-1 text-xs">
             <Sparkles className="h-3.5 w-3.5 mr-1.5 inline" />
-            PrintKoro Network Expansion
+            {t('partnerPage.tag', 'PrintKoro Network Expansion')}
           </Badge>
           <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight mb-4 text-white">
-            Register Your Shop or Host a Kiosk
+            {t('partnerPage.title', 'Register Your Shop or Host a Kiosk')}
           </h1>
           <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto mb-8 leading-relaxed">
-            Turn your store or empty 2×2 ft space into guaranteed recurring income with Bangladesh’s premier self-service cloud printing network.
+            {t('partnerPage.subtitle', 'Turn your store or empty 2×2 ft space into guaranteed recurring income with Bangladesh’s premier self-service cloud printing network.')}
           </p>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl mx-auto text-left">
             <div className="bg-[#111827] border border-slate-800 rounded-xl p-4">
-              <div className="text-xs text-slate-400">Shop Earnings</div>
-              <div className="text-2xl font-bold text-[#00bf63]">100% Retained</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Keep full customer print revenue</div>
+              <div className="text-xs text-slate-400">{lang === 'bn' ? 'দোকানের আয়' : 'Shop Earnings'}</div>
+              <div className="text-2xl font-bold text-[#00bf63]">{lang === 'bn' ? '১০০% নিশ্চিত' : '100% Retained'}</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">{lang === 'bn' ? 'প্রতি প্রিন্টে সম্পূর্ণ রেভিনিউ' : 'Keep full customer print revenue'}</div>
             </div>
             <div className="bg-[#111827] border border-slate-800 rounded-xl p-4">
-              <div className="text-xs text-slate-400">Terminal Software</div>
-              <div className="text-2xl font-bold text-white">Desktop POS</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Pairs directly with counter printers</div>
+              <div className="text-xs text-slate-400">{lang === 'bn' ? 'টার্মিনাল সফটওয়্যার' : 'Terminal Software'}</div>
+              <div className="text-2xl font-bold text-white">{lang === 'bn' ? 'ডেস্কটপ POS' : 'Desktop POS'}</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">{lang === 'bn' ? 'বিদ্যমান প্রিন্টারের সাথে সরাসরি কানেক্ট' : 'Pairs directly with counter printers'}</div>
             </div>
             <div className="bg-[#111827] border border-slate-800 rounded-xl p-4">
-              <div className="text-xs text-slate-400">Approval Time</div>
-              <div className="text-2xl font-bold text-white">Instant / 24h</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Quick verification & provisioning</div>
+              <div className="text-xs text-slate-400">{lang === 'bn' ? 'ভেরিফিকেশন সময়' : 'Approval Time'}</div>
+              <div className="text-2xl font-bold text-white">{lang === 'bn' ? 'তাৎক্ষণিক / ২৪ ঘণ্টা' : 'Instant / 24h'}</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">{lang === 'bn' ? 'দ্রুত অনুমোদন ও সেটআপ' : 'Quick verification & provisioning'}</div>
             </div>
           </div>
 
@@ -213,7 +217,7 @@ export default function PartnerPage() {
               className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#00bf63] hover:bg-[#00a855] text-black font-extrabold text-sm shadow-xl shadow-[#00bf63]/20 transition-all hover:scale-[1.02]"
             >
               <Download className="w-5 h-5 text-black" />
-              <span>Download PrintKoro Desktop App (.exe)</span>
+              <span>{lang === 'bn' ? 'প্রিন্টকোরো ডেস্কটপ অ্যাপ ডাউনলোড (.exe)' : 'Download PrintKoro Desktop App (.exe)'}</span>
             </a>
             <span className="text-xs text-slate-400">Windows 10 / 11 • Version 1.0.0 • Auto-Updating</span>
           </div>
@@ -231,9 +235,11 @@ export default function PartnerPage() {
                 <HardDrive className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-white">Already Approved or Setting Up Your Counter PC?</h3>
+                <h3 className="text-sm font-bold text-white">
+                  {lang === 'bn' ? 'ইতিমধ্যে নিবন্ধিত বা কাউন্টারে সেটআপ করতে চান?' : 'Already Approved or Setting Up Your Counter PC?'}
+                </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Download the PrintKoro Desktop Terminal on your shop computer and log in with your registered phone number.
+                  {lang === 'bn' ? 'দোকানের কম্পিউটারে প্রিন্টকোরো টার্মিনাল ডাউনলোড করে মোবাইল নম্বর দিয়ে লগইন করুন।' : 'Download the PrintKoro Desktop Terminal on your shop computer and log in with your registered phone number.'}
                 </p>
               </div>
             </div>
@@ -242,7 +248,7 @@ export default function PartnerPage() {
               className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00bf63] hover:bg-[#00a855] text-black font-bold text-xs shadow-sm transition-all hover:scale-[1.02]"
             >
               <Download className="w-4 h-4 text-black" />
-              <span>Download Installer (.exe)</span>
+              <span>{lang === 'bn' ? 'ডাউনলোড ইনস্টলার (.exe)' : 'Download Installer (.exe)'}</span>
             </a>
           </div>
 
@@ -257,7 +263,7 @@ export default function PartnerPage() {
               }`}
             >
               <Store className="w-4 h-4 text-[#00bf63]" />
-              <span>Partner Shop</span>
+              <span>{t('partnerPage.tabShop', 'Partner Shop')}</span>
             </button>
 
             <button
@@ -269,7 +275,7 @@ export default function PartnerPage() {
               }`}
             >
               <HardDrive className="w-4 h-4 text-[#00bf63]" />
-              <span>Host a Kiosk</span>
+              <span>{t('partnerPage.tabKiosk', 'Host a Kiosk')}</span>
             </button>
 
             <button
@@ -281,7 +287,7 @@ export default function PartnerPage() {
               }`}
             >
               <Search className="w-4 h-4 text-[#00bf63]" />
-              <span>Track Status</span>
+              <span>{t('partnerPage.tabTrack', 'Track Status')}</span>
             </button>
           </div>
 
@@ -335,14 +341,14 @@ export default function PartnerPage() {
                   <div>
                     <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
                       <Store className="w-5 h-5 text-[#00bf63]" />
-                      Partner Print Shop Registration
+                      {t('partnerPage.shopHeading', 'Partner Print Shop Registration')}
                     </CardTitle>
                     <p className="text-xs text-slate-500 mt-1">
-                      For print shop, stationery store, and cyber café owners with physical storefronts.
+                      {t('partnerPage.shopSub', 'For print shop, stationery store, and cyber café owners with physical storefronts.')}
                     </p>
                   </div>
                   <Badge className="bg-emerald-100 text-emerald-800 font-bold text-[11px] border-emerald-200">
-                    40% Payout
+                    {lang === 'bn' ? 'আকর্ষণীয় লাভ' : '40% Payout'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -350,22 +356,26 @@ export default function PartnerPage() {
                 <form onSubmit={handleShopSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="shop_name" className="text-xs font-semibold text-slate-700">Shop / Store Name *</Label>
+                      <Label htmlFor="shop_name" className="text-xs font-semibold text-slate-700">
+                        {t('partnerPage.shopNameLabel', 'Shop / Store Name *')}
+                      </Label>
                       <Input
                         id="shop_name"
                         required
-                        placeholder="e.g. Modern Xerox & Stationery"
+                        placeholder={lang === 'bn' ? 'যেমন: মডার্ন জেরক্স অ্যান্ড স্টেশনারি' : 'e.g. Modern Xerox & Stationery'}
                         value={shopForm.shop_name}
                         onChange={(e) => setShopForm({ ...shopForm, shop_name: e.target.value })}
                         className="mt-1 text-xs sm:text-sm h-10 border-slate-200 rounded-lg"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="owner_name" className="text-xs font-semibold text-slate-700">Owner / Manager Name *</Label>
+                      <Label htmlFor="owner_name" className="text-xs font-semibold text-slate-700">
+                        {t('partnerPage.nameLabel', 'Owner / Manager Name *')}
+                      </Label>
                       <Input
                         id="owner_name"
                         required
-                        placeholder="e.g. Rafiqul Islam"
+                        placeholder={lang === 'bn' ? 'যেমন: রফিকুল ইসলাম' : 'e.g. Rafiqul Islam'}
                         value={shopForm.name}
                         onChange={(e) => setShopForm({ ...shopForm, name: e.target.value })}
                         className="mt-1 text-xs sm:text-sm h-10 border-slate-200 rounded-lg"
@@ -375,7 +385,9 @@ export default function PartnerPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="phone" className="text-xs font-semibold text-slate-700">Mobile / WhatsApp Number *</Label>
+                      <Label htmlFor="phone" className="text-xs font-semibold text-slate-700">
+                        {t('partnerPage.phoneLabel', 'Mobile / WhatsApp Number *')}
+                      </Label>
                       <Input
                         id="phone"
                         required
@@ -386,7 +398,9 @@ export default function PartnerPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="email" className="text-xs font-semibold text-slate-700">Email Address (Optional)</Label>
+                      <Label htmlFor="email" className="text-xs font-semibold text-slate-700">
+                        {t('partnerPage.emailLabel', 'Email Address (Optional)')}
+                      </Label>
                       <Input
                         id="email"
                         type="email"
@@ -399,11 +413,13 @@ export default function PartnerPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="location" className="text-xs font-semibold text-slate-700">Shop Physical Address *</Label>
+                    <Label htmlFor="location" className="text-xs font-semibold text-slate-700">
+                      {t('partnerPage.locationLabel', 'Shop Physical Address *')}
+                    </Label>
                     <Textarea
                       id="location"
                       required
-                      placeholder="e.g. Shop 4B, Central Super Market, Dhanmondi 27, Dhaka"
+                      placeholder={lang === 'bn' ? 'যেমন: দোকান নং ৪বি, সেন্ট্রাল সুপার মার্কেট, ধানমন্ডি ২৭, ঢাকা' : 'e.g. Shop 4B, Central Super Market, Dhanmondi 27, Dhaka'}
                       rows={2}
                       value={shopForm.location}
                       onChange={(e) => setShopForm({ ...shopForm, location: e.target.value })}
@@ -413,7 +429,9 @@ export default function PartnerPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div>
-                      <Label htmlFor="city" className="text-xs font-semibold text-slate-700">City / District *</Label>
+                      <Label htmlFor="city" className="text-xs font-semibold text-slate-700">
+                        {t('partnerPage.cityLabel', 'City / District *')}
+                      </Label>
                       <Input
                         id="city"
                         required
@@ -423,7 +441,9 @@ export default function PartnerPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="operating_hours" className="text-xs font-semibold text-slate-700">Operating Hours</Label>
+                      <Label htmlFor="operating_hours" className="text-xs font-semibold text-slate-700">
+                        {t('partnerPage.hoursLabel', 'Operating Hours')}
+                      </Label>
                       <Input
                         id="operating_hours"
                         placeholder="09:00 AM - 10:00 PM"
@@ -433,10 +453,12 @@ export default function PartnerPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="daily_footfall" className="text-xs font-semibold text-slate-700">Estimated Daily Customers</Label>
+                      <Label htmlFor="daily_footfall" className="text-xs font-semibold text-slate-700">
+                        {t('partnerPage.footfallLabel', 'Estimated Daily Customers')}
+                      </Label>
                       <Input
                         id="daily_footfall"
-                        placeholder="e.g. 100 - 200 / day"
+                        placeholder={lang === 'bn' ? 'যেমন: ১০০ - ২০০ জন / দিন' : 'e.g. 100 - 200 / day'}
                         value={shopForm.daily_footfall}
                         onChange={(e) => setShopForm({ ...shopForm, daily_footfall: e.target.value })}
                         className="mt-1 text-xs sm:text-sm h-10 border-slate-200 rounded-lg"
@@ -445,7 +467,9 @@ export default function PartnerPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="printer_model" className="text-xs font-semibold text-slate-700">Existing Connected Printers (Optional)</Label>
+                    <Label htmlFor="printer_model" className="text-xs font-semibold text-slate-700">
+                      {t('partnerPage.printerModelLabel', 'Existing Connected Printers (Optional)')}
+                    </Label>
                     <Input
                       id="printer_model"
                       placeholder="e.g. Epson L130, Canon LBP2900, HP LaserJet Pro"
@@ -453,7 +477,9 @@ export default function PartnerPage() {
                       onChange={(e) => setShopForm({ ...shopForm, printer_model: e.target.value })}
                       className="mt-1 text-xs sm:text-sm h-10 border-slate-200 rounded-lg"
                     />
-                    <p className="text-[11px] text-slate-500 mt-1">If you already have printers, our desktop software pairs directly with them.</p>
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      {lang === 'bn' ? 'আপনার দোকানে প্রিন্টার থাকলে আমাদের ডেস্কটপ সফটওয়্যার সরাসরি তার সাথে যুক্ত হয়ে যায়।' : 'If you already have printers, our desktop software pairs directly with them.'}
+                    </p>
                   </div>
 
                   <Button
@@ -461,7 +487,7 @@ export default function PartnerPage() {
                     disabled={loading}
                     className="w-full h-11 text-sm font-semibold bg-[#00bf63] hover:bg-[#00a656] text-white rounded-xl mt-4"
                   >
-                    {loading ? 'Submitting Registration...' : 'Submit Shop Application'}
+                    {loading ? (lang === 'bn' ? 'আবেদন জমা হচ্ছে...' : 'Submitting Registration...') : t('partnerPage.submitShopBtn', 'Submit Shop Application')}
                   </Button>
                 </form>
               </CardContent>
@@ -478,14 +504,14 @@ export default function PartnerPage() {
                   <div>
                     <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
                       <HardDrive className="w-5 h-5 text-[#00bf63]" />
-                      Self-Service Kiosk Host Station Request
+                      {t('partnerPage.kioskHeading', 'Self-Service Kiosk Host Station Request')}
                     </CardTitle>
                     <p className="text-xs text-slate-500 mt-1">
-                      For universities, commercial malls, hospitals, tech parks, and co-working spaces.
+                      {t('partnerPage.kioskSub', 'For universities, commercial malls, hospitals, tech parks, and co-working spaces.')}
                     </p>
                   </div>
                   <Badge className="bg-blue-100 text-blue-800 font-bold text-[11px] border-blue-200">
-                    Zero Hardware Cost
+                    {lang === 'bn' ? 'শূন্য মেশিন খরচ' : 'Zero Hardware Cost'}
                   </Badge>
                 </div>
               </CardHeader>
@@ -493,22 +519,26 @@ export default function PartnerPage() {
                 <form onSubmit={handleKioskSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="venue_name" className="text-xs font-semibold text-slate-700">Venue / Institution Name *</Label>
+                      <Label htmlFor="venue_name" className="text-xs font-semibold text-slate-700">
+                        {lang === 'bn' ? 'প্রতিষ্ঠান বা ভেন্যুর নাম *' : 'Venue / Institution Name *'}
+                      </Label>
                       <Input
                         id="venue_name"
                         required
-                        placeholder="e.g. North South University Cafeteria"
+                        placeholder={lang === 'bn' ? 'যেমন: ঢাকা বিশ্ববিদ্যালয় ক্যাফেটেরিয়া' : 'e.g. North South University Cafeteria'}
                         value={kioskForm.shop_name}
                         onChange={(e) => setKioskForm({ ...kioskForm, shop_name: e.target.value })}
                         className="mt-1 text-xs sm:text-sm h-10 border-slate-200 rounded-lg"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="kiosk_contact" className="text-xs font-semibold text-slate-700">Contact Person & Title *</Label>
+                      <Label htmlFor="kiosk_contact" className="text-xs font-semibold text-slate-700">
+                        {lang === 'bn' ? 'দায়িত্বশীল কর্মকর্তার নাম ও পদবী *' : 'Contact Person & Title *'}
+                      </Label>
                       <Input
                         id="kiosk_contact"
                         required
-                        placeholder="e.g. Tanvir Ahmed (Facilities Manager)"
+                        placeholder={lang === 'bn' ? 'যেমন: তানভীর আহমেদ (ফ্যাসিলিটি ম্যানেজার)' : 'e.g. Tanvir Ahmed (Facilities Manager)'}
                         value={kioskForm.name}
                         onChange={(e) => setKioskForm({ ...kioskForm, name: e.target.value })}
                         className="mt-1 text-xs sm:text-sm h-10 border-slate-200 rounded-lg"
@@ -518,7 +548,9 @@ export default function PartnerPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="kiosk_phone" className="text-xs font-semibold text-slate-700">Official Mobile Number *</Label>
+                      <Label htmlFor="kiosk_phone" className="text-xs font-semibold text-slate-700">
+                        {t('partnerPage.phoneLabel', 'Official Mobile Number *')}
+                      </Label>
                       <Input
                         id="kiosk_phone"
                         required
@@ -529,7 +561,9 @@ export default function PartnerPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="kiosk_email" className="text-xs font-semibold text-slate-700">Official Email *</Label>
+                      <Label htmlFor="kiosk_email" className="text-xs font-semibold text-slate-700">
+                        {t('partnerPage.emailLabel', 'Official Email *')}
+                      </Label>
                       <Input
                         id="kiosk_email"
                         type="email"
@@ -543,11 +577,13 @@ export default function PartnerPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="kiosk_location" className="text-xs font-semibold text-slate-700">Exact Placement Location & Address *</Label>
+                    <Label htmlFor="kiosk_location" className="text-xs font-semibold text-slate-700">
+                      {lang === 'bn' ? 'নির্দিষ্ট অবস্থান ও ঠিকানা *' : 'Exact Placement Location & Address *'}
+                    </Label>
                     <Textarea
                       id="kiosk_location"
                       required
-                      placeholder="e.g. Ground Floor, Building 8, Main Student Lounge, Bashundhara R/A, Dhaka"
+                      placeholder={lang === 'bn' ? 'যেমন: নিচতলা, ভবন ৮, কেন্দ্রীয় স্টুডেন্ট লাউঞ্জ' : 'e.g. Ground Floor, Building 8, Main Student Lounge, Bashundhara R/A, Dhaka'}
                       rows={2}
                       value={kioskForm.location}
                       onChange={(e) => setKioskForm({ ...kioskForm, location: e.target.value })}
@@ -557,26 +593,30 @@ export default function PartnerPage() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="space_type" className="text-xs font-semibold text-slate-700">Venue Category *</Label>
+                      <Label htmlFor="space_type" className="text-xs font-semibold text-slate-700">
+                        {t('partnerPage.spaceTypeLabel', 'Venue Category *')}
+                      </Label>
                       <select
                         id="space_type"
                         className="mt-1 w-full text-xs sm:text-sm h-10 px-3 bg-white border border-slate-200 rounded-lg outline-none focus:border-[#00bf63]"
                         value={kioskForm.space_type}
                         onChange={(e) => setKioskForm({ ...kioskForm, space_type: e.target.value })}
                       >
-                        <option value="University / Campus">University / Campus</option>
-                        <option value="Shopping Mall / Retail Hub">Shopping Mall / Retail Hub</option>
-                        <option value="Hospital / Diagnostic Center">Hospital / Diagnostic Center</option>
-                        <option value="Commercial Tech Park / Coworking">Commercial Tech Park / Coworking</option>
-                        <option value="Government / Public Service Center">Government / Public Service Center</option>
+                        <option value="University / Campus">{lang === 'bn' ? 'বিশ্ববিদ্যালয় / ক্যাম্পাস' : 'University / Campus'}</option>
+                        <option value="Shopping Mall / Retail Hub">{lang === 'bn' ? 'শপিং মল / মার্কেট' : 'Shopping Mall / Retail Hub'}</option>
+                        <option value="Hospital / Diagnostic Center">{lang === 'bn' ? 'হাসপাতাল / ডায়াগনস্টিক সেন্টার' : 'Hospital / Diagnostic Center'}</option>
+                        <option value="Commercial Tech Park / Coworking">{lang === 'bn' ? 'টেক পার্ক / কো-ওয়ার্কিং স্পেস' : 'Commercial Tech Park / Coworking'}</option>
+                        <option value="Government / Public Service Center">{lang === 'bn' ? 'সরকারি / পাবলিক সেবা কেন্দ্র' : 'Government / Public Service Center'}</option>
                       </select>
                     </div>
 
                     <div>
-                      <Label htmlFor="kiosk_footfall" className="text-xs font-semibold text-slate-700">Estimated Daily Footfall</Label>
+                      <Label htmlFor="kiosk_footfall" className="text-xs font-semibold text-slate-700">
+                        {t('partnerPage.footfallLabel', 'Estimated Daily Footfall')}
+                      </Label>
                       <Input
                         id="kiosk_footfall"
-                        placeholder="e.g. 1,000+ daily visitors"
+                        placeholder={lang === 'bn' ? 'যেমন: ১,০০০+ দৈনিক শিক্ষার্থী বা দর্শনার্থী' : 'e.g. 1,000+ daily visitors'}
                         value={kioskForm.daily_footfall}
                         onChange={(e) => setKioskForm({ ...kioskForm, daily_footfall: e.target.value })}
                         className="mt-1 text-xs sm:text-sm h-10 border-slate-200 rounded-lg"
@@ -594,7 +634,7 @@ export default function PartnerPage() {
                         className="w-4 h-4 text-[#00bf63] rounded border-slate-300 focus:ring-[#00bf63]"
                       />
                       <label htmlFor="kiosk_power" className="text-xs font-medium text-slate-700 cursor-pointer">
-                        Standard 220V power socket and reliable Wi-Fi / 4G coverage available at installation spot.
+                        {lang === 'bn' ? 'প্রস্তাবিত জায়গায় সাধারণ ২২০ ভোল্ট বিদ্যুৎ সকেট এবং নির্ভরযোগ্য ওয়াইফাই/৪জি নেটওয়ার্ক রয়েছে।' : 'Standard 220V power socket and reliable Wi-Fi / 4G coverage available at installation spot.'}
                       </label>
                     </div>
                   </div>
@@ -604,7 +644,7 @@ export default function PartnerPage() {
                     disabled={loading}
                     className="w-full h-11 text-sm font-semibold bg-[#00bf63] hover:bg-[#00a656] text-white rounded-xl mt-4"
                   >
-                    {loading ? 'Submitting Kiosk Request...' : 'Submit Kiosk Location Request'}
+                    {loading ? (lang === 'bn' ? 'আবেদন পাঠানো হচ্ছে...' : 'Submitting Kiosk Request...') : t('partnerPage.submitKioskBtn', 'Submit Kiosk Location Request')}
                   </Button>
                 </form>
               </CardContent>
@@ -620,10 +660,10 @@ export default function PartnerPage() {
                 <CardHeader className="bg-slate-50/70 border-b border-slate-100 p-6">
                   <CardTitle className="text-lg font-bold text-slate-900 flex items-center gap-2">
                     <FileCheck className="w-5 h-5 text-[#00bf63]" />
-                    Track Registration Progress
+                    {t('partnerPage.trackHeading', 'Track Registration Progress')}
                   </CardTitle>
                   <p className="text-xs text-slate-500 mt-1">
-                    Enter your application reference code (e.g. QIK-REG-849201) or registered mobile number.
+                    {t('partnerPage.trackSub', 'Enter your application reference code (e.g. QIK-REG-849201) or registered mobile number.')}
                   </p>
                 </CardHeader>
                 <CardContent className="p-6">
@@ -632,7 +672,7 @@ export default function PartnerPage() {
                       <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
                       <Input
                         required
-                        placeholder="Enter Reference ID (QIK-REG-...) or Phone (017...)"
+                        placeholder={lang === 'bn' ? 'রেফারেন্স আইডি (QIK-REG-...) বা মোবাইল নম্বর দিন' : 'Enter Reference ID (QIK-REG-...) or Phone (017...)'}
                         value={trackQuery}
                         onChange={(e) => setTrackQuery(e.target.value)}
                         className="pl-10 text-xs sm:text-sm h-11 border-slate-200 rounded-xl"
@@ -643,7 +683,7 @@ export default function PartnerPage() {
                       disabled={trackLoading}
                       className="h-11 px-6 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs sm:text-sm rounded-xl"
                     >
-                      {trackLoading ? 'Searching...' : 'Check Status'}
+                      {trackLoading ? (lang === 'bn' ? 'অনুসন্ধান হচ্ছে...' : 'Searching...') : t('partnerPage.trackSearchBtn', 'Check Status')}
                     </Button>
                   </form>
 
@@ -677,9 +717,9 @@ export default function PartnerPage() {
                       <p className="text-xs text-slate-500 mt-0.5">{trackResult.location}</p>
                     </div>
                     <div className="text-right">
-                      <div className="text-xs text-slate-400">Application Type</div>
+                      <div className="text-xs text-slate-400">{lang === 'bn' ? 'আবেদনের ধরন' : 'Application Type'}</div>
                       <div className="text-sm font-bold text-slate-800 uppercase tracking-wide">
-                        {trackResult.type === 'kiosk' ? 'Automated Kiosk' : 'Partner Shop'}
+                        {trackResult.type === 'kiosk' ? (lang === 'bn' ? 'স্মার্ট কিয়স্ক' : 'Automated Kiosk') : (lang === 'bn' ? 'পার্টনার শপ' : 'Partner Shop')}
                       </div>
                     </div>
                   </div>
@@ -691,8 +731,12 @@ export default function PartnerPage() {
                         <div className="w-6 h-6 mx-auto rounded-full bg-[#00bf63] text-white flex items-center justify-center text-xs font-bold mb-1">
                           ✓
                         </div>
-                        <div className="text-xs font-bold text-slate-900">Application Received</div>
-                        <div className="text-[10px] text-slate-500 mt-0.5">Submitted via web</div>
+                        <div className="text-xs font-bold text-slate-900">
+                          {lang === 'bn' ? 'আবেদন গৃহীত' : 'Application Received'}
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          {lang === 'bn' ? 'অনলাইনে জমাকৃত' : 'Submitted via web'}
+                        </div>
                       </div>
 
                       <div className={`p-3 rounded-xl border ${
@@ -707,9 +751,11 @@ export default function PartnerPage() {
                         }`}>
                           {trackResult.status !== 'pending' ? '✓' : '2'}
                         </div>
-                        <div className="text-xs font-bold text-slate-900">Admin Review</div>
+                        <div className="text-xs font-bold text-slate-900">
+                          {lang === 'bn' ? 'টিম পর্যালোচনা' : 'Admin Review'}
+                        </div>
                         <div className="text-[10px] text-slate-500 mt-0.5">
-                          {trackResult.status === 'pending' ? 'Under verification' : 'Verified'}
+                          {trackResult.status === 'pending' ? (lang === 'bn' ? 'যাচাই করা হচ্ছে' : 'Under verification') : (lang === 'bn' ? 'যাচাই সম্পন্ন' : 'Verified')}
                         </div>
                       </div>
 
@@ -729,13 +775,15 @@ export default function PartnerPage() {
                         }`}>
                           {trackResult.status === 'approved' ? '✓' : trackResult.status === 'rejected' ? '✕' : '3'}
                         </div>
-                        <div className="text-xs font-bold text-slate-900">Station Provisioned</div>
+                        <div className="text-xs font-bold text-slate-900">
+                          {lang === 'bn' ? 'স্টেশন প্রস্তুত' : 'Station Provisioned'}
+                        </div>
                         <div className="text-[10px] text-slate-500 mt-0.5">
                           {trackResult.status === 'approved'
-                            ? 'Ready for Desktop POS'
+                            ? (lang === 'bn' ? 'ডেস্কটপ POS সক্রিয়' : 'Ready for Desktop POS')
                             : trackResult.status === 'rejected'
-                            ? 'Not approved'
-                            : 'Awaiting decision'}
+                            ? (lang === 'bn' ? 'অনুমোদিত নয়' : 'Not approved')
+                            : (lang === 'bn' ? 'সিদ্ধান্তের অপেক্ষায়' : 'Awaiting decision')}
                         </div>
                       </div>
                     </div>
@@ -745,11 +793,10 @@ export default function PartnerPage() {
                       <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl space-y-2">
                         <div className="flex items-center gap-2 text-emerald-900 font-bold text-sm">
                           <CheckCircle className="w-4 h-4 text-[#00bf63]" />
-                          Congratulations! Your Station has been Approved & Provisioned
+                          {lang === 'bn' ? 'অভিনন্দন! আপনার স্টেশন অনুমোদিত ও চালু হয়েছে' : 'Congratulations! Your Station has been Approved & Provisioned'}
                         </div>
                         <p className="text-xs text-slate-700 leading-relaxed">
-                          Your PrintKoro Desktop terminal profile has been set up. Our operations team is contacting you at{' '}
-                          <strong>{trackResult.phone}</strong> to deliver your pairing key or dispatch our field technician with the self-service hardware.
+                          {lang === 'bn' ? `আপনার প্রিন্টকোরো ডেস্কটপ টার্মিনাল প্রোফাইল সেটআপ করা হয়েছে। আমাদের টিম ${trackResult.phone} নম্বরে যোগাযোগ করে সফটওয়্যার পেয়ারিং এবং সেটআপ সম্পন্ন করবে।` : `Your PrintKoro Desktop terminal profile has been set up. Our operations team is contacting you at ${trackResult.phone} to deliver your pairing key or dispatch our field technician with the self-service hardware.`}
                         </p>
                         <div className="pt-2">
                           <a
@@ -757,7 +804,7 @@ export default function PartnerPage() {
                             className="inline-flex items-center gap-2 px-4 py-2 bg-[#00bf63] hover:bg-[#00a855] text-white font-semibold text-xs rounded-lg transition-colors shadow-sm"
                           >
                             <Download className="w-4 h-4" />
-                            Download PrintKoro Desktop App (.exe)
+                            {lang === 'bn' ? 'ডেস্কটপ অ্যাপ ডাউনলোড (.exe)' : 'Download PrintKoro Desktop App (.exe)'}
                           </a>
                         </div>
                       </div>
@@ -765,9 +812,11 @@ export default function PartnerPage() {
 
                     {trackResult.status === 'pending' && (
                       <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                        <div className="text-xs font-bold text-slate-800">Next Step: Field Verification</div>
+                        <div className="text-xs font-bold text-slate-800">
+                          {lang === 'bn' ? 'পরবর্তী ধাপ: তথ্য যাচাইকরণ' : 'Next Step: Field Verification'}
+                        </div>
                         <p className="text-xs text-slate-500 leading-relaxed">
-                          Our operations manager will call you within 24 hours to verify space feasibility and schedule installation.
+                          {lang === 'bn' ? 'আমাদের অপারেশন টিম ২৪ ঘণ্টার মধ্যে আপনার সাথে যোগাযোগ করে স্থান যাচাই ও ইনস্টলেশন শিডিউল চূড়ান্ত করবে।' : 'Our operations manager will call you within 24 hours to verify space feasibility and schedule installation.'}
                         </p>
                       </div>
                     )}

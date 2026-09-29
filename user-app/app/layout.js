@@ -1,8 +1,14 @@
-import { Inter } from 'next/font/google'
+import { Inter, Hind_Siliguri } from 'next/font/google'
 import './globals.css'
 import Navbar from '@/components/Navbar'
+import { LanguageProvider } from '@/context/LanguageContext'
 
-const inter = Inter({ subsets: ['latin'] })
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
+const hindSiliguri = Hind_Siliguri({
+  subsets: ['bengali'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-bangla',
+})
 
 export const metadata = {
   title: 'PrintKoro — Print Anything, Anytime, Near You in Bangladesh',
@@ -14,12 +20,14 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <body className={`${inter.className} antialiased`}>
-        <Navbar />
-        <main className="min-h-screen pt-20">
-          {children}
-        </main>
+    <html lang="bn" className="scroll-smooth">
+      <body className={`${inter.variable} ${hindSiliguri.variable} font-sans antialiased text-gray-900 bg-white selection:bg-[#00bf63]/20 selection:text-[#00bf63]`}>
+        <LanguageProvider>
+          <Navbar />
+          <main className="min-h-screen pt-20">
+            {children}
+          </main>
+        </LanguageProvider>
       </body>
     </html>
   )

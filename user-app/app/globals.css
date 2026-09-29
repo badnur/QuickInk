@@ -5,6 +5,7 @@
   --color-primary-hover: #00a656;
   --color-primary-light: #e6f9ef;
   --color-brand: #00bf63;
+  --font-sans: var(--font-bangla), var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 @layer base {

@@ -10,6 +10,7 @@ import PassportPhotoModal from '@/components/print/PassportPhotoModal'
 import IdCardScannerModal from '@/components/print/IdCardScannerModal'
 import { playCompletionChime } from '@/lib/audio-chime'
 import { loadPdfDocument, renderPdfPageToDataUrl, slicePdfBlob, fastScanPdfPages, mergeFilesToPdf } from '@/lib/pdf-utils'
+import { useLanguage } from '@/context/LanguageContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -84,6 +85,7 @@ export default function PrintOrderPage({ initialDeviceId = null }) {
 }
 
 function PrintOrderPageContent({ initialDeviceId }) {
+  const { t, lang, toBengaliNumber } = useLanguage()
   const searchParams = useSearchParams()
   const activeDeviceId = initialDeviceId || searchParams.get('device')
 
@@ -651,10 +653,10 @@ function PrintOrderPageContent({ initialDeviceId }) {
         {/* ========================================================================= */}
         <div className="flex items-center justify-between px-2 mb-6">
           {[
-            { num: 1, label: 'Upload' },
-            { num: 2, label: 'Preview' },
-            { num: 3, label: 'Options' },
-            { num: 4, label: 'Ticket' },
+            { num: 1, label: lang === 'bn' ? 'আপলোড' : 'Upload' },
+            { num: 2, label: lang === 'bn' ? 'প্রিভিউ' : 'Preview' },
+            { num: 3, label: lang === 'bn' ? 'অপশন' : 'Options' },
+            { num: 4, label: lang === 'bn' ? 'টিকেট' : 'Ticket' },
           ].map((s, idx, arr) => {
             const isDone = step > s.num
             const isActive = step === s.num
@@ -857,8 +859,12 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 <div className="w-10 h-10 rounded-xl bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center mx-auto mb-2 text-xl font-bold">
                   📄
                 </div>
-                <b className="text-xs font-bold text-gray-900 block leading-tight">Document Print</b>
-                <span className="text-[10px] text-gray-500 block mt-1">PDF, Word, Images</span>
+                <b className="text-xs font-bold text-gray-900 block leading-tight">
+                  {lang === 'bn' ? 'ডকুমেন্ট প্রিন্ট' : 'Document Print'}
+                </b>
+                <span className="text-[10px] text-gray-500 block mt-1">
+                  {lang === 'bn' ? 'PDF, Word, ছবি ফাইল' : 'PDF, Word, Images'}
+                </span>
               </Card>
 
               {/* 2. Smart Scanner */}
@@ -873,8 +879,12 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 <div className="w-10 h-10 rounded-xl bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center mx-auto mb-2 text-xl font-bold">
                   📸
                 </div>
-                <b className="text-xs font-bold text-gray-900 block leading-tight">Smart Scanner</b>
-                <span className="text-[10px] text-gray-500 block mt-1">Perspective crop & auto-straighten</span>
+                <b className="text-xs font-bold text-gray-900 block leading-tight">
+                  {lang === 'bn' ? 'স্মার্ট স্ক্যানার' : 'Smart Scanner'}
+                </b>
+                <span className="text-[10px] text-gray-500 block mt-1">
+                  {lang === 'bn' ? 'অটো-ক্রপ ও ছায়া দূরীকরণ' : 'Perspective crop & auto-straighten'}
+                </span>
               </Card>
 
               {/* 3. Mini Print (N-in-1 Paper Saver) */}
@@ -888,8 +898,12 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 <div className="w-10 h-10 rounded-xl bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center mx-auto mb-2 text-xl font-bold">
                   🗒️
                 </div>
-                <b className="text-xs font-bold text-gray-900 block leading-tight">Mini Print (N-in-1)</b>
-                <span className="text-[10px] text-gray-500 block mt-1">2, 4, 6 pages per sheet</span>
+                <b className="text-xs font-bold text-gray-900 block leading-tight">
+                  {lang === 'bn' ? 'মিনি প্রিন্ট (N-in-1)' : 'Mini Print (N-in-1)'}
+                </b>
+                <span className="text-[10px] text-gray-500 block mt-1">
+                  {lang === 'bn' ? '২, ৪, ৬ পেজ এক শিটে' : '2, 4, 6 pages per sheet'}
+                </span>
               </Card>
 
               {/* 4. Passport / 4×6 Photo Grid */}
@@ -903,8 +917,12 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 <div className="w-10 h-10 rounded-xl bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center mx-auto mb-2 text-xl font-bold">
                   📷
                 </div>
-                <b className="text-xs font-bold text-gray-900 block leading-tight">Passport Photo Grid</b>
-                <span className="text-[10px] text-gray-500 block mt-1">4, 6, 8, 12 photos with guides</span>
+                <b className="text-xs font-bold text-gray-900 block leading-tight">
+                  {lang === 'bn' ? 'পাসপোর্ট ফটো গ্রিড' : 'Passport Photo Grid'}
+                </b>
+                <span className="text-[10px] text-gray-500 block mt-1">
+                  {lang === 'bn' ? '৪, ৬, ৮ বা ১২ কপি ফটো' : '4, 6, 8, 12 photos with guides'}
+                </span>
               </Card>
 
               {/* 5. ID Card 2-in-1 Photocopy */}
@@ -920,9 +938,11 @@ function PrintOrderPageContent({ initialDeviceId }) {
                   🆔
                 </div>
                 <div className="min-w-0 flex-1">
-                  <b className="text-xs font-bold text-gray-900 block">ID Card 2-in-1 Photocopy</b>
+                  <b className="text-xs font-bold text-gray-900 block">
+                    {lang === 'bn' ? 'আইডি কার্ড ২-ইন-১ ফটোকপি' : 'ID Card 2-in-1 Photocopy'}
+                  </b>
                   <span className="text-[11px] text-gray-500 block mt-0.5">
-                    Combine Front & Back with perspective crop on 1 A4 page
+                    {lang === 'bn' ? 'উভয় পিঠ সোজা করে ১টি A4 পাতায় কম্বাইন করুন' : 'Combine Front & Back with perspective crop on 1 A4 page'}
                   </span>
                 </div>
                 <ChevronRight className="w-4 h-4 text-gray-400" />
@@ -938,10 +958,14 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 <div className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center mb-2">
                   <Upload className="h-5 w-5" />
                 </div>
-                <h4 className="text-sm font-bold text-gray-900 mb-0.5">Or Choose Local File</h4>
-                <p className="text-xs text-gray-500 mb-2.5">PDF, DOCX, JPG, PNG up to 20MB</p>
+                <h4 className="text-sm font-bold text-gray-900 mb-0.5">
+                  {lang === 'bn' ? 'অথবা সরাসরি ফাইল আপলোড করুন' : 'Or Choose Local File'}
+                </h4>
+                <p className="text-xs text-gray-500 mb-2.5">
+                  {lang === 'bn' ? 'PDF, DOCX, JPG, PNG (সর্বোচ্চ ২০MB)' : 'PDF, DOCX, JPG, PNG up to 20MB'}
+                </p>
                 <span className="inline-flex items-center gap-1 bg-gray-100 text-gray-700 text-xs font-medium px-3 py-1 rounded-lg border border-gray-200">
-                  Browse Files <ChevronRight className="h-3 w-3" />
+                  {lang === 'bn' ? 'ফাইল সিলেক্ট করুন' : 'Browse Files'} <ChevronRight className="h-3 w-3" />
                 </span>
               </CardContent>
             </Card>
