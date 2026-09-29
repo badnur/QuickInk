@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
+import { logAdminAction } from '@/lib/audit-logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -118,20 +119,115 @@ export async function GET(request) {
 
 /**
  * PATCH /api/admin/jobs
- * Update print job status or details
+ * Incident Management: Update status, issue refund, extend OTP, or reroute station
  */
 export async function PATCH(request) {
   try {
-    const body = await request.json()
-    const { jobId, status } = body
+    const adminEmail = request.headers.get('x-admin-email') || 'superadmin@printkoro.com'
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1'
 
-    if (!jobId || !status) {
-      return NextResponse.json({ error: 'jobId and status are required' }, { status: 400 })
+    const body = await request.json()
+    const { jobId, status, action, targetDeviceId, refundReason } = body
+
+    if (!jobId) {
+      return NextResponse.json({ error: 'jobId is required' }, { status: 400 })
+    }
+
+    // 1. Action: Issue Instant Refund
+    if (action === 'REFUND_JOB') {
+      const { data, error } = await supabase
+        .from('print_jobs')
+        .update({
+          status: 'cancelled',
+          payment_status: 'refunded',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', jobId)
+        .select()
+        .single()
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      await logAdminAction({
+        actorEmail: adminEmail,
+        action: 'JOB_REFUND_ISSUED',
+        resourceType: 'print_job',
+        resourceId: jobId,
+        details: { refundReason: refundReason || 'Customer requested via support' },
+        ip,
+      })
+
+      invalidateCache('admin_jobs')
+      invalidateCache('admin_stats')
+      return NextResponse.json({ success: true, message: 'Print job refunded and marked cancelled', job: data })
+    }
+
+    // 2. Action: Extend OTP Validity by 24 hours
+    if (action === 'EXTEND_OTP') {
+      const newExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      const { data: otpData, error: otpError } = await supabase
+        .from('otps')
+        .update({ expires_at: newExpiry, used: false })
+        .eq('job_id', jobId)
+        .select()
+
+      if (otpError) {
+        return NextResponse.json({ error: otpError.message }, { status: 500 })
+      }
+
+      await logAdminAction({
+        actorEmail: adminEmail,
+        action: 'JOB_OTP_EXTENDED',
+        resourceType: 'print_job',
+        resourceId: jobId,
+        details: { extendedTo: newExpiry },
+        ip,
+      })
+
+      invalidateCache('admin_jobs')
+      return NextResponse.json({ success: true, message: 'OTP expiration extended by 24 hours', otps: otpData })
+    }
+
+    // 3. Action: Reroute print job to alternative device
+    if (action === 'REROUTE_DEVICE' && targetDeviceId) {
+      const { data, error } = await supabase
+        .from('print_jobs')
+        .update({
+          redeemed_by_device_id: targetDeviceId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', jobId)
+        .select()
+        .single()
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 })
+      }
+
+      await logAdminAction({
+        actorEmail: adminEmail,
+        action: 'JOB_REROUTED_DEVICE',
+        resourceType: 'print_job',
+        resourceId: jobId,
+        details: { targetDeviceId },
+        ip,
+      })
+
+      invalidateCache('admin_jobs')
+      return NextResponse.json({ success: true, message: 'Job successfully rerouted to new station', job: data })
+    }
+
+    // 4. Standard Status Update
+    if (!status) {
+      return NextResponse.json({ error: 'Status or specific action is required' }, { status: 400 })
     }
 
     const updateData = { status }
-    if (status === 'printed') {
+    if (status === 'printed' || status === 'completed') {
       updateData.printed_at = new Date().toISOString()
+      updateData.status = 'completed'
     } else if (status === 'redeemed') {
       updateData.redeemed_at = new Date().toISOString()
     }
@@ -147,7 +243,15 @@ export async function PATCH(request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // Invalidate caches
+    await logAdminAction({
+      actorEmail: adminEmail,
+      action: 'JOB_STATUS_CHANGE',
+      resourceType: 'print_job',
+      resourceId: jobId,
+      details: { newStatus: status },
+      ip,
+    })
+
     invalidateCache('admin_jobs')
     invalidateCache('admin_stats')
 

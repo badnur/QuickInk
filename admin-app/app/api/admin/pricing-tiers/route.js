@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
+import { logAdminAction } from '@/lib/audit-logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -70,6 +71,13 @@ export async function POST(request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    await logAdminAction({
+      action: 'PRICING_TIER_CREATE',
+      resourceType: 'pricing_tier',
+      resourceId: data.id,
+      details: { name: data.name, bw_price: data.bw_price, color_price: data.color_price },
+    })
+
     invalidateCache('admin_pricing_tiers')
     invalidateCache('admin_devices')
 
@@ -108,6 +116,13 @@ export async function PATCH(request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    await logAdminAction({
+      action: 'PRICING_TIER_UPDATE',
+      resourceType: 'pricing_tier',
+      resourceId: id,
+      details: updates,
+    })
 
     invalidateCache('admin_pricing_tiers')
     invalidateCache('admin_devices')
@@ -153,6 +168,12 @@ export async function DELETE(request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    await logAdminAction({
+      action: 'PRICING_TIER_DELETE',
+      resourceType: 'pricing_tier',
+      resourceId: id,
+    })
 
     invalidateCache('admin_pricing_tiers')
     invalidateCache('admin_devices')

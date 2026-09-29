@@ -372,35 +372,102 @@ export default function AdminJobsPage() {
             </div>
 
             {/* Quick Action Controls */}
-            <div className="pt-2">
-              <span className="text-[11px] font-medium text-slate-400 block mb-2">Override Status:</span>
-              <div className="grid grid-cols-3 gap-2">
-                <Button
-                  size="sm"
-                  disabled={actionLoading || selectedJob.status === 'printed'}
-                  onClick={() => handleUpdateStatus(selectedJob.id, 'printed')}
-                  className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 rounded shadow-none"
-                >
-                  <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Mark Printed
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={actionLoading || selectedJob.status === 'redeemed'}
-                  onClick={() => handleUpdateStatus(selectedJob.id, 'redeemed')}
-                  className="border-slate-800 bg-slate-900 text-blue-400 hover:text-white text-xs h-8 rounded shadow-none"
-                >
-                  Mark Redeemed
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  disabled={actionLoading || selectedJob.status === 'expired'}
-                  onClick={() => handleUpdateStatus(selectedJob.id, 'expired')}
-                  className="border-slate-800 bg-slate-900 text-slate-400 hover:text-red-400 text-xs h-8 rounded shadow-none"
-                >
-                  <Ban className="w-3.5 h-3.5 mr-1" /> Expire Job
-                </Button>
+            <div className="pt-2 space-y-3">
+              <div>
+                <span className="text-[11px] font-medium text-slate-400 block mb-1.5">Support & Incident Resolution:</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={actionLoading}
+                    onClick={async () => {
+                      setActionLoading(true)
+                      try {
+                        const res = await fetch('/api/admin/jobs', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ jobId: selectedJob.id, action: 'EXTEND_OTP' }),
+                        })
+                        const data = await res.json()
+                        if (res.ok && data.success) {
+                          alert('OTP validity extended by 24 hours.')
+                          fetchJobs(true)
+                          setSelectedJob(null)
+                        } else {
+                          alert(data.error || 'Failed to extend OTP')
+                        }
+                      } finally {
+                        setActionLoading(false)
+                      }
+                    }}
+                    className="border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs h-8.5 rounded shadow-none font-medium"
+                  >
+                    <KeyRound className="w-3.5 h-3.5 mr-1" /> Extend OTP (+24h)
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={actionLoading || selectedJob.status === 'cancelled'}
+                    onClick={async () => {
+                      const reason = prompt('Please enter refund reason:', 'Customer requested cancel / Machine issue')
+                      if (!reason) return
+                      setActionLoading(true)
+                      try {
+                        const res = await fetch('/api/admin/jobs', {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ jobId: selectedJob.id, action: 'REFUND_JOB', refundReason: reason }),
+                        })
+                        const data = await res.json()
+                        if (res.ok && data.success) {
+                          alert('Job cancelled and marked as refunded.')
+                          fetchJobs(true)
+                          setSelectedJob(null)
+                        } else {
+                          alert(data.error || 'Failed to issue refund')
+                        }
+                      } finally {
+                        setActionLoading(false)
+                      }
+                    }}
+                    className="border-red-500/30 bg-red-500/10 text-red-400 hover:bg-red-500/20 text-xs h-8.5 rounded shadow-none font-medium"
+                  >
+                    <Ban className="w-3.5 h-3.5 mr-1" /> 1-Click Refund
+                  </Button>
+                </div>
+              </div>
+
+              <div>
+                <span className="text-[11px] font-medium text-slate-400 block mb-1.5">Override Status:</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    size="sm"
+                    disabled={actionLoading || selectedJob.status === 'printed' || selectedJob.status === 'completed'}
+                    onClick={() => handleUpdateStatus(selectedJob.id, 'printed')}
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs h-8 rounded shadow-none"
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Mark Printed
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={actionLoading || selectedJob.status === 'redeemed'}
+                    onClick={() => handleUpdateStatus(selectedJob.id, 'redeemed')}
+                    className="border-slate-800 bg-slate-900 text-blue-400 hover:text-white text-xs h-8 rounded shadow-none"
+                  >
+                    Mark Redeemed
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={actionLoading || selectedJob.status === 'expired'}
+                    onClick={() => handleUpdateStatus(selectedJob.id, 'expired')}
+                    className="border-slate-800 bg-slate-900 text-slate-400 hover:text-red-400 text-xs h-8 rounded shadow-none"
+                  >
+                    <Ban className="w-3.5 h-3.5 mr-1" /> Expire Job
+                  </Button>
+                </div>
               </div>
             </div>
           </DialogContent>

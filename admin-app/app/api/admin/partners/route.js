@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
+import { logAdminAction } from '@/lib/audit-logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -206,6 +207,13 @@ export async function POST(request) {
         // Safe to ignore since devices table is authoritatively updated
       }
     }
+
+    await logAdminAction({
+      action: 'PARTNER_APPROVAL',
+      resourceType: 'partner',
+      resourceId: partnerId,
+      details: { shopName, cleanPhone, type, deviceId: provisionedDevice?.id },
+    })
 
     invalidateCache('admin_partners')
     invalidateCache('admin_devices')

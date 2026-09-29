@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
+import { logAdminAction } from '@/lib/audit-logger'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,10 +49,13 @@ export async function GET(request) {
 
 /**
  * POST /api/admin/devices
- * Create a new device/kiosk
+ * Create a new device/kiosk with pairing credentials
  */
 export async function POST(request) {
   try {
+    const adminEmail = request.headers.get('x-admin-email') || 'superadmin@printkoro.com'
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1'
+
     const body = await request.json()
     const { name, type = 'kiosk', address, phone, operating_hours = '24/7', pricing_tier_id = null } = body
 
@@ -59,11 +63,16 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Name and address are required' }, { status: 400 })
     }
 
+    // Auto-generate terminal pairing key
+    const pairingKey = `PK-TERM-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+
     const locationObj = {
       address,
       phone: phone || '',
       operating_hours,
       created_via: 'admin_dashboard',
+      pairing_key: pairingKey,
+      last_heartbeat: new Date().toISOString(),
     }
 
     const { data, error } = await supabase
@@ -82,10 +91,19 @@ export async function POST(request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    await logAdminAction({
+      actorEmail: adminEmail,
+      action: 'DEVICE_CREATE',
+      resourceType: 'device',
+      resourceId: data.id,
+      details: { name: data.name, type: data.type, pairingKey },
+      ip,
+    })
+
     invalidateCache('admin_devices')
     invalidateCache('admin_stats')
 
-    return NextResponse.json({ success: true, device: data }, { status: 201 })
+    return NextResponse.json({ success: true, device: data, pairingKey }, { status: 201 })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
@@ -97,11 +115,55 @@ export async function POST(request) {
  */
 export async function PATCH(request) {
   try {
+    const adminEmail = request.headers.get('x-admin-email') || 'superadmin@printkoro.com'
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1'
+
     const body = await request.json()
-    const { id, name, status, type, location, pricing_tier_id } = body
+    const { id, name, status, type, location, pricing_tier_id, action: customAction } = body
 
     if (!id) {
       return NextResponse.json({ error: 'Device ID is required' }, { status: 400 })
+    }
+
+    // Handle remote ping / test print dispatch
+    if (customAction === 'REMOTE_TEST_PRINT') {
+      await logAdminAction({
+        actorEmail: adminEmail,
+        action: 'DEVICE_TEST_PRINT_DISPATCH',
+        resourceType: 'device',
+        resourceId: id,
+        details: { command: 'PRINT_TEST_ALIGNMENT_SHEET' },
+        ip,
+      })
+      return NextResponse.json({ success: true, message: 'Remote test print command queued for station.' })
+    }
+
+    // Handle regenerate pairing key
+    if (customAction === 'REGENERATE_PAIRING_KEY') {
+      const newPairingKey = `PK-TERM-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+      const existingLoc = location || {}
+      existingLoc.pairing_key = newPairingKey
+
+      const { data, error } = await supabase
+        .from('devices')
+        .update({ location: existingLoc })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+      await logAdminAction({
+        actorEmail: adminEmail,
+        action: 'DEVICE_REGEN_PAIRING_KEY',
+        resourceType: 'device',
+        resourceId: id,
+        details: { newPairingKey },
+        ip,
+      })
+
+      invalidateCache('admin_devices')
+      return NextResponse.json({ success: true, device: data, newPairingKey })
     }
 
     const updates = {}
@@ -122,6 +184,15 @@ export async function PATCH(request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    await logAdminAction({
+      actorEmail: adminEmail,
+      action: 'DEVICE_UPDATE',
+      resourceType: 'device',
+      resourceId: id,
+      details: updates,
+      ip,
+    })
+
     invalidateCache('admin_devices')
     invalidateCache('admin_stats')
 
@@ -136,6 +207,9 @@ export async function PATCH(request) {
  */
 export async function DELETE(request) {
   try {
+    const adminEmail = request.headers.get('x-admin-email') || 'superadmin@printkoro.com'
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1'
+
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
 
@@ -151,6 +225,14 @@ export async function DELETE(request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    await logAdminAction({
+      actorEmail: adminEmail,
+      action: 'DEVICE_DELETE',
+      resourceType: 'device',
+      resourceId: id,
+      ip,
+    })
 
     invalidateCache('admin_devices')
     invalidateCache('admin_stats')

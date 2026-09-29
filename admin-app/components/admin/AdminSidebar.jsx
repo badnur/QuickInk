@@ -10,7 +10,9 @@ import {
   BarChart3,
   LogOut,
   ChevronRight,
-  ExternalLink
+  ExternalLink,
+  Tag,
+  ShieldCheck,
 } from 'lucide-react'
 import { clearAdminSession } from '@/lib/admin-auth'
 
@@ -44,9 +46,19 @@ export default function AdminSidebar({ user, isConnected = true, pendingJobsCoun
       icon: Users,
     },
     {
+      href: '/pricing',
+      label: 'Dynamic Pricing',
+      icon: Tag,
+    },
+    {
       href: '/analytics',
       label: 'Revenue & Volume',
       icon: BarChart3,
+    },
+    {
+      href: '/audit',
+      label: 'Audit & Security',
+      icon: ShieldCheck,
     },
   ]
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
-import { getAdminSession } from '@/lib/admin-auth'
+import { getAdminSession, verifyServerSession } from '@/lib/admin-auth'
 import { supabase } from '@/lib/supabase'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 
@@ -18,13 +18,24 @@ export default function AdminLayoutClient({ children }) {
   const isLoginPage = pathname === '/login'
 
   useEffect(() => {
-    const session = getAdminSession()
-    if (!session && !isLoginPage) {
-      router.push('/login')
-    } else {
-      setAdminUser(session)
+    async function checkSession() {
+      const cached = getAdminSession()
+      if (cached) {
+        setAdminUser(cached)
+      }
+      
+      if (!isLoginPage) {
+        const verified = await verifyServerSession()
+        if (verified) {
+          setAdminUser(verified)
+        } else if (!cached) {
+          router.push('/login')
+        }
+      }
+      setIsLoading(false)
     }
-    setIsLoading(false)
+
+    checkSession()
   }, [pathname, isLoginPage, router])
 
   useEffect(() => {

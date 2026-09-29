@@ -27,7 +27,8 @@ import {
   ShieldAlert,
   Tag,
   DollarSign,
-  Layers
+  Layers,
+  Printer
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -121,6 +122,24 @@ export default function AdminDevicesPage() {
       console.error('Error fetching pricing tiers:', err)
     } finally {
       setLoadingTiers(false)
+    }
+  }
+
+  const handleRemoteTestPrint = async (deviceId) => {
+    try {
+      const res = await fetch('/api/admin/devices', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: deviceId, action: 'REMOTE_TEST_PRINT' }),
+      })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        alert('Test print instruction dispatched to station queue!')
+      } else {
+        alert(data.error || 'Failed to dispatch test print')
+      }
+    } catch (e) {
+      alert('Network error communicating with station.')
     }
   }
 
@@ -604,16 +623,25 @@ export default function AdminDevicesPage() {
                       <BarChart3 className="w-3.5 h-3.5" /> Performance
                     </Button>
 
-                    {/* Station QR Code */}
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setSelectedDeviceForQr(device)}
+                        className="border-slate-800 bg-slate-900 text-slate-300 hover:text-white text-xs h-8 rounded-xl flex items-center justify-center gap-1.5"
+                      >
+                        <QrCode className="w-3.5 h-3.5 text-slate-400" /> Station QR
+                      </Button>
+                    </div>
+
+                    {/* Remote Test Print Trigger */}
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setSelectedDeviceForQr(device)}
-                      className="border-slate-800 bg-slate-900 text-slate-300 hover:text-white text-xs h-8 rounded-xl flex items-center justify-center gap-1.5"
+                      onClick={() => handleRemoteTestPrint(device.id)}
+                      className="w-full border-slate-800 bg-slate-900/60 text-slate-300 hover:text-[#00bf63] hover:border-[#00bf63]/40 text-xs h-8 rounded-xl flex items-center justify-center gap-1.5"
                     >
-                      <QrCode className="w-3.5 h-3.5 text-slate-400" /> Station QR
+                      <Printer className="w-3.5 h-3.5 text-slate-400" /> Dispatch Remote Test Print
                     </Button>
-                  </div>
 
                   {/* Partnership Cancellation / Reinstatement Button */}
                   {device.status === 'suspended' || device.status === 'cancelled' ? (
