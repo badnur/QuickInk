@@ -11,6 +11,7 @@ import IdCardScannerModal from '@/components/print/IdCardScannerModal'
 import { playCompletionChime } from '@/lib/audio-chime'
 import { loadPdfDocument, renderPdfPageToDataUrl, slicePdfBlob, fastScanPdfPages, mergeFilesToPdf } from '@/lib/pdf-utils'
 import { useLanguage } from '@/context/LanguageContext'
+import PrintFeedbackBox from '@/components/print/PrintFeedbackBox'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -1838,6 +1839,14 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 </div>
               </div>
             </Card>
+
+            {/* Customer Experience Feedback */}
+            <PrintFeedbackBox
+              jobId={ticketOrder?.id}
+              otpCode={ticketOtp?.code}
+              deviceId={ticketOrder?.redeemed_by_device_id || ticketOtp?.device_id}
+              lang={lang}
+            />
 
             <div className="flex gap-2.5">
               <Link href="/find-printer" className="flex-1">

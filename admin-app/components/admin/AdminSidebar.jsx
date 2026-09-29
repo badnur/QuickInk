@@ -13,6 +13,7 @@ import {
   ExternalLink,
   Tag,
   ShieldCheck,
+  MessageSquareHeart,
 } from 'lucide-react'
 import { clearAdminSession } from '@/lib/admin-auth'
 
@@ -54,6 +55,11 @@ export default function AdminSidebar({ user, isConnected = true, pendingJobsCoun
       href: '/analytics',
       label: 'Revenue & Volume',
       icon: BarChart3,
+    },
+    {
+      href: '/feedback',
+      label: 'Customer Feedback',
+      icon: MessageSquareHeart,
     },
     {
       href: '/audit',
