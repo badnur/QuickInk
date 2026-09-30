@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
+import { getCache, setCache, invalidateCache, FAST_EDGE_HEADERS } from '@/lib/admin-cache'
 import { logAdminAction } from '@/lib/audit-logger'
 
 export const dynamic = 'force-dynamic'
@@ -18,7 +18,7 @@ export async function GET(request) {
 
     if (!forceRefresh) {
       const cached = getCache(CACHE_KEY)
-      if (cached) return NextResponse.json(cached)
+      if (cached) return NextResponse.json(cached, { headers: FAST_EDGE_HEADERS })
     }
 
     const { data: tiers, error } = await supabase
@@ -31,9 +31,9 @@ export async function GET(request) {
     }
 
     const payload = { success: true, tiers: tiers || [] }
-    setCache(CACHE_KEY, payload, 15)
+    setCache(CACHE_KEY, payload, 60)
 
-    return NextResponse.json(payload)
+    return NextResponse.json(payload, { headers: FAST_EDGE_HEADERS })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

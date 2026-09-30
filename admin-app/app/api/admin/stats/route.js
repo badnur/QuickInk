@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getCache, setCache } from '@/lib/admin-cache'
+import { getCache, setCache, FAST_EDGE_HEADERS } from '@/lib/admin-cache'
 import { sanitizeDeviceList } from '@/lib/data-sanitizer'
 
 export const dynamic = 'force-dynamic'
 
 const CACHE_KEY = 'admin_stats'
-const CACHE_TTL_SECONDS = 10
+const CACHE_TTL_SECONDS = 60
 
 /**
  * GET /api/admin/stats
@@ -21,7 +21,7 @@ export async function GET(request) {
     if (!forceRefresh) {
       const cached = getCache(CACHE_KEY)
       if (cached) {
-        return NextResponse.json(cached)
+        return NextResponse.json(cached, { headers: FAST_EDGE_HEADERS })
       }
     }
 
@@ -36,11 +36,11 @@ export async function GET(request) {
         .from('print_jobs')
         .select('id, status, payment_type, page_count, copies, color_mode, created_at, redeemed_by_device_id, file_path, file_type')
         .order('created_at', { ascending: false })
-        .limit(300),
+        .limit(150),
       supabase
         .from('payments')
         .select('amount, method')
-        .limit(500),
+        .limit(150),
       supabase
         .from('devices')
         .select('id, name, type, status, location')
@@ -202,12 +202,10 @@ export async function GET(request) {
       shopLeaderboard,
     }
 
-    setCache(CACHE_KEY, responsePayload, 20)
+    setCache(CACHE_KEY, responsePayload, CACHE_TTL_SECONDS)
 
     return NextResponse.json(responsePayload, {
-      headers: {
-        'Cache-Control': 'private, max-age=10, stale-while-revalidate=45',
-      },
+      headers: FAST_EDGE_HEADERS,
     })
   } catch (err) {
     console.error('Admin stats error:', err)

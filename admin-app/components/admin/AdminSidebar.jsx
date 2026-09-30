@@ -16,6 +16,7 @@ import {
   MessageSquareHeart,
 } from 'lucide-react'
 import { clearAdminSession } from '@/lib/admin-auth'
+import { prefetchAdminData } from '@/lib/use-admin-data'
 
 export default function AdminSidebar({ user, isConnected = true, pendingJobsCount = 0 }) {
   const pathname = usePathname()
@@ -29,42 +30,58 @@ export default function AdminSidebar({ user, isConnected = true, pendingJobsCoun
       label: 'Overview',
       icon: LayoutDashboard,
       exact: true,
+      prefetchKey: 'admin_stats',
+      prefetchUrl: '/api/admin/stats',
     },
     {
       href: '/jobs',
       label: 'Live Print Jobs',
       icon: Printer,
       badge: pendingJobsCount > 0 ? pendingJobsCount : null,
+      prefetchKey: 'admin_jobs_all_50',
+      prefetchUrl: '/api/admin/jobs?status=all',
     },
     {
       href: '/devices',
       label: 'Devices & Kiosks',
       icon: HardDrive,
+      prefetchKey: 'admin_devices',
+      prefetchUrl: '/api/admin/devices',
     },
     {
       href: '/partners',
       label: 'Partner Applications',
       icon: Users,
+      prefetchKey: 'admin_partners_all_all',
+      prefetchUrl: '/api/admin/partners',
     },
     {
       href: '/pricing',
       label: 'Dynamic Pricing',
       icon: Tag,
+      prefetchKey: 'admin_pricing_tiers',
+      prefetchUrl: '/api/admin/pricing-tiers',
     },
     {
       href: '/analytics',
       label: 'Revenue & Volume',
       icon: BarChart3,
+      prefetchKey: 'admin_stats',
+      prefetchUrl: '/api/admin/stats',
     },
     {
       href: '/feedback',
       label: 'Customer Feedback',
       icon: MessageSquareHeart,
+      prefetchKey: 'admin_feedback_all_100',
+      prefetchUrl: '/api/admin/feedback',
     },
     {
       href: '/audit',
       label: 'Audit & Security',
       icon: ShieldCheck,
+      prefetchKey: 'admin_audit_logs_50',
+      prefetchUrl: '/api/admin/audit-logs?limit=50',
     },
   ]
 
@@ -123,6 +140,11 @@ export default function AdminSidebar({ user, isConnected = true, pendingJobsCoun
               <Link
                 key={item.href}
                 href={item.href}
+                onMouseEnter={() => {
+                  if (item.prefetchKey && item.prefetchUrl) {
+                    prefetchAdminData(item.prefetchKey, item.prefetchUrl)
+                  }
+                }}
                 className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
                   isActive
                     ? 'bg-[#00bf63] text-slate-950 font-bold'

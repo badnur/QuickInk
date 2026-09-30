@@ -15,36 +15,11 @@ import { Badge } from '@/components/ui/badge'
 import AdminHeader from '@/components/admin/AdminHeader'
 import StatCard from '@/components/admin/StatCard'
 import DevicePerformanceModal from '@/components/admin/DevicePerformanceModal'
-
-let clientAnalyticsCache = null
+import { useAdminData } from '@/lib/use-admin-data'
 
 export default function AdminAnalyticsPage() {
-  const [data, setData] = useState(() => clientAnalyticsCache)
-  const [loading, setLoading] = useState(() => !clientAnalyticsCache)
-  const [refreshing, setRefreshing] = useState(false)
+  const { data, loading, refreshing, refetch } = useAdminData('admin_stats', '/api/admin/stats')
   const [selectedDeviceForModal, setSelectedDeviceForModal] = useState(null)
-
-  const fetchStats = async (isManual = false) => {
-    if (isManual) setRefreshing(true)
-    try {
-      const url = isManual ? '/api/admin/stats?refresh=true' : '/api/admin/stats'
-      const res = await fetch(url)
-      const json = await res.json()
-      if (json?.success) {
-        clientAnalyticsCache = json
-        setData(json)
-      }
-    } catch (e) {
-      console.error('Analytics fetch error:', e)
-    } finally {
-      setLoading(false)
-      if (isManual) setRefreshing(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchStats(false)
-  }, [])
 
   const stats = data?.stats || {
     totalRevenue: 0,
@@ -69,7 +44,7 @@ export default function AdminAnalyticsPage() {
       <AdminHeader
         title="Revenue, Growth & Volume Telemetry"
         subtitle="Audited financial breakdown, page throughput trends, and station leaderboard"
-        onRefresh={() => fetchStats(true)}
+        onRefresh={() => refetch()}
         isRefreshing={refreshing}
       />
 

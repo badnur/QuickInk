@@ -43,13 +43,27 @@ import {
 import AdminHeader from '@/components/admin/AdminHeader'
 import DeviceQrModal from '@/components/admin/DeviceQrModal'
 import DevicePerformanceModal from '@/components/admin/DevicePerformanceModal'
-
-let clientDevicesCache = []
+import { useAdminData } from '@/lib/use-admin-data'
 
 export default function AdminDevicesPage() {
-  const [devices, setDevices] = useState(() => clientDevicesCache)
-  const [loading, setLoading] = useState(() => clientDevicesCache.length === 0)
-  const [refreshing, setRefreshing] = useState(false)
+  const {
+    data: devicesData,
+    loading: devicesLoading,
+    refreshing,
+    refetch: fetchDevices,
+    mutate: mutateDevices,
+  } = useAdminData('admin_devices', '/api/admin/devices')
+
+  const {
+    data: tiersData,
+    refetch: fetchPricingTiers,
+  } = useAdminData('admin_pricing_tiers', '/api/admin/pricing-tiers')
+
+  const devices = devicesData?.devices || []
+  const loading = devicesLoading && devices.length === 0
+  const pricingTiers = tiersData?.tiers || []
+  const loadingTiers = false
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   
   // Modals for inspection and control
@@ -62,9 +76,6 @@ export default function AdminDevicesPage() {
   const [suspendingDevice, setSuspendingDevice] = useState(null)
   const [suspensionReason, setSuspensionReason] = useState('')
   const [suspensionSubmitting, setSuspensionSubmitting] = useState(false)
-
-  const [pricingTiers, setPricingTiers] = useState([])
-  const [loadingTiers, setLoadingTiers] = useState(false)
 
   // Tier management modal state
   const [isTierModalOpen, setIsTierModalOpen] = useState(false)
@@ -97,36 +108,6 @@ export default function AdminDevicesPage() {
   const [editSubStatus, setEditSubStatus] = useState('active')
   const [editTierId, setEditTierId] = useState('')
   const [editSubmitting, setEditSubmitting] = useState(false)
-
-  const fetchDevices = async () => {
-    setRefreshing(true)
-    try {
-      const res = await fetch('/api/admin/devices')
-      const data = await res.json()
-      if (data?.devices) {
-        clientDevicesCache = data.devices
-        setDevices(data.devices)
-      }
-    } catch (err) {
-      console.error('Error fetching devices:', err)
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }
-
-  const fetchPricingTiers = async () => {
-    setLoadingTiers(true)
-    try {
-      const res = await fetch('/api/admin/pricing-tiers')
-      const data = await res.json()
-      if (data?.tiers) setPricingTiers(data.tiers)
-    } catch (err) {
-      console.error('Error fetching pricing tiers:', err)
-    } finally {
-      setLoadingTiers(false)
-    }
-  }
 
   const handleRemoteTestPrint = async (deviceId) => {
     try {

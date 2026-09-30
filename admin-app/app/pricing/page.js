@@ -20,10 +20,17 @@ import {
   Layers,
   HardDrive
 } from 'lucide-react'
+import { useAdminData } from '@/lib/use-admin-data'
 
 export default function PricingTiersPage() {
-  const [tiers, setTiers] = useState([])
-  const [loading, setLoading] = useState(true)
+  const {
+    data: tiersData,
+    loading: swrLoading,
+    refreshing: loading,
+    refetch: fetchTiers,
+  } = useAdminData('admin_pricing_tiers', '/api/admin/pricing-tiers')
+
+  const tiers = tiersData?.tiers || []
   const [error, setError] = useState(null)
   const [successMsg, setSuccessMsg] = useState(null)
 
@@ -37,28 +44,6 @@ export default function PricingTiersPage() {
     bw_price: '2.00',
     color_price: '8.00',
   })
-
-  async function fetchTiers(force = false) {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch(`/api/admin/pricing-tiers${force ? '?refresh=true' : ''}`)
-      const data = await res.json()
-      if (res.ok && data.success) {
-        setTiers(data.tiers || [])
-      } else {
-        setError(data.error || 'Failed to load pricing tiers')
-      }
-    } catch (err) {
-      setError('Network connection error fetching pricing tiers')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchTiers()
-  }, [])
 
   function openCreateModal() {
     setEditingTier(null)

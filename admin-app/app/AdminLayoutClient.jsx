@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { getAdminSession, verifyServerSession } from '@/lib/admin-auth'
 import { supabase } from '@/lib/supabase'
+import { prefetchAllAdminData } from '@/lib/use-admin-data'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 
 export default function AdminLayoutClient({ children }) {
@@ -21,6 +22,13 @@ export default function AdminLayoutClient({ children }) {
   const router = useRouter()
   const isLoginPage = pathname === '/login'
   const sessionCheckedRef = useRef(false)
+
+  // Trigger background prefetch for all key data on app launch
+  useEffect(() => {
+    if (!isLoginPage && adminUser) {
+      prefetchAllAdminData()
+    }
+  }, [isLoginPage, adminUser])
 
   // Verify server session once in background without blocking the UI
   useEffect(() => {

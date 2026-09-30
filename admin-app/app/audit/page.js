@@ -18,34 +18,19 @@ import {
   Lock,
   Download
 } from 'lucide-react'
+import { useAdminData } from '@/lib/use-admin-data'
 
 export default function AuditLogsPage() {
-  const [logs, setLogs] = useState([])
-  const [loading, setLoading] = useState(true)
+  const {
+    data: auditData,
+    loading: swrLoading,
+    refreshing: loading,
+    refetch: fetchLogs,
+  } = useAdminData('admin_audit_logs_50', '/api/admin/audit-logs?limit=50')
+
+  const logs = auditData?.logs || []
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
-
-  async function fetchLogs() {
-    setLoading(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/admin/audit-logs?limit=100')
-      const data = await res.json()
-      if (res.ok && data.success) {
-        setLogs(data.logs || [])
-      } else {
-        setError(data.error || 'Failed to load audit trail')
-      }
-    } catch (err) {
-      setError('Network connection error fetching audit trail')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchLogs()
-  }, [])
 
   const filteredLogs = logs.filter((log) => {
     if (!searchQuery) return true

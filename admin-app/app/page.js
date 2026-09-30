@@ -18,39 +18,11 @@ import { Badge } from '@/components/ui/badge'
 import AdminHeader from '@/components/admin/AdminHeader'
 import StatCard from '@/components/admin/StatCard'
 import DeviceQrModal from '@/components/admin/DeviceQrModal'
-
-let clientStatsCache = null
+import { useAdminData } from '@/lib/use-admin-data'
 
 export default function AdminDashboardPage() {
-  const [data, setData] = useState(() => clientStatsCache)
-  const [loading, setLoading] = useState(() => !clientStatsCache)
-  const [refreshing, setRefreshing] = useState(false)
+  const { data, loading, refreshing, refetch } = useAdminData('admin_stats', '/api/admin/stats')
   const [selectedDeviceForQr, setSelectedDeviceForQr] = useState(null)
-
-  const fetchStats = async (isManual = false) => {
-    if (isManual) setRefreshing(true)
-    try {
-      const url = isManual ? '/api/admin/stats?refresh=true' : '/api/admin/stats'
-      const res = await fetch(url)
-      const json = await res.json()
-      if (json?.success) {
-        clientStatsCache = json
-        setData(json)
-      }
-    } catch (err) {
-      console.error('Error fetching admin dashboard stats:', err)
-    } finally {
-      setLoading(false)
-      if (isManual) setRefreshing(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchStats(false)
-    // Refresh periodically (45 seconds)
-    const interval = setInterval(() => fetchStats(false), 45000)
-    return () => clearInterval(interval)
-  }, [])
 
   const stats = data?.stats || {
     totalRevenue: 0,
@@ -78,7 +50,7 @@ export default function AdminDashboardPage() {
       <AdminHeader
         title="PrintKoro Executive Dashboard"
         subtitle="Platform metrics, station fleet status, and print volumes"
-        onRefresh={() => fetchStats(true)}
+        onRefresh={() => refetch()}
         isRefreshing={refreshing}
       />
 

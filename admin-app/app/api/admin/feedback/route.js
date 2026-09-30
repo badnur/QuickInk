@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { getCache, setCache, invalidateCache, FAST_EDGE_HEADERS } from '@/lib/admin-cache'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,10 +9,19 @@ export async function GET(request) {
     const { searchParams } = new URL(request?.url || 'http://localhost')
     const ratingFilter = searchParams.get('rating')
     const limit = parseInt(searchParams.get('limit') || '100', 10)
+    const forceRefresh = searchParams.get('refresh') === 'true'
+
+    const cacheKey = `admin_feedback_${ratingFilter || 'all'}_${limit}`
+    if (!forceRefresh) {
+      const cached = getCache(cacheKey)
+      if (cached) {
+        return NextResponse.json(cached, { headers: FAST_EDGE_HEADERS })
+      }
+    }
 
     let feedbacks = []
 
-    // 1. Try querying Supabase customer_feedbacks table
+    // 1. Query Supabase customer_feedbacks table
     try {
       let query = supabase
         .from('customer_feedbacks')
@@ -32,25 +42,7 @@ export async function GET(request) {
       console.warn('Customer feedbacks Supabase query notice:', dbErr)
     }
 
-    // 2. If no data in Supabase (e.g. migration pending in production or local dev fallback),
-    // fetch from user-app memory endpoint
-    if (feedbacks.length === 0) {
-      try {
-        const userAppRes = await fetch('http://localhost:3000/api/feedback', {
-          cache: 'no-store',
-        })
-        if (userAppRes.ok) {
-          const userAppData = await userAppRes.json()
-          if (Array.isArray(userAppData?.feedbacks) && userAppData.feedbacks.length > 0) {
-            feedbacks = userAppData.feedbacks
-          }
-        }
-      } catch (userAppErr) {
-        // user app might be on different port or offline
-      }
-    }
-
-    // 3. If still empty, provide graceful initial seed data so the admin view is never broken
+    // 2. If empty in db, provide graceful sample data for preview
     if (feedbacks.length === 0) {
       feedbacks = [
         {
@@ -128,7 +120,7 @@ export async function GET(request) {
       }
     })
 
-    return NextResponse.json({
+    const payload = {
       success: true,
       metrics: {
         totalFeedback: totalCount,
@@ -138,7 +130,11 @@ export async function GET(request) {
         tagFrequencies,
       },
       feedbacks,
-    })
+    }
+
+    setCache(cacheKey, payload, 60)
+
+    return NextResponse.json(payload, { headers: FAST_EDGE_HEADERS })
   } catch (err) {
     return NextResponse.json({ error: err.message || 'Failed to fetch customer feedback' }, { status: 500 })
   }
@@ -161,6 +157,8 @@ export async function DELETE(request) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    invalidateCache('admin_feedback')
 
     return NextResponse.json({ success: true, message: 'Feedback removed successfully' })
   } catch (err) {

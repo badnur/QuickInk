@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
+import { getCache, setCache, invalidateCache, FAST_EDGE_HEADERS } from '@/lib/admin-cache'
 import { logAdminAction } from '@/lib/audit-logger'
 
 export const dynamic = 'force-dynamic'
@@ -19,7 +19,7 @@ export async function GET(request) {
     const cacheKey = `admin_partners_${status}_${type}`
     if (!forceRefresh) {
       const cached = getCache(cacheKey)
-      if (cached) return NextResponse.json(cached)
+      if (cached) return NextResponse.json(cached, { headers: FAST_EDGE_HEADERS })
     }
 
     // Fetch both partners and devices in parallel for instant data availability
@@ -120,12 +120,10 @@ export async function GET(request) {
     results.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
 
     const payload = { success: true, partners: results }
-    setCache(cacheKey, payload, 8)
+    setCache(cacheKey, payload, 60)
 
     return NextResponse.json(payload, {
-      headers: {
-        'Cache-Control': 'private, max-age=5, stale-while-revalidate=30',
-      },
+      headers: FAST_EDGE_HEADERS,
     })
   } catch (err) {
     console.error('Error fetching admin partners:', err)

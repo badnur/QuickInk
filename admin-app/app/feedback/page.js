@@ -24,57 +24,37 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import AdminHeader from '@/components/admin/AdminHeader'
-
-let clientFeedbackCache = null
+import { useAdminData } from '@/lib/use-admin-data'
 
 export default function AdminFeedbackPage() {
-  const [feedbacks, setFeedbacks] = useState(() => clientFeedbackCache?.feedbacks || [])
-  const [metrics, setMetrics] = useState(() => clientFeedbackCache?.metrics || {
-    totalFeedback: 0,
-    averageRating: 5.0,
-    positivePercentage: 100,
-    ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
-    tagFrequencies: {},
-  })
-  const [loading, setLoading] = useState(() => !clientFeedbackCache)
-  const [refreshing, setRefreshing] = useState(false)
   const [selectedRating, setSelectedRating] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [onlyWithMessages, setOnlyWithMessages] = useState(false)
   const [copiedId, setCopiedId] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
 
-  const fetchFeedback = async () => {
-    setRefreshing(true)
-    try {
-      const url = selectedRating === 'all'
-        ? '/api/admin/feedback'
-        : `/api/admin/feedback?rating=${selectedRating}`
-      const res = await fetch(url)
-      const data = await res.json()
-      if (data?.feedbacks) {
-        setFeedbacks(data.feedbacks)
-      }
-      if (data?.metrics) {
-        setMetrics(data.metrics)
-      }
-      if (data) {
-        clientFeedbackCache = {
-          feedbacks: data.feedbacks || [],
-          metrics: data.metrics || metrics,
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load customer feedback:', err)
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }
+  const cacheKey = `admin_feedback_${selectedRating}_100`
+  const queryUrl = selectedRating === 'all'
+    ? '/api/admin/feedback'
+    : `/api/admin/feedback?rating=${selectedRating}`
 
-  useEffect(() => {
-    fetchFeedback()
-  }, [selectedRating])
+  const {
+    data: feedbackData,
+    loading: swrLoading,
+    refreshing,
+    refetch: fetchFeedback,
+    mutate: mutateFeedback,
+  } = useAdminData(cacheKey, queryUrl)
+
+  const feedbacks = feedbackData?.feedbacks || []
+  const metrics = feedbackData?.metrics || {
+    totalFeedback: 0,
+    averageRating: 5.0,
+    positivePercentage: 100,
+    ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+    tagFrequencies: {},
+  }
+  const loading = swrLoading && feedbacks.length === 0
 
   const copyToClipboard = (text, id) => {
     if (!text) return

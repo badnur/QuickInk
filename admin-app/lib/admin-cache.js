@@ -17,7 +17,7 @@ export function getCache(key) {
   return item.data
 }
 
-export function setCache(key, data, ttlSeconds = 10) {
+export function setCache(key, data, ttlSeconds = 60) {
   memoryCache.set(key, {
     data,
     expiresAt: Date.now() + ttlSeconds * 1000,
@@ -35,4 +35,8 @@ export function invalidateCache(prefix) {
       memoryCache.delete(key)
     }
   }
+}
+
+export const FAST_EDGE_HEADERS = {
+  'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=120',
 }

@@ -32,13 +32,19 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog'
 import AdminHeader from '@/components/admin/AdminHeader'
-
-let clientPartnersCache = []
+import { useAdminData } from '@/lib/use-admin-data'
 
 export default function AdminPartnersPage() {
-  const [partners, setPartners] = useState(() => clientPartnersCache)
-  const [loading, setLoading] = useState(() => clientPartnersCache.length === 0)
-  const [refreshing, setRefreshing] = useState(false)
+  const {
+    data: partnersData,
+    loading: swrLoading,
+    refreshing,
+    refetch: fetchPartners,
+    mutate: mutatePartners,
+  } = useAdminData('admin_partners_all_all', '/api/admin/partners')
+
+  const partners = partnersData?.partners || []
+  const loading = swrLoading && partners.length === 0
   const [actionLoading, setActionLoading] = useState(null)
   
   // Filters
@@ -53,27 +59,6 @@ export default function AdminPartnersPage() {
   // Rejection modal
   const [rejectingPartner, setRejectingPartner] = useState(null)
   const [rejectionReason, setRejectionReason] = useState('')
-
-  const fetchPartners = async () => {
-    setRefreshing(true)
-    try {
-      const res = await fetch('/api/admin/partners')
-      const data = await res.json()
-      if (data?.partners) {
-        clientPartnersCache = data.partners
-        setPartners(data.partners)
-      }
-    } catch (err) {
-      console.error('Error fetching partners:', err)
-    } finally {
-      setLoading(false)
-      setRefreshing(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchPartners()
-  }, [])
 
   // Approve and Provision Station in devices table
   const handleApproveAndProvision = async (partner) => {

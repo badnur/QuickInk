@@ -30,13 +30,9 @@ import {
 } from '@/components/ui/dialog'
 import AdminHeader from '@/components/admin/AdminHeader'
 import { supabase } from '@/lib/supabase'
-
-let clientJobsCache = []
+import { useAdminData } from '@/lib/use-admin-data'
 
 export default function AdminJobsPage() {
-  const [jobs, setJobs] = useState(() => clientJobsCache)
-  const [loading, setLoading] = useState(() => clientJobsCache.length === 0)
-  const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -52,29 +48,19 @@ export default function AdminJobsPage() {
     return () => clearTimeout(handler)
   }, [search])
 
-  const fetchJobs = useCallback(async (isManual = false) => {
-    if (isManual) setRefreshing(true)
-    try {
-      let url = `/api/admin/jobs?status=${statusFilter}`
-      if (debouncedSearch.trim()) url += `&search=${encodeURIComponent(debouncedSearch.trim())}`
-      if (isManual) url += '&refresh=true'
-      const res = await fetch(url)
-      const data = await res.json()
-      if (data?.jobs) {
-        clientJobsCache = data.jobs
-        setJobs(data.jobs)
-      }
-    } catch (err) {
-      console.error('Error fetching jobs:', err)
-    } finally {
-      setLoading(false)
-      if (isManual) setRefreshing(false)
-    }
-  }, [statusFilter, debouncedSearch])
+  const cacheKey = `admin_jobs_${statusFilter}_50`
+  const queryUrl = `/api/admin/jobs?status=${statusFilter}${debouncedSearch.trim() ? `&search=${encodeURIComponent(debouncedSearch.trim())}` : ''}`
+  
+  const {
+    data,
+    loading: swrLoading,
+    refreshing,
+    refetch: fetchJobs,
+    mutate: mutateJobs,
+  } = useAdminData(cacheKey, queryUrl)
 
-  useEffect(() => {
-    fetchJobs(false)
-  }, [fetchJobs])
+  const jobs = data?.jobs || []
+  const loading = swrLoading && jobs.length === 0
 
   // Realtime subscription setup ONLY once or when statusFilter changes (NOT on every keystroke)
   const fetchJobsRef = useRef(fetchJobs)

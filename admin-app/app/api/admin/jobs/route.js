@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
+import { getCache, setCache, invalidateCache, FAST_EDGE_HEADERS } from '@/lib/admin-cache'
 import { logAdminAction } from '@/lib/audit-logger'
 
 export const dynamic = 'force-dynamic'
@@ -22,7 +22,7 @@ export async function GET(request) {
     if (!search && !forceRefresh) {
       const cached = getCache(cacheKey)
       if (cached) {
-        return NextResponse.json(cached)
+        return NextResponse.json(cached, { headers: FAST_EDGE_HEADERS })
       }
     }
 
@@ -107,10 +107,12 @@ export async function GET(request) {
 
     const payload = { success: true, jobs: filtered, count: filtered.length }
     if (!search) {
-      setCache(cacheKey, payload, 5)
+      setCache(cacheKey, payload, 45)
     }
 
-    return NextResponse.json(payload)
+    return NextResponse.json(payload, {
+      headers: FAST_EDGE_HEADERS,
+    })
   } catch (err) {
     console.error('Error fetching admin jobs:', err)
     return NextResponse.json({ error: 'Failed to fetch jobs', details: err.message }, { status: 500 })
