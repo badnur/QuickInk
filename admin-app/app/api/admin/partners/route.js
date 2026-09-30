@@ -34,6 +34,17 @@ export async function GET(request) {
     // Build unified partner applications list
     const partnerMap = new Map() // key: clean phone or id
 
+    const includePhotos = searchParams.get('includePhotos') === 'true'
+
+    const cleanImg = (url) => {
+      if (!url) return ''
+      if (includePhotos) return url
+      if (typeof url === 'string' && url.startsWith('data:image') && url.length > 500) {
+        return '' // Exclude from list for 99% faster loading
+      }
+      return url
+    }
+
     // 1. Ingest partner entries from 'partners' table
     for (const p of dbPartners) {
       const cleanPhone = (p.phone || '').trim().replace(/[^0-9]/g, '')
@@ -57,8 +68,10 @@ export async function GET(request) {
         operating_hours: matchingDev?.location?.operating_hours || (matchingDev?.type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM'),
         status: derivedStatus,
         rejection_reason: matchingDev?.location?.rejection_reason || null,
-        logo_url: matchingDev?.location?.logo_url || '',
-        shop_photo_url: matchingDev?.location?.shop_photo_url || '',
+        logo_url: cleanImg(matchingDev?.location?.logo_url),
+        shop_photo_url: cleanImg(matchingDev?.location?.shop_photo_url),
+        has_logo: Boolean(matchingDev?.location?.logo_url),
+        has_shop_photo: Boolean(matchingDev?.location?.shop_photo_url),
         provisioned_device_id: matchingDev?.id || null,
         created_at: p.created_at || matchingDev?.created_at || new Date().toISOString(),
       })
@@ -82,8 +95,10 @@ export async function GET(request) {
             operating_hours: d.location?.operating_hours || (d.type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM'),
             status: d.location.partner_status || (d.status === 'online' ? 'approved' : 'pending'),
             rejection_reason: d.location.rejection_reason || null,
-            logo_url: d.location.logo_url || '',
-            shop_photo_url: d.location.shop_photo_url || '',
+            logo_url: cleanImg(d.location.logo_url),
+            shop_photo_url: cleanImg(d.location.shop_photo_url),
+            has_logo: Boolean(d.location.logo_url),
+            has_shop_photo: Boolean(d.location.shop_photo_url),
             provisioned_device_id: d.id,
             created_at: d.created_at,
           })
@@ -107,7 +122,11 @@ export async function GET(request) {
     const payload = { success: true, partners: results }
     setCache(cacheKey, payload, 8)
 
-    return NextResponse.json(payload)
+    return NextResponse.json(payload, {
+      headers: {
+        'Cache-Control': 'private, max-age=5, stale-while-revalidate=30',
+      },
+    })
   } catch (err) {
     console.error('Error fetching admin partners:', err)
     return NextResponse.json({ error: err.message }, { status: 500 })

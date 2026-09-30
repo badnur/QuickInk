@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCache, setCache, invalidateCache } from '@/lib/admin-cache'
 import { logAdminAction } from '@/lib/audit-logger'
+import { sanitizeDeviceList } from '@/lib/data-sanitizer'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,10 +39,15 @@ export async function GET(request) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const payload = { success: true, devices: devices || [] }
-    setCache(CACHE_KEY, payload, 8)
+    const cleanDevices = sanitizeDeviceList(devices || [])
+    const payload = { success: true, devices: cleanDevices }
+    setCache(CACHE_KEY, payload, 15)
 
-    return NextResponse.json(payload)
+    return NextResponse.json(payload, {
+      headers: {
+        'Cache-Control': 'private, max-age=5, stale-while-revalidate=30',
+      },
+    })
   } catch (err) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

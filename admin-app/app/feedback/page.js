@@ -25,16 +25,18 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import AdminHeader from '@/components/admin/AdminHeader'
 
+let clientFeedbackCache = null
+
 export default function AdminFeedbackPage() {
-  const [feedbacks, setFeedbacks] = useState([])
-  const [metrics, setMetrics] = useState({
+  const [feedbacks, setFeedbacks] = useState(() => clientFeedbackCache?.feedbacks || [])
+  const [metrics, setMetrics] = useState(() => clientFeedbackCache?.metrics || {
     totalFeedback: 0,
     averageRating: 5.0,
     positivePercentage: 100,
     ratingBreakdown: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
     tagFrequencies: {},
   })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(() => !clientFeedbackCache)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedRating, setSelectedRating] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
@@ -55,6 +57,12 @@ export default function AdminFeedbackPage() {
       }
       if (data?.metrics) {
         setMetrics(data.metrics)
+      }
+      if (data) {
+        clientFeedbackCache = {
+          feedbacks: data.feedbacks || [],
+          metrics: data.metrics || metrics,
+        }
       }
     } catch (err) {
       console.error('Failed to load customer feedback:', err)

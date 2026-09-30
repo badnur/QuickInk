@@ -44,9 +44,11 @@ import AdminHeader from '@/components/admin/AdminHeader'
 import DeviceQrModal from '@/components/admin/DeviceQrModal'
 import DevicePerformanceModal from '@/components/admin/DevicePerformanceModal'
 
+let clientDevicesCache = []
+
 export default function AdminDevicesPage() {
-  const [devices, setDevices] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [devices, setDevices] = useState(() => clientDevicesCache)
+  const [loading, setLoading] = useState(() => clientDevicesCache.length === 0)
   const [refreshing, setRefreshing] = useState(false)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   
@@ -102,6 +104,7 @@ export default function AdminDevicesPage() {
       const res = await fetch('/api/admin/devices')
       const data = await res.json()
       if (data?.devices) {
+        clientDevicesCache = data.devices
         setDevices(data.devices)
       }
     } catch (err) {

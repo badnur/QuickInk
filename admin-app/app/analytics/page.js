@@ -16,9 +16,11 @@ import AdminHeader from '@/components/admin/AdminHeader'
 import StatCard from '@/components/admin/StatCard'
 import DevicePerformanceModal from '@/components/admin/DevicePerformanceModal'
 
+let clientAnalyticsCache = null
+
 export default function AdminAnalyticsPage() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(() => clientAnalyticsCache)
+  const [loading, setLoading] = useState(() => !clientAnalyticsCache)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedDeviceForModal, setSelectedDeviceForModal] = useState(null)
 
@@ -28,7 +30,10 @@ export default function AdminAnalyticsPage() {
       const url = isManual ? '/api/admin/stats?refresh=true' : '/api/admin/stats'
       const res = await fetch(url)
       const json = await res.json()
-      if (json?.success) setData(json)
+      if (json?.success) {
+        clientAnalyticsCache = json
+        setData(json)
+      }
     } catch (e) {
       console.error('Analytics fetch error:', e)
     } finally {

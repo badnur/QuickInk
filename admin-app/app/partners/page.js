@@ -33,9 +33,11 @@ import {
 } from '@/components/ui/dialog'
 import AdminHeader from '@/components/admin/AdminHeader'
 
+let clientPartnersCache = []
+
 export default function AdminPartnersPage() {
-  const [partners, setPartners] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [partners, setPartners] = useState(() => clientPartnersCache)
+  const [loading, setLoading] = useState(() => clientPartnersCache.length === 0)
   const [refreshing, setRefreshing] = useState(false)
   const [actionLoading, setActionLoading] = useState(null)
   
@@ -58,6 +60,7 @@ export default function AdminPartnersPage() {
       const res = await fetch('/api/admin/partners')
       const data = await res.json()
       if (data?.partners) {
+        clientPartnersCache = data.partners
         setPartners(data.partners)
       }
     } catch (err) {

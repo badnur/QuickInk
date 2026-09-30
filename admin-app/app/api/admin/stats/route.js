@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { getCache, setCache } from '@/lib/admin-cache'
+import { sanitizeDeviceList } from '@/lib/data-sanitizer'
 
 export const dynamic = 'force-dynamic'
 
@@ -197,13 +198,17 @@ export async function GET(request) {
       },
       chartData,
       recentJobs,
-      devices: allDevices,
+      devices: sanitizeDeviceList(allDevices || []),
       shopLeaderboard,
     }
 
-    setCache(CACHE_KEY, responsePayload, CACHE_TTL_SECONDS)
+    setCache(CACHE_KEY, responsePayload, 20)
 
-    return NextResponse.json(responsePayload)
+    return NextResponse.json(responsePayload, {
+      headers: {
+        'Cache-Control': 'private, max-age=10, stale-while-revalidate=45',
+      },
+    })
   } catch (err) {
     console.error('Admin stats error:', err)
     return NextResponse.json(

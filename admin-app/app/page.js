@@ -19,9 +19,11 @@ import AdminHeader from '@/components/admin/AdminHeader'
 import StatCard from '@/components/admin/StatCard'
 import DeviceQrModal from '@/components/admin/DeviceQrModal'
 
+let clientStatsCache = null
+
 export default function AdminDashboardPage() {
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [data, setData] = useState(() => clientStatsCache)
+  const [loading, setLoading] = useState(() => !clientStatsCache)
   const [refreshing, setRefreshing] = useState(false)
   const [selectedDeviceForQr, setSelectedDeviceForQr] = useState(null)
 
@@ -32,6 +34,7 @@ export default function AdminDashboardPage() {
       const res = await fetch(url)
       const json = await res.json()
       if (json?.success) {
+        clientStatsCache = json
         setData(json)
       }
     } catch (err) {

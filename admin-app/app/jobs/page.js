@@ -31,9 +31,11 @@ import {
 import AdminHeader from '@/components/admin/AdminHeader'
 import { supabase } from '@/lib/supabase'
 
+let clientJobsCache = []
+
 export default function AdminJobsPage() {
-  const [jobs, setJobs] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [jobs, setJobs] = useState(() => clientJobsCache)
+  const [loading, setLoading] = useState(() => clientJobsCache.length === 0)
   const [refreshing, setRefreshing] = useState(false)
   const [search, setSearch] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
@@ -59,6 +61,7 @@ export default function AdminJobsPage() {
       const res = await fetch(url)
       const data = await res.json()
       if (data?.jobs) {
+        clientJobsCache = data.jobs
         setJobs(data.jobs)
       }
     } catch (err) {

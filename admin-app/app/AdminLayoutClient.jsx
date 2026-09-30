@@ -1,14 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { getAdminSession, verifyServerSession } from '@/lib/admin-auth'
 import { supabase } from '@/lib/supabase'
 import AdminSidebar from '@/components/admin/AdminSidebar'
 
 export default function AdminLayoutClient({ children }) {
-  const [adminUser, setAdminUser] = useState(null)
-  const [isLoading, setIsLoading] = useState(true)
+  // Optimistic initial session: if cached in localStorage, zero loading wait (0ms)
+  const [adminUser, setAdminUser] = useState(() => getAdminSession())
+  const [isLoading, setIsLoading] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return !getAdminSession()
+  })
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(false)
   const [pendingJobsCount, setPendingJobsCount] = useState(0)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -16,43 +20,63 @@ export default function AdminLayoutClient({ children }) {
   const pathname = usePathname()
   const router = useRouter()
   const isLoginPage = pathname === '/login'
+  const sessionCheckedRef = useRef(false)
 
+  // Verify server session once in background without blocking the UI
   useEffect(() => {
-    async function checkSession() {
-      const cached = getAdminSession()
-      if (cached) {
-        setAdminUser(cached)
-      }
-      
-      if (!isLoginPage) {
-        const verified = await verifyServerSession()
-        if (verified) {
-          setAdminUser(verified)
-        } else if (!cached) {
-          router.push('/login')
-        }
-      }
+    if (isLoginPage) {
       setIsLoading(false)
+      return
     }
 
-    checkSession()
-  }, [pathname, isLoginPage, router])
+    // If already verified this session, skip redundant network calls
+    if (sessionCheckedRef.current) return
+    sessionCheckedRef.current = true
 
+    let isMounted = true
+    async function verify() {
+      try {
+        const verified = await verifyServerSession()
+        if (!isMounted) return
+        if (verified) {
+          setAdminUser(verified)
+        } else if (!getAdminSession()) {
+          router.push('/login')
+        }
+      } catch (e) {
+        // Fallback to cached session
+      } finally {
+        if (isMounted) setIsLoading(false)
+      }
+    }
+
+    verify()
+
+    return () => {
+      isMounted = false
+    }
+  }, [isLoginPage, router])
+
+  // Single global background subscription for pending print jobs count
   useEffect(() => {
     if (isLoginPage) return
 
+    let isMounted = true
     async function fetchPendingCount() {
       try {
         const { count } = await supabase
           .from('print_jobs')
           .select('id', { count: 'exact', head: true })
           .in('status', ['awaiting_redemption', 'redeemed'])
-        setPendingJobsCount(count || 0)
-        setIsRealtimeConnected(true)
+        if (isMounted) {
+          setPendingJobsCount(count || 0)
+          setIsRealtimeConnected(true)
+        }
       } catch (e) {
-        console.warn('Realtime count fetch notice:', e)
+        // Soft fallback
       }
     }
+
     fetchPendingCount()
 
     const channel = supabase
@@ -65,16 +89,18 @@ export default function AdminLayoutClient({ children }) {
         }
       )
       .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
+        if (status === 'SUBSCRIBED' && isMounted) {
           setIsRealtimeConnected(true)
         }
       })
 
     return () => {
+      isMounted = false
       supabase.removeChannel(channel)
     }
   }, [isLoginPage])
 
+  // Auto-close mobile menu on navigation
   useEffect(() => {
     setIsMobileMenuOpen(false)
   }, [pathname])
@@ -83,12 +109,13 @@ export default function AdminLayoutClient({ children }) {
     return <div className="min-h-screen bg-[#090d16]">{children}</div>
   }
 
-  if (isLoading) {
+  // Only show blocking spinner if user has zero cached session (fresh browser window)
+  if (isLoading && !adminUser) {
     return (
       <div className="min-h-screen bg-[#090d16] flex items-center justify-center text-slate-400 text-xs">
         <div className="flex flex-col items-center gap-2">
           <div className="w-5 h-5 rounded-full border-2 border-[#00bf63] border-t-transparent animate-spin" />
-          <span>Loading Admin Portal...</span>
+          <span>Opening Admin Portal...</span>
         </div>
       </div>
     )
