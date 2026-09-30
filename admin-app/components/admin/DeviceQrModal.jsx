@@ -58,15 +58,15 @@ export default function DeviceQrModal({ isOpen, onClose, device }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-md p-5 rounded-xl shadow-none">
+      <DialogContent className="bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white max-w-md p-5 rounded-xl shadow-xl">
         <DialogHeader>
-          <div className="w-8 h-8 rounded-lg bg-slate-900 text-[#00bf63] flex items-center justify-center mb-1 border border-slate-800">
+          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-900 text-[#00bf63] flex items-center justify-center mb-1 border border-slate-200 dark:border-slate-800">
             <QrCode className="w-4 h-4" />
           </div>
-          <DialogTitle className="text-base font-semibold text-white">
+          <DialogTitle className="text-base font-semibold text-slate-900 dark:text-white">
             Kiosk Print Station QR Code
           </DialogTitle>
-          <DialogDescription className="text-xs text-slate-400">
+          <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
             Display this QR at <strong>{device.name}</strong>. Customers scan to upload and print in 60s.
           </DialogDescription>
         </DialogHeader>
@@ -100,15 +100,15 @@ export default function DeviceQrModal({ isOpen, onClose, device }) {
         </div>
 
         {/* URL Box */}
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between text-xs">
-          <span className="text-slate-400 truncate text-[11px] max-w-[260px]">{printUrl}</span>
+        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2.5 flex items-center justify-between text-xs">
+          <span className="text-slate-600 dark:text-slate-400 truncate text-[11px] max-w-[260px]">{printUrl}</span>
           <Button
             size="sm"
             variant="ghost"
             onClick={handleCopyLink}
-            className="h-7 text-xs text-[#00bf63] hover:text-white hover:bg-slate-800 px-2"
+            className="h-7 text-xs text-emerald-600 dark:text-[#00bf63] hover:text-emerald-700 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-800 px-2 font-medium"
           >
-            {copied ? <Check className="w-3.5 h-3.5 mr-1 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
+            {copied ? <Check className="w-3.5 h-3.5 mr-1 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 mr-1" />}
             {copied ? 'Copied' : 'Copy'}
           </Button>
         </div>
@@ -124,7 +124,7 @@ export default function DeviceQrModal({ isOpen, onClose, device }) {
           <Button
             variant="outline"
             onClick={onClose}
-            className="border-slate-800 bg-slate-900 text-slate-300 hover:text-white text-xs h-9 rounded-xl"
+            className="border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs h-9 rounded-xl"
           >
             Close
           </Button>

@@ -1,33 +1,34 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
-  --color-background: #090d16;
-  --color-foreground: #f8fafc;
-  --color-card: #0d131f;
-  --color-card-foreground: #f8fafc;
-  --color-popover: #0d131f;
-  --color-popover-foreground: #f8fafc;
   --color-primary: #00bf63;
   --color-primary-hover: #00a656;
   --color-primary-foreground: #020617;
-  --color-secondary: #131b2c;
-  --color-secondary-foreground: #f8fafc;
-  --color-muted: #1e293b;
-  --color-muted-foreground: #94a3b8;
-  --color-accent: #131b2c;
-  --color-accent-foreground: #f8fafc;
-  --color-destructive: #ef4444;
-  --color-destructive-foreground: #f8fafc;
-  --color-border: #1e293b;
-  --color-input: #1e293b;
-  --color-ring: #00bf63;
   --color-brand: #00bf63;
 }
 
 @layer base {
+  :root {
+    --bg-main: #f8fafc;
+    --bg-card: #ffffff;
+    --border-subtle: #e2e8f0;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+  }
+
+  .dark {
+    --bg-main: #000000;
+    --bg-card: #0a0a0a;
+    --border-subtle: #1e293b;
+    --text-main: #f8fafc;
+    --text-muted: #94a3b8;
+  }
+
   body {
-    background-color: #090d16;
-    color: #f8fafc;
+    background-color: var(--bg-main);
+    color: var(--text-main);
   }
 }
 
@@ -42,12 +43,12 @@
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: #334155;
   border-radius: 4px;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: #475569;
 }
 
 /* Smooth Scroll */

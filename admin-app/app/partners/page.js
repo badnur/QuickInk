@@ -140,7 +140,7 @@ export default function AdminPartnersPage() {
   })
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-[#090d16]">
+    <div className="flex-1 flex flex-col min-h-screen bg-slate-50 dark:bg-black transition-colors">
       <AdminHeader
         title="Shop & Kiosk Registration Center"
         subtitle="Review prospective partner print shops and host venues, approve applications, and auto-provision stations"
@@ -151,42 +151,42 @@ export default function AdminPartnersPage() {
       <main className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full">
         {/* KPI Summary Strip */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-          <div className="bg-[#0d131f] border border-slate-800 rounded-2xl p-4 shadow-lg">
-            <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Total Applications</div>
-            <div className="text-2xl font-black text-white mt-1">{partners.length}</div>
-            <div className="text-[11px] text-slate-500 mt-0.5">Shops and Kiosks</div>
+          <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs transition-colors">
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">Total Applications</div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{partners.length}</div>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Shops and Kiosks</div>
           </div>
 
-          <div className="bg-[#0d131f] border border-amber-900/40 bg-amber-950/10 rounded-2xl p-4 shadow-lg">
-            <div className="text-xs text-amber-400 font-semibold uppercase tracking-wider">Pending Review</div>
-            <div className="text-2xl font-black text-amber-300 mt-1">
+          <div className="bg-white dark:bg-[#0a0a0a] border border-amber-300 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/10 rounded-2xl p-4 shadow-xs transition-colors">
+            <div className="text-xs text-amber-600 dark:text-amber-400 font-semibold uppercase tracking-wider">Pending Review</div>
+            <div className="text-2xl font-black text-amber-600 dark:text-amber-300 mt-1">
               {partners.filter((p) => p.status === 'pending').length}
             </div>
-            <div className="text-[11px] text-amber-400/80 mt-0.5">Awaiting admin verification</div>
+            <div className="text-[11px] text-amber-600/80 dark:text-amber-400/80 mt-0.5">Awaiting admin verification</div>
           </div>
 
-          <div className="bg-[#0d131f] border border-emerald-900/40 bg-emerald-950/10 rounded-2xl p-4 shadow-lg">
-            <div className="text-xs text-emerald-400 font-semibold uppercase tracking-wider">Approved & Active</div>
+          <div className="bg-white dark:bg-[#0a0a0a] border border-emerald-300 dark:border-emerald-900/40 bg-emerald-50/50 dark:bg-emerald-950/10 rounded-2xl p-4 shadow-xs transition-colors">
+            <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold uppercase tracking-wider">Approved & Active</div>
             <div className="text-2xl font-black text-[#00bf63] mt-1">
               {partners.filter((p) => p.status === 'approved' || p.status === 'onboarded').length}
             </div>
-            <div className="text-[11px] text-emerald-400/80 mt-0.5">Stations provisioned in fleet</div>
+            <div className="text-[11px] text-emerald-600/80 dark:text-emerald-400/80 mt-0.5">Stations provisioned in fleet</div>
           </div>
 
-          <div className="bg-[#0d131f] border border-slate-800 rounded-2xl p-4 shadow-lg">
-            <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider">Automated Kiosks</div>
-            <div className="text-2xl font-black text-purple-400 mt-1">
+          <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs transition-colors">
+            <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider">Automated Kiosks</div>
+            <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
               {partners.filter((p) => p.type === 'kiosk').length}
             </div>
-            <div className="text-[11px] text-slate-500 mt-0.5">Campus & Mall Host requests</div>
+            <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Campus & Mall Host requests</div>
           </div>
         </div>
 
         {/* Filter Toolbar */}
-        <div className="bg-[#0d131f] border border-slate-800 rounded-2xl p-4 shadow-xl flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+        <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
           <div className="flex flex-wrap items-center gap-2">
             {/* Status pills */}
-            <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-xl">
+            <div className="flex bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
               {[
                 { id: 'all', label: 'All Status' },
                 { id: 'pending', label: 'Pending' },
@@ -199,7 +199,7 @@ export default function AdminPartnersPage() {
                   className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
                     filterStatus === tab.id
                       ? 'bg-[#00bf63] text-slate-950 font-bold'
-                      : 'text-slate-400 hover:text-white'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   {tab.label}
@@ -208,7 +208,7 @@ export default function AdminPartnersPage() {
             </div>
 
             {/* Type Filter */}
-            <div className="flex bg-slate-900 border border-slate-800 p-1 rounded-xl">
+            <div className="flex bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 rounded-xl">
               {[
                 { id: 'all', label: 'All Modalities' },
                 { id: 'shop', label: 'Shops' },
@@ -219,8 +219,8 @@ export default function AdminPartnersPage() {
                   onClick={() => setFilterType(tab.id)}
                   className={`px-3 py-1 text-xs font-semibold rounded-lg transition-colors ${
                     filterType === tab.id
-                      ? 'bg-slate-800 text-white font-bold'
-                      : 'text-slate-400 hover:text-white'
+                      ? 'bg-slate-900 dark:bg-slate-800 text-white font-bold shadow-xs'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   {tab.label}
@@ -230,34 +230,34 @@ export default function AdminPartnersPage() {
           </div>
 
           <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-500" />
+            <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
               placeholder="Search by name, phone, ref..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-900 border border-slate-800 text-white text-xs pl-9 pr-3 py-1.5 rounded-xl outline-none focus:border-[#00bf63]"
+              className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-xs pl-9 pr-3 py-1.5 rounded-xl outline-none focus:border-[#00bf63]"
             />
           </div>
         </div>
 
         {/* Applications List */}
-        <div className="bg-[#0d131f] border border-slate-800 rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-slate-800 flex items-center justify-between">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+        <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden shadow-xs">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
               <FileCheck className="w-4 h-4 text-[#00bf63]" />
               Registration Applications Queue
             </h3>
-            <span className="text-xs text-slate-400 font-mono">{filteredPartners.length} shown</span>
+            <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">{filteredPartners.length} shown</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#0b101b] text-slate-400 border-b border-slate-800 uppercase tracking-wider text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th className="py-3 px-4">Reference & Type</th>
-                  <th className="py-3 px-4">Business / Venue</th>
-                  <th className="py-3 px-4">Contact Info</th>
+                  <th className="py-3 px-4 font-semibold">Reference & Type</th>
+                  <th className="py-3 px-4 font-semibold">Business / Venue</th>
+                  <th className="py-3 px-4 font-semibold">Contact Info</th>
                   <th className="py-3 px-4">Location / Area</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4 text-right">Review Actions</th>
@@ -286,8 +286,8 @@ export default function AdminPartnersPage() {
                           <span
                             className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider mt-1 ${
                               isKiosk
-                                ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
-                                : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                                ? 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700'
+                                : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/30'
                             }`}
                           >
                             {isKiosk ? <HardDrive className="w-2.5 h-2.5" /> : <Store className="w-2.5 h-2.5" />}
@@ -402,12 +402,12 @@ export default function AdminPartnersPage() {
       {/* Inspect Partner Application Modal */}
       {selectedPartner && (
         <Dialog open={Boolean(selectedPartner)} onOpenChange={() => setSelectedPartner(null)}>
-          <DialogContent className="max-w-xl bg-[#0d131f] border border-slate-800 text-white p-5 rounded-xl shadow-none">
-            <DialogHeader className="border-b border-slate-800 pb-3">
+          <DialogContent className="max-w-xl bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white p-5 rounded-xl shadow-xl">
+            <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-3">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="font-mono text-xs text-slate-500 font-bold">{selectedPartner.reference_id}</span>
-                  <DialogTitle className="text-lg font-bold text-white mt-0.5">
+                  <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white mt-0.5">
                     {selectedPartner.shop_name}
                   </DialogTitle>
                 </div>
@@ -417,11 +417,11 @@ export default function AdminPartnersPage() {
               </div>
             </DialogHeader>
 
-            <div className="space-y-4 py-3 text-xs text-slate-300">
-              <div className="grid grid-cols-2 gap-3 bg-[#111827] border border-slate-800 p-3.5 rounded-xl">
+            <div className="space-y-4 py-3 text-xs text-slate-600 dark:text-slate-300">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 p-3.5 rounded-xl">
                 <div>
                   <span className="text-[10px] text-slate-500 uppercase font-semibold">Contact Person</span>
-                  <div className="text-sm font-bold text-white">{selectedPartner.name}</div>
+                  <div className="text-sm font-bold text-slate-900 dark:text-white">{selectedPartner.name}</div>
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-500 uppercase font-semibold">Phone Number</span>
@@ -516,28 +516,28 @@ export default function AdminPartnersPage() {
       {/* Provisioned Success Dialog */}
       {provisionResult && (
         <Dialog open={Boolean(provisionResult)} onOpenChange={() => setProvisionResult(null)}>
-          <DialogContent className="max-w-md bg-[#0d131f] border-slate-800 text-white p-6 rounded-2xl">
+          <DialogContent className="max-w-md bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white p-6 rounded-2xl shadow-xl">
             <DialogHeader className="text-center">
               <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-[#00bf63] flex items-center justify-center mx-auto mb-2">
                 <CheckCircle2 className="w-6 h-6" />
               </div>
-              <DialogTitle className="text-lg font-bold text-white">
+              <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">
                 Station Successfully Provisioned!
               </DialogTitle>
-              <DialogDescription className="text-xs text-slate-400">
+              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
                 A hardware terminal entry has been created in your fleet.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3.5 my-3 text-xs">
-              <div className="bg-[#111827] border border-slate-800 rounded-xl p-3 space-y-1">
-                <div className="text-slate-400 text-[10px] uppercase font-bold">Station Name</div>
-                <div className="text-white font-bold text-sm">{provisionResult.device?.name}</div>
+              <div className="bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 rounded-xl p-3 space-y-1">
+                <div className="text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold">Station Name</div>
+                <div className="text-slate-900 dark:text-white font-bold text-sm">{provisionResult.device?.name}</div>
               </div>
 
-              <div className="bg-[#111827] border border-slate-800 rounded-xl p-3 space-y-1">
-                <div className="text-slate-400 text-[10px] uppercase font-bold">Device UUID (Desktop POS ID)</div>
-                <div className="font-mono text-emerald-400 font-bold text-xs break-all">{provisionResult.device?.id}</div>
+              <div className="bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 rounded-xl p-3 space-y-1">
+                <div className="text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold">Device UUID (Desktop POS ID)</div>
+                <div className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-xs break-all">{provisionResult.device?.id}</div>
               </div>
 
               <div className="pt-2 flex flex-col gap-2">
@@ -564,7 +564,7 @@ export default function AdminPartnersPage() {
                 <Button
                   variant="outline"
                   onClick={() => setProvisionResult(null)}
-                  className="w-full border-slate-800 text-slate-300 text-xs h-9"
+                  className="w-full border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs h-9"
                 >
                   Done
                 </Button>
@@ -577,17 +577,17 @@ export default function AdminPartnersPage() {
       {/* Rejection Dialog */}
       {rejectingPartner && (
         <Dialog open={Boolean(rejectingPartner)} onOpenChange={() => setRejectingPartner(null)}>
-          <DialogContent className="max-w-md bg-[#0d131f] border border-slate-800 text-white p-5 rounded-xl shadow-none">
+          <DialogContent className="max-w-md bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white p-5 rounded-xl shadow-xl">
             <DialogHeader>
-              <DialogTitle className="text-base font-bold text-white">Reject Application</DialogTitle>
-              <DialogDescription className="text-xs text-slate-400">
+              <DialogTitle className="text-base font-bold text-slate-900 dark:text-white">Reject Application</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
                 Rejecting application for &ldquo;{rejectingPartner.shop_name}&rdquo;. The shop owner will be required to re-register.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3 my-3 text-xs">
               <div>
-                <label className="text-slate-300 font-semibold block mb-1.5">Quick Reason Presets</label>
+                <label className="text-slate-700 dark:text-slate-300 font-semibold block mb-1.5">Quick Reason Presets</label>
                 <div className="flex flex-wrap gap-1.5 mb-2">
                   {[
                     'Storefront / kiosk photo unverifiable',
@@ -599,7 +599,7 @@ export default function AdminPartnersPage() {
                       key={preset}
                       type="button"
                       onClick={() => setRejectionReason(preset)}
-                      className="text-[10px] bg-slate-900 border border-slate-700 hover:border-red-500/60 text-slate-300 hover:text-white px-2 py-1 rounded-md transition-colors"
+                      className="text-[10px] bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-red-500/60 text-slate-700 dark:text-slate-300 hover:text-red-500 px-2 py-1 rounded-md transition-colors"
                     >
                       {preset}
                     </button>

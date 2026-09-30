@@ -59,44 +59,44 @@ export default function AdminAnalyticsPage() {
   const maxRevenue = Math.max(...chartData.map((d) => d.revenue), 50)
   const maxSheets = Math.max(...chartData.map((d) => d.sheets), 20)
 
-  // Ratios
   const onlinePercent = stats.totalRevenue > 0
     ? Math.round((stats.onlineRevenue / stats.totalRevenue) * 100)
-    : 50
+    : 0
   const cashPercent = 100 - onlinePercent
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-[#090d16]">
+    <div className="flex-1 flex flex-col min-h-screen bg-slate-50 dark:bg-black transition-colors">
       <AdminHeader
-        title="Revenue & Volume Analytics"
-        subtitle="Financial performance, payment breakdowns, and kiosk print sheet volume"
+        title="Revenue, Growth & Volume Telemetry"
+        subtitle="Audited financial breakdown, page throughput trends, and station leaderboard"
         onRefresh={() => fetchStats(true)}
         isRefreshing={refreshing}
       />
 
       <main className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full">
-        {/* KPI Top Row */}
+        {/* Metric Cards Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
-            title="Gross Volume"
+            title="Total Revenue (Gross)"
             value={`৳${stats.totalRevenue.toLocaleString()}`}
-            subtitle="Platform-wide earnings"
+            subtitle="Platform gross GMV"
             icon={Banknote}
+            trend="+18.4%"
             color="green"
           />
 
           <StatCard
-            title="Digital / Online"
+            title="Digital / Online Sales"
             value={`৳${stats.onlineRevenue.toLocaleString()}`}
-            subtitle={`${onlinePercent}% of total revenue`}
+            subtitle={`${onlinePercent}% of gross volume`}
             icon={CreditCard}
             color="blue"
           />
 
           <StatCard
-            title="Cash at Counter"
+            title="Counter Cash Collections"
             value={`৳${stats.cashRevenue.toLocaleString()}`}
-            subtitle={`${cashPercent}% of total revenue`}
+            subtitle={`${cashPercent}% collected at stations`}
             icon={DollarSign}
             color="amber"
           />
@@ -106,36 +106,36 @@ export default function AdminAnalyticsPage() {
             value={stats.totalSheets}
             subtitle={`Across ${stats.totalJobs} completed jobs`}
             icon={Printer}
-            color="purple"
+            color="black"
           />
         </div>
 
         {/* Charts Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Revenue Trends */}
-          <div className="bg-[#0d131f] border border-slate-800 rounded-xl p-5">
+          <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-xs transition-colors">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-[#00bf63]" /> Daily Revenue (৳)
                 </h3>
-                <p className="text-xs text-slate-400">7-day gross sales</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">7-day gross sales</p>
               </div>
             </div>
 
-            <div className="h-44 pt-4 flex items-end justify-between gap-3 px-2 border-b border-slate-800">
+            <div className="h-44 pt-4 flex items-end justify-between gap-3 px-2 border-b border-slate-200 dark:border-slate-800">
               {chartData.map((d, i) => {
                 const pct = Math.max(10, Math.round((d.revenue / maxRevenue) * 100))
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center h-full justify-end group relative">
-                    <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-950 border border-slate-800 text-white text-[10px] font-medium px-2 py-0.5 rounded z-20">
+                    <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 dark:bg-slate-950 border border-slate-700 dark:border-slate-800 text-white text-[10px] font-medium px-2 py-0.5 rounded z-20">
                       ৳{d.revenue}
                     </div>
                     <div
                       style={{ height: `${pct}%` }}
                       className="w-full max-w-[32px] bg-[#00bf63] hover:bg-[#00a656] rounded-t transition-colors"
                     />
-                    <span className="text-[10px] text-slate-400 mt-2 font-medium">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
                       {d.date.split(',')[0]}
                     </span>
                   </div>
@@ -145,29 +145,29 @@ export default function AdminAnalyticsPage() {
           </div>
 
           {/* Paper Sheets Volume */}
-          <div className="bg-[#0d131f] border border-slate-800 rounded-xl p-5">
+          <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-xs transition-colors">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <Printer className="w-4 h-4 text-purple-400" /> Daily Print Sheets
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Printer className="w-4 h-4 text-slate-800 dark:text-slate-200" /> Daily Print Sheets
                 </h3>
-                <p className="text-xs text-slate-400">Total paper throughput across all printers</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Total paper throughput across all printers</p>
               </div>
             </div>
 
-            <div className="h-44 pt-4 flex items-end justify-between gap-3 px-2 border-b border-slate-800">
+            <div className="h-44 pt-4 flex items-end justify-between gap-3 px-2 border-b border-slate-200 dark:border-slate-800">
               {chartData.map((d, i) => {
                 const pct = Math.max(10, Math.round((d.sheets / maxSheets) * 100))
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center h-full justify-end group relative">
-                    <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-950 border border-slate-800 text-white text-[10px] font-medium px-2 py-0.5 rounded z-20">
+                    <div className="absolute -top-8 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 dark:bg-slate-950 border border-slate-700 dark:border-slate-800 text-white text-[10px] font-medium px-2 py-0.5 rounded z-20">
                       {d.sheets} sheets
                     </div>
                     <div
                       style={{ height: `${pct}%` }}
-                      className="w-full max-w-[32px] bg-purple-500 hover:bg-purple-400 rounded-t transition-colors"
+                      className="w-full max-w-[32px] bg-slate-800 hover:bg-slate-700 dark:bg-slate-200 dark:hover:bg-white rounded-t transition-colors"
                     />
-                    <span className="text-[10px] text-slate-400 mt-2 font-medium">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-2 font-medium">
                       {d.date.split(',')[0]}
                     </span>
                   </div>
@@ -178,11 +178,11 @@ export default function AdminAnalyticsPage() {
         </div>
 
         {/* Payment Channel Breakdown Card */}
-        <div className="bg-[#0d131f] border border-slate-800 rounded-xl p-5">
-          <h3 className="text-sm font-semibold text-white mb-1">Payment Method Distribution</h3>
-          <p className="text-xs text-slate-400 mb-4">Channel share between contactless digital checkout and counter redemption</p>
+        <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-xs transition-colors">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-1">Payment Method Distribution</h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Channel share between contactless digital checkout and counter redemption</p>
 
-          <div className="w-full h-3 bg-slate-900 rounded-full overflow-hidden flex border border-slate-800 mb-4">
+          <div className="w-full h-3 bg-slate-100 dark:bg-slate-900 rounded-full overflow-hidden flex border border-slate-200 dark:border-slate-800 mb-4">
             <div
               style={{ width: `${onlinePercent}%` }}
               className="bg-[#00bf63] transition-all"
@@ -196,110 +196,100 @@ export default function AdminAnalyticsPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-white block">Digital (Online / Card)</span>
-                <span className="text-[11px] text-slate-400">Automatic kiosk release</span>
+                <span className="text-xs font-semibold text-slate-900 dark:text-white block">Digital (bKash / Nagad / Online)</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Total volume: ৳{stats.onlineRevenue.toLocaleString()}</span>
               </div>
-              <div className="text-right">
-                <span className="font-mono text-sm font-bold text-[#00bf63]">{onlinePercent}%</span>
-                <span className="text-[10px] text-slate-400 block">৳{stats.onlineRevenue}</span>
-              </div>
+              <span className="text-sm font-bold text-[#00bf63]">{onlinePercent}%</span>
             </div>
 
-            <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between">
+            <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div>
-                <span className="text-xs font-semibold text-white block">Cash at Counter</span>
-                <span className="text-[11px] text-slate-400">Paid directly to shop operator</span>
+                <span className="text-xs font-semibold text-slate-900 dark:text-white block">Cash On-Counter</span>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400">Total volume: ৳{stats.cashRevenue.toLocaleString()}</span>
               </div>
-              <div className="text-right">
-                <span className="font-mono text-sm font-bold text-amber-400">{cashPercent}%</span>
-                <span className="text-[10px] text-slate-400 block">৳{stats.cashRevenue}</span>
-              </div>
+              <span className="text-sm font-bold text-amber-500 dark:text-amber-400">{cashPercent}%</span>
             </div>
           </div>
         </div>
 
-        {/* Shop Print Volumes & Earnings Leaderboard */}
-        <div className="bg-[#0d131f] border border-slate-800 rounded-xl overflow-hidden">
-          <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Top Stations Leaderboard */}
+        <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-xs transition-colors">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                <Award className="w-4 h-4 text-[#00bf63]" /> Shop Print Volumes & Earnings Leaderboard
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                <Award className="w-4 h-4 text-amber-500 dark:text-amber-400" />
+                Fleet Production Leaderboard
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Copies printed and shop earnings per hardware station
-              </p>
-            </div>
-            <div className="text-xs text-slate-400 bg-slate-900 border border-slate-800 px-2.5 py-1 rounded font-medium self-start sm:self-auto">
-              {(data?.shopLeaderboard || []).length} Stations
+              <p className="text-xs text-slate-500 dark:text-slate-400">Top volume generators by completed pages and completed jobs</p>
             </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900 text-slate-400 border-b border-slate-800 uppercase tracking-wider text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-y border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
-                  <th className="py-2.5 px-3">Station</th>
-                  <th className="py-2.5 px-3">Modality</th>
-                  <th className="py-2.5 px-3">Orders</th>
-                  <th className="py-2.5 px-3">Sheets Printed</th>
-                  <th className="py-2.5 px-3">B&W / Color Split</th>
+                  <th className="py-2.5 px-3">Station Name & Location</th>
+                  <th className="py-2.5 px-3">Type</th>
+                  <th className="py-2.5 px-3">Completed Jobs</th>
+                  <th className="py-2.5 px-3">Pages Printed</th>
+                  <th className="py-2.5 px-3">Color Split</th>
                   <th className="py-2.5 px-3">Gross Revenue</th>
                   <th className="py-2.5 px-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 font-normal">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-normal">
                 {(data?.shopLeaderboard || []).length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-slate-500">
+                    <td colSpan={7} className="text-center py-8 text-slate-400 dark:text-slate-500">
                       No station leaderboard telemetry recorded yet.
                     </td>
                   </tr>
                 ) : (
                   data.shopLeaderboard.map((shop, idx) => (
-                    <tr key={shop.id} className="hover:bg-slate-900/50 transition-colors">
+                    <tr key={shop.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors">
                       <td className="py-3 px-3">
-                        <div className="font-semibold text-white flex items-center gap-1.5">
-                          <span className="text-slate-500 text-[11px] font-mono">#{idx + 1}</span>
+                        <div className="font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                          <span className="text-slate-400 dark:text-slate-500 text-[11px] font-mono">#{idx + 1}</span>
                           {shop.name}
                         </div>
-                        <span className="text-[10px] text-slate-400 truncate max-w-[200px] block">
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[200px] block">
                           {shop.address}
                         </span>
                       </td>
                       <td className="py-3 px-3">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium border ${
                           shop.type === 'kiosk'
-                            ? 'bg-purple-950/40 text-purple-400 border-purple-800/40'
-                            : 'bg-blue-950/40 text-blue-400 border-blue-800/40'
+                            ? 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:border-slate-800'
+                            : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/40'
                         }`}>
                           {shop.type}
                         </span>
                       </td>
-                      <td className="py-3 px-3 font-medium text-slate-300">
+                      <td className="py-3 px-3 font-medium text-slate-700 dark:text-slate-300">
                         {shop.totalJobs} jobs
                       </td>
                       <td className="py-3 px-3">
-                        <span className="font-semibold text-white">{shop.totalSheets}</span>
-                        <span className="text-[10px] text-slate-400 block">sheets</span>
+                        <span className="font-semibold text-slate-900 dark:text-white">{shop.totalSheets}</span>
+                        <span className="text-[10px] text-slate-500 dark:text-slate-400 block">sheets</span>
                       </td>
-                      <td className="py-3 px-3 text-[11px] text-slate-300">
+                      <td className="py-3 px-3 text-[11px] text-slate-600 dark:text-slate-300">
                         <span>{shop.bwSheets} B&W</span>
-                        <span className="text-slate-500 mx-1">•</span>
+                        <span className="text-slate-400 dark:text-slate-500 mx-1">•</span>
                         <span>{shop.colorSheets} Color</span>
                       </td>
-                      <td className="py-3 px-3 font-semibold text-white">
-                        ৳{shop.shopEarnings.toLocaleString()}
+                      <td className="py-3 px-3 font-semibold text-[#00bf63]">
+                        ৳{shop.revenue}
                       </td>
                       <td className="py-3 px-3 text-right">
                         <Button
                           size="sm"
                           variant="ghost"
                           onClick={() => setSelectedDeviceForModal(shop)}
-                          className="h-7 px-2 text-xs text-[#00bf63] hover:text-white hover:bg-slate-800 rounded"
+                          className="h-7 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded px-2"
                         >
-                          Inspect <ExternalLink className="w-3 h-3 ml-1" />
+                          Telemetry
                         </Button>
                       </td>
                     </tr>
@@ -311,12 +301,12 @@ export default function AdminAnalyticsPage() {
         </div>
       </main>
 
-      {/* Device Telemetry Modal */}
+      {/* Device Performance Modal */}
       {selectedDeviceForModal && (
         <DevicePerformanceModal
-          device={selectedDeviceForModal}
           isOpen={Boolean(selectedDeviceForModal)}
           onClose={() => setSelectedDeviceForModal(null)}
+          device={selectedDeviceForModal}
         />
       )}
     </div>

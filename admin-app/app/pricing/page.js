@@ -143,12 +143,12 @@ export default function PricingTiersPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold text-slate-900 tracking-tight">Dynamic Pricing & Zones</h1>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight">Dynamic Pricing & Zones</h1>
             <Badge className="bg-[#00bf63]/10 text-[#00bf63] border-none text-[10px] font-bold">
               Production Matrix
             </Badge>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Configure geographic rate cards, student discounts, and commercial kiosk pricing tiers across Bangladesh.
           </p>
         </div>
@@ -158,7 +158,7 @@ export default function PricingTiersPage() {
             variant="outline"
             size="sm"
             onClick={() => fetchTiers(true)}
-            className="text-xs border-slate-200 text-slate-600 hover:bg-slate-100 h-9"
+            className="text-xs border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 h-9"
           >
             <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
@@ -177,14 +177,14 @@ export default function PricingTiersPage() {
 
       {/* Notifications */}
       {successMsg && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2 animate-in fade-in">
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-400 text-xs rounded-xl flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="w-4 h-4 text-[#00bf63]" />
           <span>{successMsg}</span>
         </div>
       )}
 
       {error && (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
+        <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-400 text-xs rounded-xl flex items-center gap-2">
           <AlertCircle className="w-4 h-4 text-red-500" />
           <span>{error}</span>
         </div>
@@ -192,39 +192,39 @@ export default function PricingTiersPage() {
 
       {/* Overview Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl p-4">
-          <div className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+        <Card className="border border-slate-200 dark:border-slate-800/80 shadow-xs bg-white dark:bg-[#0a0a0a] rounded-xl p-4">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             <Tag className="w-3.5 h-3.5 text-[#00bf63]" /> Active Rate Zones
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-1">{tiers.length}</div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Applied dynamically to matched kiosks</div>
+          <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{tiers.length}</div>
+          <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Applied dynamically to matched kiosks</div>
         </Card>
 
-        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl p-4">
-          <div className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+        <Card className="border border-slate-200 dark:border-slate-800/80 shadow-xs bg-white dark:bg-[#0a0a0a] rounded-xl p-4">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             <DollarSign className="w-3.5 h-3.5 text-blue-500" /> Lowest Student Rate (B&W)
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-1">
+          <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
             ৳{tiers.length > 0 ? Math.min(...tiers.map(t => t.bw_price)).toFixed(2) : '2.00'}
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Nilkhet & Campus standard</div>
+          <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Nilkhet & Campus standard</div>
         </Card>
 
-        <Card className="border border-slate-200 shadow-sm bg-white rounded-xl p-4">
-          <div className="text-xs font-semibold text-slate-500 flex items-center gap-1.5">
+        <Card className="border border-slate-200 dark:border-slate-800/80 shadow-xs bg-white dark:bg-[#0a0a0a] rounded-xl p-4">
+          <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
             <Sparkles className="w-3.5 h-3.5 text-amber-500" /> High-Gloss Color Rate
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-1">
+          <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
             ৳{tiers.length > 0 ? Math.max(...tiers.map(t => t.color_price)).toFixed(2) : '8.00'}
           </div>
-          <div className="text-[11px] text-slate-400 mt-0.5">Maximum commercial zone rate</div>
+          <div className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Maximum commercial zone rate</div>
         </Card>
       </div>
 
       {/* Pricing Zones Table */}
-      <Card className="border border-slate-200 shadow-sm rounded-xl bg-white overflow-hidden">
-        <CardHeader className="bg-slate-50/70 border-b border-slate-100 py-3.5 px-5">
-          <CardTitle className="text-sm font-bold text-slate-900 flex items-center gap-2">
+      <Card className="border border-slate-200 dark:border-slate-800/80 shadow-xs rounded-xl bg-white dark:bg-[#0a0a0a] overflow-hidden">
+        <CardHeader className="bg-slate-50/70 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 py-3.5 px-5">
+          <CardTitle className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <Layers className="w-4 h-4 text-[#00bf63]" />
             Configured Rate Cards
           </CardTitle>
@@ -233,7 +233,7 @@ export default function PricingTiersPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/40 text-slate-500 font-semibold uppercase text-[10px] tracking-wider">
+                <tr className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 text-slate-500 dark:text-slate-400 font-semibold uppercase text-[10px] tracking-wider">
                   <th className="py-3 px-4">Zone / Tier Name</th>
                   <th className="py-3 px-4">Description / Target Location</th>
                   <th className="py-3 px-4 text-right">B&W (৳/Page)</th>
@@ -242,30 +242,30 @@ export default function PricingTiersPage() {
                   <th className="py-3 px-4 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                 {tiers.map((tier) => (
-                  <tr key={tier.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3 px-4 font-bold text-slate-900">
+                  <tr key={tier.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/40 transition-colors">
+                    <td className="py-3 px-4 font-bold text-slate-900 dark:text-white">
                       <div className="flex items-center gap-1.5">
                         <span>{tier.name}</span>
                         {tier.is_default && (
-                          <Badge className="bg-emerald-100 text-emerald-800 text-[9px] font-bold border-none px-1.5 py-0">
+                          <Badge className="bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-400 text-[9px] font-bold border-none px-1.5 py-0">
                             Default
                           </Badge>
                         )}
                       </div>
                     </td>
-                    <td className="py-3 px-4 text-slate-500 max-w-xs truncate">
+                    <td className="py-3 px-4 text-slate-500 dark:text-slate-400 max-w-xs truncate">
                       {tier.description || 'Applies to unassigned stations'}
                     </td>
-                    <td className="py-3 px-4 text-right font-bold text-slate-800">
+                    <td className="py-3 px-4 text-right font-bold text-slate-800 dark:text-slate-200">
                       ৳{Number(tier.bw_price).toFixed(2)}
                     </td>
-                    <td className="py-3 px-4 text-right font-bold text-blue-600">
+                    <td className="py-3 px-4 text-right font-bold text-blue-600 dark:text-blue-400">
                       ৳{Number(tier.color_price).toFixed(2)}
                     </td>
                     <td className="py-3 px-4 text-center">
-                      <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px]">
+                      <Badge className="bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40 text-[10px]">
                         Active
                       </Badge>
                     </td>
@@ -275,7 +275,7 @@ export default function PricingTiersPage() {
                           variant="ghost"
                           size="sm"
                           onClick={() => openEditModal(tier)}
-                          className="h-7 w-7 p-0 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-lg"
+                          className="h-7 w-7 p-0 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
                           title="Edit Tier"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -285,7 +285,7 @@ export default function PricingTiersPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(tier)}
-                            className="h-7 w-7 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                            className="h-7 w-7 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg"
                             title="Delete Tier"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -303,20 +303,20 @@ export default function PricingTiersPage() {
 
       {/* Create / Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <Card className="w-full max-w-md bg-white border border-slate-200 shadow-xl rounded-2xl overflow-hidden">
-            <CardHeader className="bg-slate-50 border-b border-slate-100 p-5">
-              <CardTitle className="text-base font-bold text-slate-900">
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <Card className="w-full max-w-md bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 shadow-xl rounded-2xl overflow-hidden">
+            <CardHeader className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 p-5">
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
                 {editingTier ? `Edit Zone: ${editingTier.name}` : 'Create New Pricing Zone'}
               </CardTitle>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                 Set base B&W and Color per-page rates for this zone.
               </p>
             </CardHeader>
             <CardContent className="p-5">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <Label htmlFor="tier_name" className="text-xs font-semibold text-slate-700">
+                  <Label htmlFor="tier_name" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Zone Name *
                   </Label>
                   <Input
@@ -325,12 +325,12 @@ export default function PricingTiersPage() {
                     placeholder="e.g. DU Nilkhet Student, Rajshahi Campus"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="mt-1 h-9 text-xs border-slate-200 rounded-lg"
+                    className="mt-1 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-lg"
                   />
                 </div>
 
                 <div>
-                  <Label htmlFor="tier_desc" className="text-xs font-semibold text-slate-700">
+                  <Label htmlFor="tier_desc" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Description / Scope
                   </Label>
                   <Input
@@ -338,13 +338,13 @@ export default function PricingTiersPage() {
                     placeholder="e.g. Subsidized student printing zone"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="mt-1 h-9 text-xs border-slate-200 rounded-lg"
+                    className="mt-1 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-lg"
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <Label htmlFor="bw_price" className="text-xs font-semibold text-slate-700">
+                    <Label htmlFor="bw_price" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                       B&W Price (৳/Page) *
                     </Label>
                     <Input
@@ -355,12 +355,12 @@ export default function PricingTiersPage() {
                       required
                       value={formData.bw_price}
                       onChange={(e) => setFormData({ ...formData, bw_price: e.target.value })}
-                      className="mt-1 h-9 text-xs border-slate-200 rounded-lg font-mono font-bold"
+                      className="mt-1 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-lg font-mono font-bold"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="color_price" className="text-xs font-semibold text-slate-700">
+                    <Label htmlFor="color_price" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                       Color Price (৳/Page) *
                     </Label>
                     <Input
@@ -371,18 +371,18 @@ export default function PricingTiersPage() {
                       required
                       value={formData.color_price}
                       onChange={(e) => setFormData({ ...formData, color_price: e.target.value })}
-                      className="mt-1 h-9 text-xs border-slate-200 rounded-lg font-mono font-bold"
+                      className="mt-1 h-9 text-xs bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-lg font-mono font-bold"
                     />
                   </div>
                 </div>
 
-                <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+                <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-slate-800">
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={() => setIsModalOpen(false)}
-                    className="text-xs border-slate-200 text-slate-600"
+                    className="text-xs border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400"
                   >
                     Cancel
                   </Button>

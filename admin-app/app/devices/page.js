@@ -356,7 +356,7 @@ export default function AdminDevicesPage() {
   }
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-[#090d16]">
+    <div className="flex-1 flex flex-col min-h-screen bg-slate-50 dark:bg-black transition-colors">
       <AdminHeader
         title="Fleet Control & Station Performance"
         subtitle="Manage hardware terminals, watch real-time print performance, generate station QR codes, and configure desktop POS pairings"
@@ -366,23 +366,23 @@ export default function AdminDevicesPage() {
 
       <main className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto w-full">
         {/* Top Fleet Summary Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-[#0d131f] border border-slate-800 p-4 rounded-2xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 p-4 rounded-2xl shadow-xs transition-colors">
           <div className="flex items-center gap-6">
             <div>
-              <span className="text-xs font-semibold text-slate-400">Active Fleet:</span>
-              <span className="text-base font-black text-white ml-2">{devices.length} Stations</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Fleet:</span>
+              <span className="text-base font-black text-slate-900 dark:text-white ml-2">{devices.length} Stations</span>
             </div>
-            <div className="hidden sm:flex items-center gap-4 text-xs text-slate-400 border-l border-slate-800 pl-6">
+            <div className="hidden sm:flex items-center gap-4 text-xs text-slate-500 dark:text-slate-400 border-l border-slate-200 dark:border-slate-800 pl-6">
               <span className="flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-[#00bf63]"></span>
                 {devices.filter((d) => d.status === 'online').length} Online
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-purple-400"></span>
+                <span className="w-2 h-2 rounded-full bg-slate-700 dark:bg-slate-300"></span>
                 {devices.filter((d) => d.type === 'kiosk').length} Kiosks
               </span>
               <span className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-blue-400"></span>
+                <span className="w-2 h-2 rounded-full bg-blue-500"></span>
                 {devices.filter((d) => d.type === 'shop').length} Shops
               </span>
             </div>
@@ -397,15 +397,15 @@ export default function AdminDevicesPage() {
         </div>
 
         {/* Pricing Zones Panel */}
-        <div className="bg-[#0d131f] border border-slate-800 rounded-xl p-5">
+        <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 rounded-xl p-5 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-[#00bf63]/15 border border-[#00bf63]/30 flex items-center justify-center">
                 <Tag className="w-4 h-4 text-[#00bf63]" />
               </div>
               <div>
-                <h2 className="text-sm font-bold text-white">Pricing Zones</h2>
-                <p className="text-[11px] text-slate-400">Each device can be assigned to a zone with custom BW &amp; Color rates</p>
+                <h2 className="text-sm font-bold text-slate-900 dark:text-white">Pricing Zones</h2>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">Each device can be assigned to a zone with custom BW &amp; Color rates</p>
               </div>
             </div>
             <Button
@@ -418,7 +418,7 @@ export default function AdminDevicesPage() {
                 setTierError(null)
                 setIsTierModalOpen(true)
               }}
-              className="bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs h-8 px-3 rounded-xl flex items-center gap-1.5 shadow-none"
+              className="bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white font-bold text-xs h-8 px-3 rounded-xl flex items-center gap-1.5 shadow-none"
             >
               <Plus className="w-3.5 h-3.5" /> New Zone
             </Button>
@@ -483,7 +483,7 @@ export default function AdminDevicesPage() {
             return (
               <div
                 key={device.id}
-                className="bg-[#0d131f] border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-colors flex flex-col justify-between"
+                className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-slate-300 dark:hover:border-slate-700 transition-colors flex flex-col justify-between shadow-xs"
               >
                 <div>
                   {/* Top Row: Type, Zone badge & Status Control */}
@@ -492,8 +492,8 @@ export default function AdminDevicesPage() {
                       <span
                         className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider ${
                           isKiosk
-                            ? 'bg-purple-500/15 text-purple-400 border border-purple-500/30'
-                            : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                            ? 'bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-900 dark:text-slate-200 dark:border-slate-700'
+                            : 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-500/30'
                         }`}
                       >
                         {isKiosk ? <HardDrive className="w-2.5 h-2.5" /> : <Store className="w-2.5 h-2.5" />}
@@ -715,10 +715,10 @@ export default function AdminDevicesPage() {
       {/* Edit Station Modal */}
       {editingDevice && (
         <Dialog open={Boolean(editingDevice)} onOpenChange={() => setEditingDevice(null)}>
-          <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-md p-5 rounded-xl shadow-none">
+          <DialogContent className="bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white max-w-md p-5 rounded-xl shadow-xl">
             <DialogHeader>
-              <DialogTitle className="text-base font-bold text-white">Configure Hardware Station</DialogTitle>
-              <DialogDescription className="text-xs text-slate-400">
+              <DialogTitle className="text-base font-bold text-slate-900 dark:text-white">Configure Hardware Station</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
                 Update station parameters, status, and partner commission share.
               </DialogDescription>
             </DialogHeader>
@@ -859,10 +859,10 @@ export default function AdminDevicesPage() {
 
       {/* Add New Device Modal */}
       <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-md p-5 rounded-xl shadow-none">
+        <DialogContent className="bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white max-w-md p-5 rounded-xl shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-white">Register Hardware Station</DialogTitle>
-            <DialogDescription className="text-xs text-slate-400">
+            <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white">Register Hardware Station</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
               Add a new automated Kiosk terminal or partner shop printer counter.
             </DialogDescription>
           </DialogHeader>
@@ -976,48 +976,48 @@ export default function AdminDevicesPage() {
       {/* Partnership Cancellation & Suspension Dialog */}
       {suspendingDevice && (
         <Dialog open={Boolean(suspendingDevice)} onOpenChange={() => setSuspendingDevice(null)}>
-          <DialogContent className="bg-[#0d131f] border border-red-500/30 text-white max-w-md p-6 rounded-2xl shadow-2xl">
+          <DialogContent className="bg-white dark:bg-black border border-red-500/30 text-slate-900 dark:text-white max-w-md p-6 rounded-2xl shadow-2xl">
             <DialogHeader>
-              <div className="w-10 h-10 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-400 mb-2">
+              <div className="w-10 h-10 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-500 dark:text-red-400 mb-2">
                 <Ban className="w-5 h-5" />
               </div>
-              <DialogTitle className="text-base font-bold text-white">Cancel Partnership & Lock Desktop</DialogTitle>
-              <DialogDescription className="text-xs text-slate-400">
+              <DialogTitle className="text-base font-bold text-slate-900 dark:text-white">Cancel Partnership & Lock Desktop</DialogTitle>
+              <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
                 Revoking this partnership immediately halts this station. The shop owner will be locked out of the PrintKoro desktop app, and print job redemptions will be rejected.
               </DialogDescription>
             </DialogHeader>
 
             <div className="space-y-3.5 my-2">
-              <div className="bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs space-y-1">
-                <div className="text-slate-400">Target Terminal:</div>
-                <div className="font-bold text-white">{suspendingDevice.name}</div>
-                <div className="font-mono text-[10px] text-slate-500">{suspendingDevice.id}</div>
+              <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs space-y-1">
+                <div className="text-slate-500 dark:text-slate-400">Target Terminal:</div>
+                <div className="font-bold text-slate-900 dark:text-white">{suspendingDevice.name}</div>
+                <div className="font-mono text-[10px] text-slate-400">{suspendingDevice.id}</div>
               </div>
 
               <div>
-                <label className="text-xs font-bold text-slate-300 block mb-1.5">
+                <label className="text-xs font-bold text-slate-700 dark:text-slate-300 block mb-1.5">
                   Reason for Partnership Cancellation *
                 </label>
                 <textarea
                   value={suspensionReason}
                   onChange={(e) => setSuspensionReason(e.target.value)}
                   rows={3}
-                  className="w-full text-xs bg-slate-900 border border-slate-800 rounded-xl text-white p-3 focus:border-red-500 outline-none resize-none"
+                  className="w-full text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-slate-900 dark:text-white p-3 focus:border-red-500 outline-none resize-none"
                   placeholder="e.g. Non-compliance with partner terms, fraudulent prints, unpaid fees..."
                   required
                 />
-                <span className="text-[10px] text-slate-500 block mt-1">
+                <span className="text-[10px] text-slate-400 block mt-1">
                   ⚠️ This explanation will be displayed directly on the shop owner's desktop screen.
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
               <Button
                 type="button"
                 variant="outline"
                 onClick={() => setSuspendingDevice(null)}
-                className="border-slate-800 text-slate-400 hover:text-white text-xs h-9 rounded-xl"
+                className="border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white text-xs h-9 rounded-xl"
               >
                 Cancel
               </Button>
@@ -1036,12 +1036,12 @@ export default function AdminDevicesPage() {
 
       {/* Pricing Zone Create / Edit Dialog */}
       <Dialog open={isTierModalOpen} onOpenChange={setIsTierModalOpen}>
-        <DialogContent className="bg-[#0d131f] border border-slate-800 text-white max-w-sm p-5 rounded-xl shadow-none">
+        <DialogContent className="bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white max-w-sm p-5 rounded-xl shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-base font-bold text-white">
+            <DialogTitle className="text-base font-bold text-slate-900 dark:text-white">
               {editingTier ? 'Edit Pricing Zone' : 'Create New Pricing Zone'}
             </DialogTitle>
-            <DialogDescription className="text-xs text-slate-400">
+            <DialogDescription className="text-xs text-slate-500 dark:text-slate-400">
               Set the per-sheet B&W and Color rates for this zone. Changes apply immediately to all devices in this zone.
             </DialogDescription>
           </DialogHeader>

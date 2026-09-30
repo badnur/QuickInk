@@ -1,6 +1,7 @@
 import { Inter } from 'next/font/google'
 import './globals.css'
 import AdminLayoutClient from './AdminLayoutClient'
+import { ThemeProvider } from '@/context/ThemeContext'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -14,11 +15,13 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className="dark scroll-smooth">
-      <body className={`${inter.className} antialiased bg-[#090d16] text-slate-100`}>
-        <AdminLayoutClient>
-          {children}
-        </AdminLayoutClient>
+    <html lang="en" className="dark scroll-smooth" suppressHydrationWarning>
+      <body className={`${inter.className} antialiased bg-slate-50 text-slate-900 dark:bg-black dark:text-slate-100 transition-colors duration-150`}>
+        <ThemeProvider>
+          <AdminLayoutClient>
+            {children}
+          </AdminLayoutClient>
+        </ThemeProvider>
       </body>
     </html>
   )

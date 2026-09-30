@@ -106,13 +106,13 @@ export default function AdminLayoutClient({ children }) {
   }, [pathname])
 
   if (isLoginPage) {
-    return <div className="min-h-screen bg-[#090d16]">{children}</div>
+    return <div className="min-h-screen bg-slate-50 dark:bg-black">{children}</div>
   }
 
   // Only show blocking spinner if user has zero cached session (fresh browser window)
   if (isLoading && !adminUser) {
     return (
-      <div className="min-h-screen bg-[#090d16] flex items-center justify-center text-slate-400 text-xs">
+      <div className="min-h-screen bg-slate-50 dark:bg-black flex items-center justify-center text-slate-500 dark:text-slate-400 text-xs">
         <div className="flex flex-col items-center gap-2">
           <div className="w-5 h-5 rounded-full border-2 border-[#00bf63] border-t-transparent animate-spin" />
           <span>Opening Admin Portal...</span>
@@ -122,7 +122,7 @@ export default function AdminLayoutClient({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#090d16] text-slate-100 flex flex-col md:flex-row antialiased">
+    <div className="min-h-screen bg-slate-50 dark:bg-black text-slate-900 dark:text-slate-100 flex flex-col md:flex-row antialiased transition-colors">
       {/* Desktop Sidebar */}
       <div className="hidden md:block flex-shrink-0">
         <AdminSidebar
@@ -139,7 +139,7 @@ export default function AdminLayoutClient({ children }) {
             className="fixed inset-0 bg-black/60"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="relative z-10 w-64 bg-[#0d131f] h-full border-r border-slate-800">
+          <div className="relative z-10 w-64 bg-white dark:bg-black h-full border-r border-slate-200 dark:border-slate-800">
             <AdminSidebar
               user={adminUser}
               isConnected={isRealtimeConnected}

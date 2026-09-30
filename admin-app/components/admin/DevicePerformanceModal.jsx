@@ -65,31 +65,31 @@ export default function DevicePerformanceModal({ device, isOpen, onClose }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-[#0d131f] border-slate-800 text-slate-100 p-5 rounded-xl shadow-none">
-        <DialogHeader className="border-b border-slate-800 pb-4">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white dark:bg-black border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 p-5 rounded-xl shadow-xl">
+        <DialogHeader className="border-b border-slate-200 dark:border-slate-800 pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 text-[#00bf63] flex items-center justify-center flex-shrink-0">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-[#00bf63] flex items-center justify-center flex-shrink-0">
                 {isKiosk ? <HardDrive className="w-4 h-4" /> : <Store className="w-4 h-4" />}
               </div>
               <div>
-                <DialogTitle className="text-lg font-bold text-white flex items-center gap-2">
+                <DialogTitle className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <span>{device.name}</span>
                   <Badge className={`text-[10px] uppercase font-bold ${
                     device.status === 'online'
-                      ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
-                      : 'bg-amber-500/10 text-amber-400 border-amber-500/30'
+                      ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                      : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
                   }`}>
                     {device.status}
                   </Badge>
                 </DialogTitle>
-                <DialogDescription className="text-xs text-slate-400 flex items-center gap-3 mt-1">
+                <DialogDescription className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-3 mt-1">
                   <span className="flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-slate-500" />
+                    <MapPin className="w-3 h-3 text-slate-400" />
                     {device.location?.address || 'Address configured'}
                   </span>
                   <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-slate-500" />
+                    <Clock className="w-3 h-3 text-slate-400" />
                     {device.location?.operating_hours || 'Operating'}
                   </span>
                 </DialogDescription>
@@ -101,7 +101,7 @@ export default function DevicePerformanceModal({ device, isOpen, onClose }) {
               size="sm"
               onClick={fetchPerformance}
               disabled={loading}
-              className="h-8 text-xs font-semibold bg-slate-900 border-slate-700 text-slate-300 hover:text-white"
+              className="h-8 text-xs font-semibold bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white"
             >
               <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
               Refresh Telemetry
@@ -115,70 +115,70 @@ export default function DevicePerformanceModal({ device, isOpen, onClose }) {
             Fetching real-time station KPIs and telemetry...
           </div>
         ) : error ? (
-          <div className="py-8 text-center text-red-400 text-xs">{error}</div>
+          <div className="py-8 text-center text-red-500 text-xs">{error}</div>
         ) : (
           <div className="space-y-6 pt-2">
             {/* KPI Metric Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="bg-[#111827] border border-slate-800 rounded-xl p-3.5">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Print Jobs</div>
-                <div className="text-2xl font-black text-white mt-1">{kpis?.totalJobs || 0}</div>
-                <div className="text-[10px] text-slate-500 mt-0.5">Dispatched to station</div>
+              <div className="bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-3.5">
+                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Print Jobs</div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{kpis?.totalJobs || 0}</div>
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">Dispatched to station</div>
               </div>
 
-              <div className="bg-[#111827] border border-slate-800 rounded-xl p-3.5">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Total Sheets</div>
-                <div className="text-2xl font-black text-white mt-1">{kpis?.totalPages || 0}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">
-                  <span className="text-slate-300 font-medium">{kpis?.bwSheets || 0} B&W</span> ·{' '}
-                  <span className="text-[#00bf63] font-medium">{kpis?.colorSheets || 0} Color</span>
+              <div className="bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-3.5">
+                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Sheets</div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{kpis?.totalPages || 0}</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  <span className="text-slate-700 dark:text-slate-300 font-medium">{kpis?.bwSheets || 0} B&W</span> ·{' '}
+                  <span className="text-emerald-600 dark:text-[#00bf63] font-medium">{kpis?.colorSheets || 0} Color</span>
                 </div>
               </div>
 
-              <div className="bg-[#111827] border border-slate-800 rounded-xl p-3.5">
-                <div className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Gross Revenue</div>
-                <div className="text-2xl font-black text-white mt-1">৳{kpis?.totalRevenue?.toFixed(2) || '0.00'}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">
+              <div className="bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-3.5">
+                <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Gross Revenue</div>
+                <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">৳{kpis?.totalRevenue?.toFixed(2) || '0.00'}</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                   Counter ৳{kpis?.cashCollected || 0} · Online ৳{kpis?.digitalCollected || 0}
                 </div>
               </div>
 
-              <div className="bg-[#111827] border border-emerald-900/40 bg-emerald-950/20 rounded-xl p-3.5">
-                <div className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider flex items-center justify-between">
+              <div className="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-xl p-3.5">
+                <div className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center justify-between">
                   <span>Shop Earnings</span>
-                  <span className="text-[10px] bg-emerald-900/60 px-1.5 py-0.5 rounded font-bold">
+                  <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 px-1.5 py-0.5 rounded font-bold">
                     100% Retained
                   </span>
                 </div>
-                <div className="text-2xl font-black text-[#00bf63] mt-1">৳{(kpis?.shopEarnings ?? kpis?.totalRevenue ?? 0).toFixed(2)}</div>
-                <div className="text-[10px] text-slate-400 mt-0.5 flex items-center justify-between">
+                <div className="text-2xl font-black text-emerald-600 dark:text-[#00bf63] mt-1">৳{(kpis?.shopEarnings ?? kpis?.totalRevenue ?? 0).toFixed(2)}</div>
+                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center justify-between">
                   <span>Plan: {kpis?.subscriptionPlan || 'Pro SaaS'}</span>
-                  <span className="capitalize text-emerald-400 font-medium">({kpis?.subscriptionStatus || 'Active'})</span>
+                  <span className="capitalize text-emerald-600 dark:text-emerald-400 font-medium">({kpis?.subscriptionStatus || 'Active'})</span>
                 </div>
               </div>
             </div>
 
             {/* Print Jobs Ledger Table */}
-            <div className="bg-[#111827] border border-slate-800 rounded-xl overflow-hidden">
-              <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+            <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl overflow-hidden shadow-xs">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/30">
                 <div>
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
                     <Printer className="w-3.5 h-3.5 text-[#00bf63]" />
                     Station Print Execution Ledger
                   </h4>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Recent orders retrieved and printed at this terminal</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Recent orders retrieved and printed at this terminal</p>
                 </div>
-                <span className="text-[11px] font-mono text-slate-400">{jobs.length} records</span>
+                <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">{jobs.length} records</span>
               </div>
 
               {jobs.length === 0 ? (
-                <div className="p-8 text-center text-slate-500 text-xs">
+                <div className="p-8 text-center text-slate-400 dark:text-slate-500 text-xs">
                   No print jobs redeemed at this station yet.
                 </div>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-[#0b101b] text-slate-400 border-b border-slate-800">
+                    <thead className="bg-slate-50 dark:bg-slate-900/60 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 uppercase text-[10px] tracking-wider">
                       <tr>
                         <th className="py-2.5 px-4 font-semibold">Time</th>
                         <th className="py-2.5 px-4 font-semibold">Document</th>
@@ -189,13 +189,13 @@ export default function DevicePerformanceModal({ device, isOpen, onClose }) {
                         <th className="py-2.5 px-4 font-semibold">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800/60 text-slate-300">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-700 dark:text-slate-300">
                       {jobs.map((job) => (
-                        <tr key={job.id} className="hover:bg-slate-800/30">
-                          <td className="py-2.5 px-4 font-mono text-[11px] text-slate-400 whitespace-nowrap">
+                        <tr key={job.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-900/40 transition-colors">
+                          <td className="py-2.5 px-4 font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                             {new Date(job.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </td>
-                          <td className="py-2.5 px-4 max-w-[200px] truncate font-medium text-white">
+                          <td className="py-2.5 px-4 max-w-[200px] truncate font-medium text-slate-900 dark:text-white">
                             {job.file_name || 'Document.pdf'}
                           </td>
                           <td className="py-2.5 px-4 whitespace-nowrap">
@@ -204,32 +204,32 @@ export default function DevicePerformanceModal({ device, isOpen, onClose }) {
                           <td className="py-2.5 px-4 whitespace-nowrap">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
                               job.color_mode === 'color'
-                                ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
-                                : 'bg-slate-800 text-slate-300 border border-slate-700'
+                                ? 'bg-emerald-50 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                             }`}>
                               {job.color_mode === 'color' ? 'Color' : 'B&W'}
                             </span>
                           </td>
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            <span className="flex items-center gap-1.5 text-slate-300 text-[11px]">
+                            <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 text-[11px]">
                               {job.payment_type === 'counter_cash' ? (
                                 <>
-                                  <Banknote className="w-3 h-3 text-amber-400" />
+                                  <Banknote className="w-3 h-3 text-amber-500" />
                                   <span>Cash</span>
                                 </>
                               ) : (
                                 <>
-                                  <CreditCard className="w-3 h-3 text-emerald-400" />
+                                  <CreditCard className="w-3 h-3 text-emerald-500" />
                                   <span>Online</span>
                                 </>
                               )}
                             </span>
                           </td>
-                          <td className="py-2.5 px-4 font-bold text-white whitespace-nowrap">
+                          <td className="py-2.5 px-4 font-bold text-slate-900 dark:text-white whitespace-nowrap">
                             ৳{job.amount || (job.color_mode === 'color' ? job.page_count * job.copies * 8 : job.page_count * job.copies * 2)}
                           </td>
                           <td className="py-2.5 px-4 whitespace-nowrap">
-                            <span className="flex items-center gap-1 text-[11px] text-emerald-400 font-semibold">
+                            <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">
                               <CheckCircle2 className="w-3 h-3 text-[#00bf63]" />
                               Printed
                             </span>
@@ -243,10 +243,10 @@ export default function DevicePerformanceModal({ device, isOpen, onClose }) {
             </div>
 
             {/* Station Pairing & Device Credentials */}
-            <div className="p-4 bg-[#111827] border border-slate-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            <div className="p-4 bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
               <div>
-                <span className="text-slate-400">Desktop Terminal Device ID:</span>{' '}
-                <span className="font-mono text-white font-bold">{device.id}</span>
+                <span className="text-slate-500 dark:text-slate-400">Desktop Terminal Device ID:</span>{' '}
+                <span className="font-mono text-slate-900 dark:text-white font-bold">{device.id}</span>
               </div>
               <div className="flex gap-2">
                 <Button
@@ -267,7 +267,7 @@ export default function DevicePerformanceModal({ device, isOpen, onClose }) {
                     a.download = `quickink-config-${device.id.slice(0, 8)}.json`
                     a.click()
                   }}
-                  className="h-8 text-xs font-semibold bg-slate-800 border-slate-700 text-slate-200 hover:text-white"
+                  className="h-8 text-xs font-semibold bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white"
                 >
                   Download POS Config
                 </Button>

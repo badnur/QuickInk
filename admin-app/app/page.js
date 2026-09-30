@@ -74,7 +74,7 @@ export default function AdminDashboardPage() {
   const maxRevenue = Math.max(...chartData.map((d) => d.revenue), 50)
 
   return (
-    <div className="flex-1 flex flex-col min-h-screen bg-[#090d16]">
+    <div className="flex-1 flex flex-col min-h-screen bg-slate-50 dark:bg-black transition-colors">
       <AdminHeader
         title="PrintKoro Executive Dashboard"
         subtitle="Platform metrics, station fleet status, and print volumes"
@@ -107,7 +107,7 @@ export default function AdminDashboardPage() {
             value={stats.totalSheets}
             subtitle={`${stats.printedJobs} jobs successfully collected`}
             icon={FileText}
-            color="purple"
+            color="black"
           />
 
           <StatCard
@@ -122,28 +122,28 @@ export default function AdminDashboardPage() {
         {/* Charts & Overview Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Revenue Bar Chart (2 cols) */}
-          <div className="lg:col-span-2 bg-[#0d131f] border border-slate-800 rounded-xl p-5">
+          <div className="lg:col-span-2 bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-xs transition-colors">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                   <TrendingUp className="w-4 h-4 text-[#00bf63]" />
                   7-Day Revenue Trends (৳ BDT)
                 </h3>
-                <p className="text-xs text-slate-400">Daily earnings across all kiosks & partner shops</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Daily earnings across all kiosks & partner shops</p>
               </div>
-              <Badge className="bg-slate-900 border border-slate-800 text-slate-400 font-mono text-[10px]">
+              <Badge className="bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-mono text-[10px]">
                 LIVE UPDATES
               </Badge>
             </div>
 
             {/* Flat Minimal Bar Chart */}
-            <div className="h-48 pt-6 flex items-end justify-between gap-2 sm:gap-4 px-2 border-b border-slate-800">
+            <div className="h-48 pt-6 flex items-end justify-between gap-2 sm:gap-4 px-2 border-b border-slate-200 dark:border-slate-800">
               {chartData.map((day, idx) => {
                 const heightPercent = Math.max(10, Math.round((day.revenue / maxRevenue) * 100))
                 return (
                   <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative">
                     {/* Tooltip */}
-                    <div className="absolute -top-9 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-950 border border-slate-800 text-white text-[10px] font-medium px-2 py-0.5 rounded pointer-events-none whitespace-nowrap z-20">
+                    <div className="absolute -top-9 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 dark:bg-slate-950 border border-slate-700 dark:border-slate-800 text-white text-[10px] font-medium px-2 py-0.5 rounded pointer-events-none whitespace-nowrap z-20">
                       ৳{day.revenue} • {day.jobs} jobs
                     </div>
 
@@ -154,7 +154,7 @@ export default function AdminDashboardPage() {
                     />
 
                     {/* Date label */}
-                    <span className="text-[10px] text-slate-400 mt-2 font-medium truncate w-full text-center">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-2 font-medium truncate w-full text-center">
                       {day.date.split(',')[0]}
                     </span>
                   </div>
@@ -162,7 +162,7 @@ export default function AdminDashboardPage() {
               })}
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-400 pt-3">
+            <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 pt-3">
               <span>Standard Pricing: ৳2 B&W • ৳8 Color</span>
               <Link
                 href="/analytics"
@@ -174,16 +174,16 @@ export default function AdminDashboardPage() {
           </div>
 
           {/* Quick Fleet Health & Partner Leads */}
-          <div className="bg-[#0d131f] border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+          <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 flex flex-col justify-between shadow-xs transition-colors">
             <div>
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-white flex items-center gap-2">
-                  <HardDrive className="w-4 h-4 text-amber-400" />
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                  <HardDrive className="w-4 h-4 text-amber-500 dark:text-amber-400" />
                   Kiosk & Shop Health
                 </h3>
                 <Link
                   href="/devices"
-                  className="text-xs text-slate-400 hover:text-white"
+                  className="text-xs text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 >
                   Manage All
                 </Link>
@@ -193,14 +193,14 @@ export default function AdminDashboardPage() {
                 {devices.slice(0, 4).map((d) => (
                   <div
                     key={d.id}
-                    className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-between hover:border-slate-700 transition-colors"
+                    className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors"
                   >
                     <div className="min-w-0 flex-1 pr-2">
                       <div className="flex items-center gap-1.5">
                         <span className={`w-2 h-2 rounded-full ${d.status === 'online' ? 'bg-[#00bf63]' : 'bg-red-400'}`} />
-                        <span className="text-xs font-semibold text-white truncate">{d.name}</span>
+                        <span className="text-xs font-semibold text-slate-900 dark:text-white truncate">{d.name}</span>
                       </div>
-                      <p className="text-[10px] text-slate-400 truncate pl-3.5">
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate pl-3.5">
                         {typeof d.location === 'object' ? d.location?.address : d.location}
                       </p>
                     </div>
@@ -210,7 +210,7 @@ export default function AdminDashboardPage() {
                       variant="ghost"
                       onClick={() => setSelectedDeviceForQr(d)}
                       title="View Kiosk QR Code"
-                      className="h-7 w-7 p-0 text-slate-400 hover:text-[#00bf63] hover:bg-slate-800 rounded"
+                      className="h-7 w-7 p-0 text-slate-500 dark:text-slate-400 hover:text-[#00bf63] hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
                     >
                       <QrCode className="w-3.5 h-3.5" />
                     </Button>
@@ -220,13 +220,13 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Partner Leads banner */}
-            <div className="mt-4 pt-3 border-t border-slate-800">
-              <div className="bg-slate-900 p-3 rounded-lg border border-slate-800 flex items-center justify-between">
+            <div className="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <div className="bg-slate-50 dark:bg-slate-950 p-3 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-between">
                 <div>
-                  <span className="text-xs font-semibold text-emerald-400 block">
+                  <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 block">
                     {stats.pendingPartners} Partner Application{stats.pendingPartners === 1 ? '' : 's'}
                   </span>
-                  <span className="text-[10px] text-slate-400">Shop owners awaiting review</span>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400">Shop owners awaiting review</span>
                 </div>
                 <Link href="/partners">
                   <Button size="sm" className="bg-[#00bf63] hover:bg-[#00a656] text-slate-950 font-bold text-xs h-7 px-2.5 rounded shadow-none">
@@ -239,20 +239,20 @@ export default function AdminDashboardPage() {
         </div>
 
         {/* Live Print Jobs Table Section */}
-        <div className="bg-[#0d131f] border border-slate-800 rounded-xl p-5">
+        <div className="bg-white dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 shadow-xs transition-colors">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
                 <Printer className="w-4 h-4 text-[#00bf63]" />
                 Recent Print Orders
               </h3>
-              <p className="text-xs text-slate-400">Incoming uploads from mobile, kiosks, and counter shops</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Incoming uploads from mobile, kiosks, and counter shops</p>
             </div>
             <Link href="/jobs">
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-slate-900 border-slate-800 text-slate-300 hover:text-white text-xs h-7 rounded shadow-none"
+                className="bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white text-xs h-7 rounded shadow-none"
               >
                 View All Jobs <ChevronRight className="w-3 h-3 ml-1" />
               </Button>
@@ -261,7 +261,7 @@ export default function AdminDashboardPage() {
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-900 text-slate-400 border-y border-slate-800 uppercase tracking-wider text-[10px]">
+              <thead className="bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-400 border-y border-slate-200 dark:border-slate-800 uppercase tracking-wider text-[10px]">
                 <tr>
                   <th className="py-2.5 px-3">Job ID</th>
                   <th className="py-2.5 px-3">File</th>
@@ -272,44 +272,44 @@ export default function AdminDashboardPage() {
                   <th className="py-2.5 px-3 text-right">Station</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800 font-normal">
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800 font-normal">
                 {recentJobs.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="text-center py-8 text-slate-500">
+                    <td colSpan={7} className="text-center py-8 text-slate-400 dark:text-slate-500">
                       No print jobs recorded yet. Place an order on /print to test live sync.
                     </td>
                   </tr>
                 ) : (
                   recentJobs.map((job) => {
                     const statusStyles = {
-                      awaiting_redemption: 'bg-amber-950/40 text-amber-400 border-amber-800/40',
-                      redeemed: 'bg-blue-950/40 text-blue-400 border-blue-800/40',
-                      printed: 'bg-emerald-950/40 text-emerald-400 border-emerald-800/40',
-                      expired: 'bg-slate-900 text-slate-400 border-slate-800',
-                    }[job.status] || 'bg-slate-900 text-slate-400 border-slate-800'
+                      awaiting_redemption: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/40',
+                      redeemed: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/40',
+                      printed: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40',
+                      expired: 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800',
+                    }[job.status] || 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-900 dark:text-slate-400 dark:border-slate-800'
 
                     return (
-                      <tr key={job.id} className="hover:bg-slate-900/60 transition-colors">
-                        <td className="py-3 px-3 font-mono text-slate-400">
+                      <tr key={job.id} className="hover:bg-slate-50 dark:hover:bg-slate-900/60 transition-colors">
+                        <td className="py-3 px-3 font-mono text-slate-500 dark:text-slate-400">
                           #{job.id.substring(0, 8)}
                         </td>
                         <td className="py-3 px-3">
-                          <div className="font-semibold text-white truncate max-w-[180px]">
+                          <div className="font-semibold text-slate-900 dark:text-white truncate max-w-[180px]">
                             {job.file_name || 'Document.pdf'}
                           </div>
-                          <span className="text-[10px] text-slate-400 uppercase">{job.file_type}</span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">{job.file_type}</span>
                         </td>
                         <td className="py-3 px-3">
-                          <span className="font-medium text-slate-300">
+                          <span className="font-medium text-slate-700 dark:text-slate-300">
                             {job.page_count} {job.page_count === 1 ? 'pg' : 'pgs'}
                           </span>
-                          <span className="text-[10px] text-slate-400 block">
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
                             {job.copies} {job.copies === 1 ? 'copy' : 'copies'} • {job.color_mode === 'color' ? 'Color' : 'B&W'}
                           </span>
                         </td>
                         <td className="py-3 px-3">
-                          <div className="font-semibold text-white">৳{job.amount || '—'}</div>
-                          <span className="text-[10px] text-slate-400 uppercase">
+                          <div className="font-semibold text-slate-900 dark:text-white">৳{job.amount || '—'}</div>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 uppercase">
                             {job.payment_type}
                           </span>
                         </td>
@@ -318,10 +318,10 @@ export default function AdminDashboardPage() {
                             {job.status?.replace('_', ' ')}
                           </span>
                         </td>
-                        <td className="py-3 px-3 text-slate-400 text-[11px]">
+                        <td className="py-3 px-3 text-slate-500 dark:text-slate-400 text-[11px]">
                           {new Date(job.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </td>
-                        <td className="py-3 px-3 text-right text-slate-400 text-[11px] truncate max-w-[150px]">
+                        <td className="py-3 px-3 text-right text-slate-500 dark:text-slate-400 text-[11px] truncate max-w-[150px]">
                           {job.device_name}
                         </td>
                       </tr>
