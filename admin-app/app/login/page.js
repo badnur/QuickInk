@@ -32,7 +32,7 @@ export default function AdminLoginPage() {
       })
 
       if (res.success) {
-        router.push('/')
+        window.location.href = '/'
       } else {
         setError(res.error || 'Authentication failed. Please check your credentials.')
       }

@@ -1,4 +1,5 @@
 const ADMIN_SESSION_CACHE_KEY = 'printkoro_admin_user_cache'
+const ADMIN_TOKEN_KEY = 'printkoro_admin_token'
 
 /**
  * Get cached session user info for optimistic UI rendering
@@ -15,11 +16,32 @@ export function getAdminSession() {
 }
 
 /**
- * Set cached session user info
+ * Get stored JWT Bearer token
  */
-export function setAdminSession(user) {
+export function getAdminToken() {
+  if (typeof window === 'undefined') return null
+  try {
+    return localStorage.getItem(ADMIN_TOKEN_KEY)
+  } catch (e) {
+    return null
+  }
+}
+
+/**
+ * Set cached session user info and token
+ */
+export function setAdminSession(user, token = null) {
   if (typeof window === 'undefined') return
-  localStorage.setItem(ADMIN_SESSION_CACHE_KEY, JSON.stringify(user))
+  try {
+    if (user) {
+      localStorage.setItem(ADMIN_SESSION_CACHE_KEY, JSON.stringify(user))
+    }
+    if (token) {
+      localStorage.setItem(ADMIN_TOKEN_KEY, token)
+    }
+  } catch (e) {
+    console.warn('Failed to store session in localStorage:', e)
+  }
 }
 
 /**
@@ -27,10 +49,16 @@ export function setAdminSession(user) {
  */
 export async function clearAdminSession() {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem(ADMIN_SESSION_CACHE_KEY)
+    try {
+      localStorage.removeItem(ADMIN_SESSION_CACHE_KEY)
+      localStorage.removeItem(ADMIN_TOKEN_KEY)
+    } catch (e) {}
   }
   try {
-    await fetch('/api/admin/auth/logout', { method: 'POST' })
+    await fetch('/api/admin/auth/logout', {
+      method: 'POST',
+      credentials: 'include',
+    })
   } catch (e) {
     // Ignore network error on logout
   }
@@ -44,14 +72,15 @@ export async function authenticateAdmin({ email, password, pin }) {
     const res = await fetch('/api/admin/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
       body: JSON.stringify({ email, password, pin }),
     })
 
     const data = await res.json()
 
     if (res.ok && data.success) {
-      setAdminSession(data.user)
-      return { success: true, user: data.user }
+      setAdminSession(data.user, data.token)
+      return { success: true, user: data.user, token: data.token }
     }
 
     return {
@@ -71,7 +100,17 @@ export async function authenticateAdmin({ email, password, pin }) {
  */
 export async function verifyServerSession() {
   try {
-    const res = await fetch('/api/admin/auth/me')
+    const headers = {}
+    const token = getAdminToken()
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`
+    }
+
+    const res = await fetch('/api/admin/auth/me', {
+      credentials: 'include',
+      headers,
+    })
+
     if (res.ok) {
       const data = await res.json()
       if (data.authenticated && data.user) {

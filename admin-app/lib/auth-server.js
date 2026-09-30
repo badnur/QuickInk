@@ -1,9 +1,8 @@
 import { SignJWT, jwtVerify } from 'jose'
-import { cookies } from 'next/headers'
 
 const COOKIE_NAME = 'printkoro_admin_session'
 const JWT_SECRET = new TextEncoder().encode(
-  process.env.ADMIN_JWT_SECRET || 'printkoro_superadmin_sec_default_change_in_prod'
+  (process.env.ADMIN_JWT_SECRET || 'printkoro_superadmin_sec_default_change_in_prod').trim()
 )
 
 /**
@@ -34,26 +33,17 @@ export async function verifyAdminToken(token) {
  * Get current admin session from server-side request (cookies or Auth header)
  */
 export async function getAdminSessionServer(request = null) {
+  if (!request) return null
   let token = null
 
-  if (request) {
-    // 1. Check cookies in request
-    token = request.cookies.get(COOKIE_NAME)?.value
+  // 1. Check cookies in request
+  token = request.cookies?.get?.(COOKIE_NAME)?.value
 
-    // 2. Fallback to Bearer token header
-    if (!token) {
-      const authHeader = request.headers.get('authorization')
-      if (authHeader?.startsWith('Bearer ')) {
-        token = authHeader.substring(7)
-      }
-    }
-  } else {
-    // Standard Next.js server component context
-    try {
-      const cookieStore = await cookies()
-      token = cookieStore.get(COOKIE_NAME)?.value
-    } catch (e) {
-      // Ignore if called outside server context
+  // 2. Fallback to Bearer token header
+  if (!token && request.headers) {
+    const authHeader = request.headers.get?.('authorization') || request.headers['authorization']
+    if (authHeader?.startsWith?.('Bearer ')) {
+      token = authHeader.substring(7)
     }
   }
 

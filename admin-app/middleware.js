@@ -39,7 +39,13 @@ export async function middleware(request) {
   }
 
   // 3. For any other /api/admin/* or app page routes, enforce valid session
-  const token = request.cookies.get(COOKIE_NAME)?.value
+  let token = request.cookies.get(COOKIE_NAME)?.value
+  if (!token) {
+    const authHeader = request.headers.get('authorization')
+    if (authHeader?.startsWith('Bearer ')) {
+      token = authHeader.substring(7)
+    }
+  }
   const session = token ? await verifyAdminToken(token) : null
 
   if (!session) {
