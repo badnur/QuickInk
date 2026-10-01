@@ -116,15 +116,13 @@ export const termsData = {
       {
         id: 'pricing-payment',
         number: '০৬',
-        title: 'মূল্য নির্ধারণ, বিলিং ও পেমেন্ট ব্যবস্থা',
+        title: 'মূল্য নির্ধারণ ও দোকানে পেমেন্ট ব্যবস্থা',
         content: [
-          'প্রিন্টকোরো প্রতিটি সেবার জন্য স্বচ্ছ এবং পূর্বনির্ধারিত রেট অনুসরণ করে। কোনো প্রকার লুকানো চার্জ বা অতিরিক্ত ফি নেওয়া হয় না।',
-          'মানক মূল্যতালিকা:',
-          '• ব্ল্যাক অ্যান্ড হোয়াইট প্রিন্ট (A4): প্রতি পৃষ্ঠা ৳২.০০ (দুই টাকা)',
-          '• কালার প্রিন্ট (A4): প্রতি পৃষ্ঠা ৳৮.০০ (আট টাকা)',
-          '• স্মার্ট স্ক্যান ও পাসপোর্ট ফটো শিট: স্ক্রিনে প্রদর্শিত নির্দিষ্ট মান অনুযায়ী নির্ধারিত।',
-          'পেমেন্ট মাধ্যম: বিকাশ (bKash), নগদ (Nagad), রকেট (Rocket), উপায় (Upay), ভিসা বা মাস্টারকার্ড এবং নির্দিষ্ট পার্টনার দোকানে সরাসরি নগদ পেমেন্টের সুযোগ রয়েছে।',
-          'সমস্ত লেনদেন বাংলাদেশি টাকায় (BDT / ৳) পরিচালিত হয় এবং প্রযোজ্য সরকারি ভ্যাট বা ট্যাক্স এতে অন্তর্ভুক্ত থাকতে পারে।'
+          'বর্তমানে প্রিন্টকোরো পার্টনার শপ নেটওয়ার্কের মাধ্যমে পরিচালিত হচ্ছে। প্রতিটি পার্টনার দোকানের নিজস্ব পরিচালন খরচ ও কাগজের মান অনুযায়ী প্রিন্ট মূল্য পরিবর্তনশীল (ডায়নামিক) হতে পারে।',
+          'মূল্য নির্ধারণ ও পরিশোধের নিয়মাবলী:',
+          '• দোকানে সরাসরি নির্ধারণ: প্ল্যাটফর্মে কোনো নির্দিষ্ট একক মূল্য বাধ্যতামূলক নয়; প্রিন্টের মোট মূল্য সরাসরি গ্রাহক ও সংশ্লিষ্ট দোকানদারের মধ্যে পারস্পরিক সম্মতিতে নির্ধারিত হবে।',
+          '• অনলাইন পেমেন্ট সাময়িকভাবে স্থগিত: স্বয়ংক্রিয় পাবলিক কিয়স্ক উন্মুক্ত হওয়ার পূর্ব পর্যন্ত অনলাইন পেমেন্ট (বিকাশ/কার্ড ইত্যাদি) বন্ধ থাকবে।',
+          '• ওটিপি কোড দিয়ে সেবা গ্রহণ: গ্রাহক ওয়েবসাইট থেকে শুধু প্রিন্ট অপশন নির্বাচন করে ৬-সংখ্যার ওটিপি কোড তৈরি করবেন এবং দোকানে গিয়ে দোকানদারকে কোডটি বলে প্রিন্ট নেওয়ার পর সরাসরি দোকানে মূল্য পরিশোধ করবেন।'
         ]
       },
       {
@@ -316,15 +314,13 @@ export const termsData = {
       {
         id: 'pricing-payment',
         number: '06',
-        title: 'Pricing, Billing & Payment Methods',
+        title: 'Dynamic Pricing & Counter Payments',
         content: [
-          'PrintKoro enforces transparent, published per-page pricing with zero hidden surcharges or undisclosed fees.',
-          'Standard Pricing Matrix:',
-          '• Standard Black & White (A4): ৳2.00 per page',
-          '• Premium Full Color (A4): ৳8.00 per page',
-          '• Smart Scanner & Passport Photo Sheets: As displayed during checkout depending on paper selection.',
-          'Supported Payment Channels: bKash, Nagad, Rocket, Upay, local/international debit & credit cards, and cash over-the-counter at certified partner locations.',
-          'All transactions are processed in Bangladeshi Taka (BDT / ৳) and are inclusive of statutory government taxes where mandated.'
+          'PrintKoro currently operates via an authorized partner shop network. Print pricing is dynamic and determined individually by each respective partner shop based on local overhead and paper stock.',
+          'Payment & Pricing Guidelines:',
+          '• Dynamic Shop Pricing: Print rates are not fixed on the platform. The final payable charge is settled directly between the customer and the partner shop owner.',
+          '• Online Payments Temporarily Disabled: Digital prepayment methods (bKash, Nagad, Cards) are temporarily disabled until unattended public kiosks are deployed.',
+          '• Simple OTP Redemption: Users configure print jobs online, generate an instant 6-digit OTP code, present it to the shop owner, and pay directly over the counter.'
         ]
       },
       {

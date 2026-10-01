@@ -148,8 +148,8 @@ function PrintOrderPageContent({ initialDeviceId }) {
   const [copies, setCopies] = useState(1)
   const [duplex, setDuplex] = useState(false)
 
-  // Payment & Order state
-  const [paymentMethod, setPaymentMethod] = useState('online') // 'online' | 'cash'
+  // Payment & Order state (Online disabled until kiosk launch; dynamic pay-at-counter only)
+  const [paymentMethod, setPaymentMethod] = useState('cash')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [submitError, setSubmitError] = useState(null)
@@ -601,8 +601,8 @@ function PrintOrderPageContent({ initialDeviceId }) {
           page_range: effectivePageRange,   // null = all pages; "1-3,5" = specific range
           pages_per_sheet: pagesPerSheet || 1,
           mini_border: Boolean(miniBorder),
-          payment_type: paymentMethod,
-          amount: parseFloat(totalPrice),
+          payment_type: 'cash',
+          amount: 0,
         }),
       })
 
@@ -1518,32 +1518,27 @@ function PrintOrderPageContent({ initialDeviceId }) {
         {/* ========================================================================= */}
         {step === 3 && selectedFile && (
           <div className="space-y-3 animate-in fade-in duration-200">
-            {/* Pricing Zone Banner */}
-            <div className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl border text-xs font-semibold ${
-              zonePrices.tierName === 'Campus'
-                ? 'bg-blue-50 border-blue-200 text-blue-700'
-                : zonePrices.tierName === 'Commercial'
-                ? 'bg-amber-50 border-amber-200 text-amber-700'
-                : 'bg-[#00bf63]/8 border-[#00bf63]/25 text-[#00bf63]'
-            }`}>
+            {/* Dynamic Shop Pricing Notice Banner */}
+            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-emerald-200 bg-emerald-50/80 text-xs font-semibold text-emerald-900">
               <span className="flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5" />
+                <MapPin className="w-3.5 h-3.5 text-[#00bf63]" />
                 <span>
-                  {zonePrices.isLoaded
-                    ? <><strong>{zonePrices.tierName} Zone</strong> — ৳{zonePrices.bw.toFixed(2)} B&amp;W · ৳{zonePrices.color.toFixed(2)} Color</>  
-                    : <>Standard Rate — ৳{zonePrices.bw.toFixed(2)} B&amp;W · ৳{zonePrices.color.toFixed(2)} Color</>  
-                  }
+                  {lang === 'bn'
+                    ? 'দোকানে সরাসরি মূল্য পরিশোধ • রেট দোকান অনুযায়ী নির্ধারিত হবে'
+                    : 'Pay Directly at Partner Shop • Dynamic pricing set by shop owner'}
                 </span>
               </span>
-              {!zonePrices.isLoaded && (
-                <span className="text-[9px] font-normal opacity-70">Scan a QR to see shop pricing</span>
-              )}
+              <span className="text-[10px] bg-white text-emerald-800 border border-emerald-300 font-bold px-2 py-0.5 rounded-full">
+                {lang === 'bn' ? 'দোকানে পরিশোধ' : 'Pay at Shop'}
+              </span>
             </div>
 
             <Card className="bg-white border border-gray-200 rounded-2xl shadow-none p-5 space-y-4">
-              {/* 1. Color Mode Toggle Cards */}
+              {/* 1. Color Mode Toggle Cards (No fixed price tags) */}
               <div>
-                <label className="block text-xs font-bold text-gray-800 mb-1.5">Color Mode</label>
+                <label className="block text-xs font-bold text-gray-800 mb-1.5">
+                  {lang === 'bn' ? 'প্রিন্ট কালার মোড' : 'Color Mode'}
+                </label>
                 <div className="grid grid-cols-2 gap-2.5">
                   <div
                     onClick={() => setColorMode('bw')}
@@ -1554,8 +1549,12 @@ function PrintOrderPageContent({ initialDeviceId }) {
                     }`}
                   >
                     <div className="text-xl mb-0.5">⬛</div>
-                    <b className="text-xs font-bold text-gray-900 block">Black &amp; White</b>
-                    <span className="text-[11px] text-gray-500">৳{zonePrices.bw.toFixed(2)}/page</span>
+                    <b className="text-xs font-bold text-gray-900 block">
+                      {lang === 'bn' ? 'ব্ল্যাক অ্যান্ড হোয়াইট' : 'Black & White'}
+                    </b>
+                    <span className="text-[11px] text-gray-500">
+                      {lang === 'bn' ? 'স্ট্যান্ডার্ড একরঙা প্রিন্ট' : 'Standard Monochrome'}
+                    </span>
                   </div>
 
                   <div
@@ -1570,8 +1569,12 @@ function PrintOrderPageContent({ initialDeviceId }) {
                     }`}
                   >
                     <div className="text-xl mb-0.5">🌈</div>
-                    <b className="text-xs font-bold text-gray-900 block">Color Print</b>
-                    <span className="text-[11px] text-gray-500">৳{zonePrices.color.toFixed(2)}/page</span>
+                    <b className="text-xs font-bold text-gray-900 block">
+                      {lang === 'bn' ? 'কালার প্রিন্ট' : 'Color Print'}
+                    </b>
+                    <span className="text-[11px] text-gray-500">
+                      {lang === 'bn' ? 'রঙিন ছবি ও ডকুমেন্টস' : 'Full Color Output'}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -1642,80 +1645,56 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 </button>
               </div>
 
-              {/* 3. Payment Method */}
+              {/* 3. Payment Method: Pay at Partner Shop (Online temporarily disabled) */}
               <div className="pt-2 border-t border-gray-100">
-                <label className="block text-xs font-bold text-gray-800 mb-1.5">Select Payment</label>
-                <div className="space-y-2">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('online')}
-                    className={`w-full p-3 rounded-xl border-2 text-left flex items-center justify-between transition-colors ${
-                      paymentMethod === 'online'
-                        ? 'border-[#00bf63] bg-[#00bf63]/5'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <CreditCard className="h-4 w-4 text-[#00bf63]" />
-                      <div>
-                        <b className="text-xs font-bold text-gray-900 block">💳 Pay Online (bKash / Card)</b>
-                        <span className="text-[10px] text-gray-500">Type A OTP — Valid at ALL Kiosks & Shops</span>
-                      </div>
+                <label className="block text-xs font-bold text-gray-800 mb-1.5">
+                  {lang === 'bn' ? 'মূল্য পরিশোধ পদ্ধতি' : 'Payment Method'}
+                </label>
+                <div className="w-full p-3.5 rounded-xl border-2 border-[#00bf63] bg-[#00bf63]/5 text-left flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-[#00bf63]/15 text-[#00bf63] flex items-center justify-center shrink-0 mt-0.5">
+                    <Banknote className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <b className="text-xs font-bold text-gray-900 block">
+                        {lang === 'bn' ? 'দোকানে সরাসরি মূল্য পরিশোধ (Cash / MFS)' : 'Pay Directly at Partner Shop (Cash / MFS)'}
+                      </b>
+                      <span className="bg-[#00bf63] text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
+                        {lang === 'bn' ? 'সক্রিয়' : 'Active'}
+                      </span>
                     </div>
-                    <span className="bg-[#00bf63]/10 text-[#00bf63] text-[9px] font-bold px-2 py-0.5 rounded">
-                      Universal
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod('cash')}
-                    disabled={deviceInfo?.type === 'kiosk'}
-                    className={`w-full p-3 rounded-xl border-2 text-left flex items-center justify-between transition-colors ${
-                      deviceInfo?.type === 'kiosk'
-                        ? 'opacity-40 cursor-not-allowed bg-gray-50 border-gray-200'
-                        : paymentMethod === 'cash'
-                        ? 'border-[#00bf63] bg-[#00bf63]/5'
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <Banknote className="h-4 w-4 text-gray-600" />
-                      <div>
-                        <b className="text-xs font-bold text-gray-900 block">💵 Pay at Counter (Cash)</b>
-                        <span className="text-[10px] text-gray-500">
-                          {deviceInfo?.type === 'kiosk'
-                            ? 'Not available at unattended kiosk'
-                            : 'Type B OTP — Valid at Partner Shops ONLY'}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="border border-gray-300 text-gray-700 text-[9px] font-medium px-2 py-0.5 rounded">
-                      Shop Only
-                    </span>
-                  </button>
+                    <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                      {lang === 'bn'
+                        ? 'অনলাইন পেমেন্ট বর্তমানে বন্ধ রয়েছে। ওটিপি কোডটি নিয়ে পার্টনার দোকানে যান; প্রিন্ট বুঝে নিয়ে সরাসরি দোকানদারের সাথে নির্ধারিত মূল্য পরিশোধ করুন।'
+                        : 'Online payment is temporarily disabled. Take your OTP code to any partner shop, and settle the price directly with the shop owner upon collecting your prints.'}
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              {/* Price Summary Breakdown */}
-              <div className="bg-gray-50 rounded-xl p-3.5 space-y-1 text-xs text-gray-600 border border-gray-200">
+              {/* Order Summary Breakdown (Dynamic Pricing) */}
+              <div className="bg-gray-50 rounded-xl p-3.5 space-y-1.5 text-xs text-gray-600 border border-gray-200">
                 <div className="flex justify-between">
-                  <span>Print Type:</span>
+                  <span>{lang === 'bn' ? 'প্রিন্ট ধরণ:' : 'Print Type:'}</span>
                   <strong className="text-gray-900">
                     {colorMode === 'color'
-                      ? 'Full Color (Single-Side)'
+                      ? (lang === 'bn' ? 'কালার প্রিন্ট (এক পিঠ)' : 'Full Color (Single-Side)')
                       : duplex
-                      ? 'Black & White (Dual-Side)'
-                      : 'Black & White (Single-Side)'}
+                      ? (lang === 'bn' ? 'ব্ল্যাক অ্যান্ড হোয়াইট (উভয় পিঠ)' : 'Black & White (Dual-Side)')
+                      : (lang === 'bn' ? 'ব্ল্যাক অ্যান্ড হোয়াইট (এক পিঠ)' : 'Black & White (Single-Side)')}
                   </strong>
                 </div>
                 <div className="flex justify-between">
-                  <span>Sheets to print:</span>
-                  <strong className="text-gray-900">{calculatedSheets} sheets × {copies} copies</strong>
+                  <span>{lang === 'bn' ? 'মোট প্রিন্ট হবে:' : 'Sheets to print:'}</span>
+                  <strong className="text-gray-900">
+                    {toBengaliNumber(calculatedSheets)} {lang === 'bn' ? 'পাতা' : 'sheets'} × {toBengaliNumber(copies)} {lang === 'bn' ? 'কপি' : 'copies'}
+                  </strong>
                 </div>
-                <div className="flex justify-between items-baseline pt-2 border-t border-gray-200 text-sm">
-                  <b className="text-gray-900">Total Payable:</b>
-                  <strong className="text-xl font-black text-[#00bf63]">৳{totalPrice}</strong>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-200 text-xs">
+                  <b className="text-gray-900">{lang === 'bn' ? 'মূল্য:' : 'Price:'}</b>
+                  <span className="font-bold text-[#00bf63] bg-[#00bf63]/10 px-2 py-0.5 rounded text-[11px]">
+                    {lang === 'bn' ? 'দোকানে প্রদেয় (দোকান অনুযায়ী নির্ধারিত)' : 'Settled at Shop (Dynamic Pricing)'}
+                  </span>
                 </div>
               </div>
 
@@ -1755,15 +1734,15 @@ function PrintOrderPageContent({ initialDeviceId }) {
               <Button
                 disabled={isSubmitting}
                 onClick={handleCreateOrder}
-                className="flex-1 bg-[#00bf63] hover:bg-[#00a656] text-white py-5 rounded-xl font-bold text-xs shadow-none"
+                className="flex-1 bg-[#00bf63] hover:bg-[#00a656] text-white py-5 rounded-xl font-bold text-xs shadow-none cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
-                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Preparing Ticket...
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> {lang === 'bn' ? 'ওটিপি তৈরি হচ্ছে...' : 'Generating OTP...'}
                   </>
                 ) : (
                   <>
-                    Confirm & Get Code →
+                    {lang === 'bn' ? 'ওটিপি কোড নিন →' : 'Get Print OTP Code →'}
                   </>
                 )}
               </Button>
@@ -1803,26 +1782,22 @@ function PrintOrderPageContent({ initialDeviceId }) {
                   </button>
                 </div>
 
-                <span className={`inline-block text-[10px] font-bold px-3 py-1 rounded-full ${
-                  ticketOtp.otp_type === 'type_a'
-                    ? 'bg-[#00bf63]/10 text-[#00bf63]'
-                    : 'bg-amber-100 text-amber-800'
-                }`}>
-                  {ticketOtp.otp_type === 'type_a' ? 'Valid at Kiosks & Shops' : 'Valid at Partner Shops Only'}
+                <span className="inline-block text-[10px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                  {lang === 'bn' ? 'পার্টনার দোকানে প্রযোজ্য • দোকানে পেমেন্ট' : 'Valid at Partner Shops • Pay at Shop'}
                 </span>
 
-                <div className="mt-4 pt-3 border-t border-gray-100 text-left space-y-2">
-                  <div className="flex items-center gap-2 text-[11px] text-gray-600">
-                    <span className="w-4 h-4 rounded-full bg-gray-100 text-gray-700 font-bold flex items-center justify-center text-[10px] flex-shrink-0">1</span>
-                    <span>Go to any nearby PrintKoro station</span>
+                <div className="mt-4 pt-3 border-t border-gray-100 text-left space-y-2.5">
+                  <div className="flex items-start gap-2 text-[11px] text-gray-600">
+                    <span className="w-4 h-4 rounded-full bg-[#00bf63] text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">1</span>
+                    <span>{lang === 'bn' ? 'কাছের যেকোনো প্রিন্টকোরো পার্টনার দোকানে যান' : 'Go to any nearby PrintKoro partner shop'}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-gray-600">
-                    <span className="w-4 h-4 rounded-full bg-gray-100 text-gray-700 font-bold flex items-center justify-center text-[10px] flex-shrink-0">2</span>
-                    <span>Type this 6-digit code on keypad</span>
+                  <div className="flex items-start gap-2 text-[11px] text-gray-600">
+                    <span className="w-4 h-4 rounded-full bg-[#00bf63] text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">2</span>
+                    <span>{lang === 'bn' ? 'দোকানদারকে এই ৬-সংখ্যার ওটিপি কোডটি বলুন' : 'Tell this 6-digit OTP code to the shop owner'}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-gray-600">
-                    <span className="w-4 h-4 rounded-full bg-gray-100 text-gray-700 font-bold flex items-center justify-center text-[10px] flex-shrink-0">3</span>
-                    <span>Collect your printed pages</span>
+                  <div className="flex items-start gap-2 text-[11px] text-gray-600">
+                    <span className="w-4 h-4 rounded-full bg-[#00bf63] text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">3</span>
+                    <span>{lang === 'bn' ? 'দোকানদারের সাথে নির্ধারিত মূল্য পরিশোধ করে প্রিন্ট বুঝে নিন' : 'Settle the price directly with the shop owner and collect your prints'}</span>
                   </div>
                 </div>
               </div>

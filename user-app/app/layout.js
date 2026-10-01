@@ -12,7 +12,7 @@ const hindSiliguri = Hind_Siliguri({
 
 export const metadata = {
   title: 'PrintKoro — Print Anything, Anytime, Near You in Bangladesh',
-  description: 'Fast, simple, and affordable self-service printing with PrintKoro. Upload from your phone, print at a nearby kiosk or partner shop in 60 seconds. ৳2 per page.',
+  description: 'Fast, simple, and affordable self-service printing with PrintKoro. Upload from your phone, get your OTP code, and print at a nearby partner shop in 60 seconds.',
   icons: {
     icon: '/icon.png',
   },
