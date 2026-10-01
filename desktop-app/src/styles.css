@@ -1332,11 +1332,12 @@ body, html {
 
 /* Keypad Layout */
 .keypad-layout {
-  display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 20px;
-  max-width: 1000px;
-  margin: 0 auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  max-width: 560px;
+  margin: 24px auto 48px auto;
+  width: 100%;
 }
 
 .terminal-card {
@@ -1344,37 +1345,43 @@ body, html {
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 24px;
+  padding: 36px 32px 30px 32px;
+  width: 100%;
+  max-width: 520px;
+  background: var(--surface-card, #121318);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 .terminal-card-header h2 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: #ffffff;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .terminal-card-header p {
-  font-size: 13px;
+  font-size: 14px;
   color: var(--text-muted);
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .otp-inputs-row {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 22px;
 }
 
 .otp-box {
-  width: 48px;
-  height: 56px;
+  width: 52px;
+  height: 62px;
   background: var(--surface-subtle);
   border: 1px solid var(--border-input);
   border-radius: var(--radius-md);
   color: #ffffff;
-  font-size: 24px;
+  font-size: 26px;
   font-weight: 700;
   text-align: center;
   outline: none;
@@ -1382,8 +1389,9 @@ body, html {
 }
 
 .otp-box:focus {
-  border-color: #ffffff;
+  border-color: #00bf63;
   background: #1c1d24;
+  box-shadow: 0 0 0 2px rgba(0, 191, 99, 0.2);
 }
 
 .otp-hyphen {
@@ -1393,18 +1401,18 @@ body, html {
 
 .numpad-grid {
   display: grid;
-  grid-template-columns: repeat(3, 72px);
-  gap: 10px;
-  margin-bottom: 20px;
+  grid-template-columns: repeat(3, 86px);
+  gap: 12px;
+  margin-bottom: 22px;
 }
 
 .numpad-btn {
-  height: 52px;
+  height: 58px;
   background: var(--surface-subtle);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   color: #ffffff;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
@@ -1412,10 +1420,12 @@ body, html {
 
 .numpad-btn:hover {
   background: #222328;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .numpad-btn:active {
   background: #2b2d35;
+  transform: scale(0.98);
 }
 
 .numpad-btn.fn-btn {

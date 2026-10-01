@@ -1,6 +1,6 @@
 {
   "name": "printkoro-station",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "PrintKoro Partner Shop & Kiosk Native Desktop Application",
   "main": "main.js",
   "scripts": {
