@@ -76,7 +76,7 @@ jobs:
 
       - name: Build Windows Installer
         run: |
-          pnpm --filter quickink-desktop exec electron-builder --win --publish never
+          pnpm --filter printkoro-station exec electron-builder --win --publish never
 
       - name: Publish to Single GitHub Release
         uses: softprops/action-gh-release@v2
