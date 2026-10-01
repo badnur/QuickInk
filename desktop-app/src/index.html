@@ -729,6 +729,18 @@
               <span id="btn-account-label">Station Account</span>
             </button>
           </div>
+
+          <!-- Credit Balance Chip (Click to open subscription modal) -->
+          <div class="credit-chip-container" id="header-credit-chip-wrap">
+            <button type="button" class="credit-chip-btn" id="btn-open-subscriptions" title="View Print Credits, Wholesale Packages & Calculator">
+              <span class="credit-coin">💎</span>
+              <div class="credit-text-group">
+                <span class="credit-mini-label">Credits Balance</span>
+                <span class="credit-amount-num" id="header-credit-amount">10,000</span>
+              </div>
+              <span class="credit-buy-badge">+ Buy Credits</span>
+            </button>
+          </div>
         </div>
 
         <div class="system-status-group">
@@ -889,6 +901,90 @@
 
             <!-- Right Instructions & Quick Stats Overview -->
             <div class="side-panel">
+              <!-- Live Software & System Update Center Card (Home Page) -->
+              <div class="card home-update-card" id="home-update-card">
+                <div class="home-update-header">
+                  <div class="home-update-title-wrap">
+                    <div class="update-radar-ring">
+                      <span class="update-radar-dot"></span>
+                    </div>
+                    <div>
+                      <h3 class="home-update-title">Live System & Software Updates</h3>
+                      <span class="home-update-sub">Official PrintKoro POS Channel</span>
+                    </div>
+                  </div>
+                  <div class="home-update-badge" id="home-update-status-pill">
+                    <span class="pill-dot">🟢</span>
+                    <span id="home-update-pill-text">Up to Date</span>
+                  </div>
+                </div>
+
+                <div class="home-update-body">
+                  <!-- Version Metrics -->
+                  <div class="home-version-specs">
+                    <div class="version-spec-item">
+                      <span class="spec-label">Installed Version</span>
+                      <strong class="spec-val font-mono" id="home-current-version">v1.0.0</strong>
+                    </div>
+                    <div class="version-spec-item">
+                      <span class="spec-label">Latest Available</span>
+                      <strong class="spec-val font-mono text-green" id="home-latest-version">v1.0.0 (Latest)</strong>
+                    </div>
+                  </div>
+
+                  <!-- What's New / Highlights Box -->
+                  <div class="home-update-changelog" id="home-update-changelog">
+                    <div class="changelog-header">
+                      <span class="changelog-title">✨ Release Highlights:</span>
+                      <span class="changelog-tag" id="home-release-tag">v1.0.0 Stable</span>
+                    </div>
+                    <ul class="changelog-list" id="home-changelog-items">
+                      <li>💎 <strong>Wholesale Credit Model:</strong> Refill 25,000 credits for ৳500 (Keep 100% customer cash).</li>
+                      <li>🛡️ <strong>Zero-Risk Safe Print:</strong> Paper jams or printer disconnects never deduct credits.</li>
+                      <li>🏷️ <strong>Dynamic Area Pricing:</strong> Auto-synced with admin-managed local area rates.</li>
+                      <li>⚡ <strong>Silent Spooler:</strong> Instant background printing via SumatraPDF engine.</li>
+                    </ul>
+                  </div>
+
+                  <!-- Download Progress Bar (shown when downloading) -->
+                  <div class="home-update-progress-wrap hidden" id="home-update-progress-wrap">
+                    <div class="progress-meta">
+                      <span id="home-download-status-txt">Downloading update packages...</span>
+                      <span class="progress-percent" id="home-download-percent">0%</span>
+                    </div>
+                    <div class="progress-track">
+                      <div class="progress-bar-fill" id="home-download-fill" style="width: 0%"></div>
+                    </div>
+                    <div class="progress-sub-meta">
+                      <span id="home-download-speed">Connecting to update server...</span>
+                      <span id="home-download-size">-- / --</span>
+                    </div>
+                  </div>
+
+                  <!-- Status Note -->
+                  <div class="home-update-status-msg" id="home-update-status-msg">
+                    <span class="status-msg-icon">ℹ️</span>
+                    <span id="home-update-msg-text">All POS modules and printer drivers are up to date.</span>
+                  </div>
+
+                  <!-- Action Controls -->
+                  <div class="home-update-actions">
+                    <button type="button" class="btn-home-update-check" id="btn-home-check-update">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="update-spin-icon hidden" id="home-check-spinner">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                      </svg>
+                      <span id="home-check-btn-text">Check for Updates</span>
+                    </button>
+
+                    <button type="button" class="btn-home-update-restart hidden" id="btn-home-restart-update">
+                      🚀 Restart & Apply Update Now
+                    </button>
+
+                    <span class="home-update-last-checked" id="home-last-checked-time">Last checked: Just now</span>
+                  </div>
+                </div>
+              </div>
+
               <div class="card info-card">
                 <h3>Kiosk & Counter Workflow</h3>
                 <ol class="workflow-steps">
@@ -1128,6 +1224,14 @@
                   <strong class="metric-value" id="metric-partner-commission">৳0.00</strong>
                 </div>
               </div>
+
+              <div class="card metric-card" style="border-color: rgba(56, 189, 248, 0.3); background: rgba(56, 189, 248, 0.04);">
+                <div class="metric-icon credits">💎</div>
+                <div class="metric-data">
+                  <span class="metric-label">Credit Balance Remaining</span>
+                  <strong class="metric-value" id="metric-credits-balance" style="color: #38bdf8;">10,000</strong>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -1179,6 +1283,25 @@
               <p id="modal-pay-instruction">Please collect the exact cash payment before releasing print.</p>
               <div class="payment-amount-tag" id="modal-pay-amount">৳0.00</div>
             </div>
+          <!-- Wholesale Credit Deduction Notice & Safe Print Rule -->
+          <div class="credit-deduction-badge" id="modal-credit-deduction-badge">
+            <div class="credit-badge-left">
+              <span class="credit-badge-icon">💎</span>
+              <div>
+                <div class="credit-badge-title">Wholesale Cost: <strong id="modal-credit-cost">0 Credits</strong> (<span id="modal-credit-taka-val">৳0.00</span> value)</div>
+                <div class="credit-badge-sub">Balance: <strong id="modal-avail-credits">10,000</strong> credits · Deducted ONLY upon paper output</div>
+              </div>
+            </div>
+            <div class="credit-safe-pill" title="If SumatraPDF or printer jams/fails after OTP, zero credits are cut">
+              🛡️ Safe Print Rule
+            </div>
+          </div>
+
+          <div class="credit-low-warning hidden" id="modal-low-credits-alert">
+            <div class="low-credits-msg">
+              <strong>⚠️ Low Credit Balance:</strong> You need <span id="modal-needed-credits">0</span> credits, but have only <span id="modal-current-credits">0</span>.
+            </div>
+            <button type="button" class="btn-topup-inline" id="btn-job-modal-topup">+ Top Up Credits</button>
           </div>
 
           <!-- Spooling Progress Bar -->
@@ -1204,69 +1327,567 @@
     </div>
 
     <!-- ========================================================================= -->
-    <!-- ACCOUNT PROFILE / LOGOUT MODAL                                            -->
+    <!-- STATION PROFILE & TERMINAL CONTROL CENTER MODAL                           -->
     <!-- ========================================================================= -->
     <div id="account-modal" class="modal-overlay hidden">
       <div class="modal-dialog account-dialog">
         <div class="modal-header">
           <div class="modal-title-group">
-            <span class="badge-success">STATION PROFILE</span>
-            <h2>Shop & Operator Account</h2>
+            <span class="badge-success">STATION PROFILE & CONTROL</span>
+            <h2>Partner Station Hub</h2>
+            <p class="modal-subtitle-text">Verified shop profile, hardware diagnostics, wholesale credits & area pricing</p>
           </div>
-          <button id="btn-close-account-modal" class="btn-close">✕</button>
+          <button id="btn-close-account-modal" class="btn-close" type="button">✕</button>
         </div>
 
-        <div class="modal-body">
-          <div class="account-profile-card">
-            <div class="account-avatar-banner">
-              <div class="account-big-avatar" id="modal-account-logo">
-                <span id="modal-account-logo-initials">QI</span>
+        <div class="modal-body account-modal-body">
+          <!-- Hero Banner: Store Identity & Verification -->
+          <div class="account-hero-banner">
+            <div class="account-hero-avatar-wrap">
+              <div class="account-hero-avatar" id="modal-account-logo">
+                <span id="modal-account-logo-initials">PK</span>
                 <img id="modal-account-logo-img" class="hidden" alt="Logo" />
               </div>
-              <div class="account-banner-meta">
+              <div class="account-avatar-verified-shield" title="Verified Partner">✓</div>
+            </div>
+
+            <div class="account-hero-meta">
+              <div class="account-hero-top-row">
                 <h3 id="modal-account-shop-name">PrintKoro Partner Shop</h3>
-                <p id="modal-account-owner-name">Owner Name</p>
-                <span class="badge-pill" id="modal-account-type">Partner Shop</span>
+                <span class="badge-verified-partner">✓ Verified Partner Station</span>
               </div>
-            </div>
-
-            <!-- Storefront Photo -->
-            <div id="modal-account-photo-wrap" class="storefront-thumb-wrap hidden">
-              <img id="modal-account-photo-img" alt="Storefront" />
-            </div>
-
-            <div class="account-details-list">
-              <div class="account-detail-item">
-                <span class="detail-label">Verified Mobile</span>
-                <strong class="detail-val" id="modal-account-phone">017XXXXXXXX</strong>
-              </div>
-              <div class="account-detail-item">
-                <span class="detail-label">Physical Address</span>
-                <span class="detail-val" id="modal-account-address">Location</span>
-              </div>
-              <div class="account-detail-item">
-                <span class="detail-label">Station Device UUID</span>
-                <span class="detail-val font-mono" id="modal-account-device-id">11111111-...</span>
-              </div>
-              <div class="account-detail-item">
-                <span class="detail-label">Subscription Model</span>
-                <strong class="detail-val text-green">SaaS Pro (100% Print Earnings to Shop)</strong>
-              </div>
-              <div class="account-detail-item">
-                <span class="detail-label">Software Version</span>
-                <span class="detail-val" style="display:flex;align-items:center;gap:8px;">
-                  <span id="app-version-txt">v1.0.0</span>
-                  <button id="btn-manual-check-update" class="btn-secondary"
-                    style="font-size:11px;padding:2px 8px;height:auto;" type="button">Check for Update</button>
+              <p class="account-hero-sub">
+                Operator: <strong id="modal-account-owner-name">Partner Name</strong> · 
+                <span id="modal-account-type" class="badge-pill-inline">Partner Print Station</span>
+              </p>
+              <div class="account-hero-status-row">
+                <span class="status-indicator-pill online">
+                  <span class="status-dot"></span> Station Online & Ready
+                </span>
+                <span class="status-indicator-pill sync">
+                  <span class="sync-icon">⚡</span> Cloud Connected (Supabase)
+                </span>
+                <span class="status-indicator-pill date" id="modal-account-member-since">
+                  🗓️ Partner Since 2026
                 </span>
               </div>
+            </div>
+          </div>
+
+          <!-- Storefront Photo Thumbnail (if provided) -->
+          <div id="modal-account-photo-wrap" class="storefront-thumb-wrap hidden">
+            <img id="modal-account-photo-img" alt="Storefront Photo" />
+          </div>
+
+          <!-- 4-Card Responsive Grid -->
+          <div class="account-cards-grid">
+            <!-- Card 1: Shop & Contact Info -->
+            <div class="account-card">
+              <div class="account-card-header">
+                <span class="account-card-icon">🏬</span>
+                <h4>Shop & Contact Information</h4>
+              </div>
+              <div class="account-card-body">
+                <div class="account-kv-row">
+                  <span class="kv-label">Station UUID:</span>
+                  <div class="kv-val-group">
+                    <span class="kv-val font-mono uuid-truncate" id="modal-account-device-id">11111111-...</span>
+                    <button type="button" class="btn-copy-chip" id="btn-copy-device-id" title="Copy UUID">Copy</button>
+                  </div>
+                </div>
+                <div class="account-kv-row">
+                  <span class="kv-label">Mobile Number:</span>
+                  <span class="kv-val font-mono">
+                    <span id="modal-account-phone">017XXXXXXXX</span>
+                    <span class="badge-otp-verified">✓ OTP Verified</span>
+                  </span>
+                </div>
+                <div class="account-kv-row">
+                  <span class="kv-label">Contact Email:</span>
+                  <span class="kv-val" id="modal-account-email">support@printkoro.com</span>
+                </div>
+                <div class="account-kv-row">
+                  <span class="kv-label">Physical Address:</span>
+                  <span class="kv-val" id="modal-account-address">Location Address</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 2: Wholesale Credits & Safe Print -->
+            <div class="account-card highlight-card">
+              <div class="account-card-header">
+                <span class="account-card-icon">💎</span>
+                <h4>Wholesale Credits & Subscription</h4>
+              </div>
+              <div class="account-card-body">
+                <div class="account-credit-highlight-box">
+                  <div class="credit-highlight-top">
+                    <span class="credit-highlight-label">Available Station Credits</span>
+                    <strong class="credit-highlight-num" id="modal-account-credits">10,000</strong>
+                  </div>
+                  <div class="credit-highlight-equiv">
+                    Equivalent to <strong id="modal-account-credits-value">৳10,000</strong> in Customer Print Value
+                  </div>
+                  <div class="credit-highlight-rate">
+                    Wholesale refill rate: <strong>25,000 Credits = ৳500</strong> (Keep 100% customer cash)
+                  </div>
+                </div>
+                
+                <div class="safe-print-compact-badge">
+                  <span class="safe-shield-emoji">🛡️</span>
+                  <span><strong>Zero-Risk Safe Print:</strong> Paper jams or printer disconnects after OTP entry never deduct credits.</span>
+                </div>
+
+                <button id="btn-account-open-sub" class="btn-manage-credits-action" type="button">
+                  💎 Manage Credits & Packages →
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 3: Hardware Diagnostics & Printer Status -->
+            <div class="account-card">
+              <div class="account-card-header">
+                <span class="account-card-icon">🖨️</span>
+                <h4>Hardware & Printer Status</h4>
+              </div>
+              <div class="account-card-body">
+                <div class="account-kv-row">
+                  <span class="kv-label">Default B&W Printer:</span>
+                  <div class="kv-printer-status">
+                    <span class="printer-dot online" id="modal-account-bw-dot"></span>
+                    <strong class="kv-val" id="modal-account-bw-name">Auto-detecting...</strong>
+                  </div>
+                </div>
+                <div class="account-kv-row">
+                  <span class="kv-label">Default Color Printer:</span>
+                  <div class="kv-printer-status">
+                    <span class="printer-dot online" id="modal-account-color-dot"></span>
+                    <strong class="kv-val" id="modal-account-color-name">Auto-detecting...</strong>
+                  </div>
+                </div>
+                <div class="account-kv-row">
+                  <span class="kv-label">Silent Spooler Engine:</span>
+                  <span class="kv-val text-green font-mono">SumatraPDF v3.5 (Active)</span>
+                </div>
+                <div class="account-kv-row">
+                  <span class="kv-label">Supported Formats:</span>
+                  <span class="kv-val">A4, Legal, Letter (PDF, JPG, PNG)</span>
+                </div>
+
+                <div class="account-card-action-bar">
+                  <button type="button" class="btn-card-action" id="btn-profile-test-print">
+                    🖨️ Send Test Print Page
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Card 4: Assigned Dynamic Pricing Zone -->
+            <div class="account-card">
+              <div class="account-card-header">
+                <span class="account-card-icon">🏷️</span>
+                <h4>Assigned Dynamic Pricing Zone</h4>
+              </div>
+              <div class="account-card-body">
+                <div class="account-kv-row">
+                  <span class="kv-label">Location Zone Tier:</span>
+                  <span class="kv-val badge-tier-name" id="modal-account-tier-name">Standard Area Tier</span>
+                </div>
+                <div class="zone-rates-compact-grid">
+                  <div class="zone-rate-cell">
+                    <span class="rate-type">B&W Single</span>
+                    <strong class="rate-val" id="modal-account-bw-single">৳2.00</strong>
+                  </div>
+                  <div class="zone-rate-cell">
+                    <span class="rate-type">B&W Duplex</span>
+                    <strong class="rate-val" id="modal-account-bw-duplex">৳3.50</strong>
+                  </div>
+                  <div class="zone-rate-cell">
+                    <span class="rate-type">Color Single</span>
+                    <strong class="rate-val" id="modal-account-color-single">৳5.00</strong>
+                  </div>
+                  <div class="zone-rate-cell">
+                    <span class="rate-type">Color Duplex</span>
+                    <strong class="rate-val" id="modal-account-color-duplex">৳9.00</strong>
+                  </div>
+                </div>
+                <div class="zone-rates-footnote">
+                  Rates are assigned automatically by Admin based on your area market dynamics.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer account-modal-footer">
+          <div class="footer-left">
+            <button id="btn-refresh-profile-sync" class="btn-secondary" type="button" title="Sync latest data from cloud">
+              🔄 Refresh Cloud Sync
+            </button>
+          </div>
+          <div class="footer-right">
+            <button id="btn-switch-account" class="btn-secondary" type="button">Switch Station / Relink Device</button>
+            <button id="btn-logout-account" class="btn-secondary btn-danger-text" type="button">Log Out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- WHOLESALE CREDIT SUBSCRIPTION & TOP-UP MODAL                              -->
+    <!-- ========================================================================= -->
+    <div id="subscription-modal" class="modal-overlay hidden">
+      <div class="modal-dialog sub-modal-dialog">
+        <div class="modal-header">
+          <div class="modal-title-group">
+            <span class="badge-sub-pill">WHOLESALE CREDIT SUBSCRIPTION</span>
+            <h2>PrintKoro Partner Credit Subscriptions</h2>
+            <p class="modal-subtitle-text">Keep 100% of customer print revenue. 1 Credit = ৳1 of gross customer print value.</p>
+          </div>
+          <button id="btn-close-sub-modal" class="btn-close" type="button">✕</button>
+        </div>
+
+        <div class="modal-body sub-modal-body">
+          <!-- Live Credit Balance & Dynamic Page Calculation Hero Card -->
+          <div class="sub-hero-card">
+            <div class="sub-hero-left">
+              <div class="sub-credit-icon-ring">
+                <span class="sub-credit-emoji">💎</span>
+              </div>
+              <div>
+                <div class="sub-balance-label">Current Station Credit Balance</div>
+                <div class="sub-balance-row">
+                  <span class="sub-balance-number" id="sub-card-balance">10,000</span>
+                  <span class="sub-balance-unit">Credits</span>
+                  <span class="sub-balance-equiv">(৳<span id="sub-card-gross-value">10,000</span> Value)</span>
+                </div>
+                <div class="sub-tier-rate-badge" id="sub-card-tier-text">
+                  Zone Rate: <strong id="sub-card-bw-rate">৳2.00</strong>/B&W · <strong id="sub-card-color-rate">৳5.00</strong>/Color (<span id="sub-card-tier-name">Standard</span>)
+                </div>
+              </div>
+            </div>
+
+            <!-- Dynamic Printable Page Estimator -->
+            <div class="sub-hero-calc">
+              <div class="sub-calc-title">Print Capacity at Your Rates:</div>
+              <div class="sub-calc-pills">
+                <div class="sub-calc-pill bw">
+                  <span class="sub-pill-val" id="sub-card-bw-pages">5,000</span>
+                  <span class="sub-pill-lbl">B&W Sheets</span>
+                </div>
+                <span class="sub-calc-or">OR</span>
+                <div class="sub-calc-pill color">
+                  <span class="sub-pill-val" id="sub-card-color-pages">2,000</span>
+                  <span class="sub-pill-lbl">Color Sheets</span>
+                </div>
+              </div>
+              <div class="sub-calc-note">Calculated dynamically based on your station's area pricing tier.</div>
+            </div>
+          </div>
+
+          <!-- Safe Print Rule Guarantee Strip -->
+          <div class="safe-print-strip">
+            <div class="safe-strip-icon">🛡️</div>
+            <div class="safe-strip-content">
+              <strong>PrintKoro Zero-Risk Credit Safeguard:</strong>
+              <span>Credits are deducted <em>ONLY</em> upon confirmed physical printing output. If SumatraPDF or your printer jams, runs out of paper, or encounters a hardware error after OTP entry, <strong>zero credits are cut</strong>.</span>
+            </div>
+          </div>
+
+          <!-- Navigation Sub-Tabs -->
+          <div class="sub-nav-tabs">
+            <button type="button" class="sub-tab-btn active" data-subtab="subtab-packages">
+              <span class="sub-tab-icon">📦</span>
+              <span>Credit Packages</span>
+            </button>
+            <button type="button" class="sub-tab-btn" data-subtab="subtab-calculator">
+              <span class="sub-tab-icon">🧮</span>
+              <span>Profit & Page Calculator</span>
+            </button>
+            <button type="button" class="sub-tab-btn" data-subtab="subtab-recharge">
+              <span class="sub-tab-icon">⚡</span>
+              <span>Instant Top-Up (bKash/Nagad)</span>
+            </button>
+            <button type="button" class="sub-tab-btn" data-subtab="subtab-history">
+              <span class="sub-tab-icon">📜</span>
+              <span>Credit Ledger</span>
+            </button>
+          </div>
+
+          <!-- SUB-TAB 1: PACKAGES GRID -->
+          <div id="subtab-packages" class="subtab-content active">
+            <div class="packages-header">
+              <h3>Select a Wholesale Credit Package</h3>
+              <p>Top up credits anytime. Station balance never expires.</p>
+            </div>
+
+            <div class="packages-grid">
+              <!-- Package 1: Starter -->
+              <div class="package-card" data-pkg-id="pkg_starter" data-pkg-credits="10000" data-pkg-price="250">
+                <div class="pkg-header">
+                  <span class="pkg-badge">STARTER</span>
+                  <h4 class="pkg-name">Starter Booster</h4>
+                </div>
+                <div class="pkg-price-row">
+                  <span class="pkg-currency">৳</span>
+                  <span class="pkg-price">250</span>
+                  <span class="pkg-period">one-time</span>
+                </div>
+                <div class="pkg-credits-highlight">
+                  <span class="pkg-credits-num">10,000</span> Credits
+                </div>
+                <div class="pkg-value-tag">৳10,000 Customer Value (40x)</div>
+                <ul class="pkg-specs">
+                  <li>🖨️ <strong class="pkg-calc-bw">5,000</strong> B&W sheets capacity</li>
+                  <li>🎨 <strong class="pkg-calc-color">2,000</strong> Color sheets capacity</li>
+                  <li>💰 <strong>৳9,750</strong> Net shop profit</li>
+                  <li>🛡️ Protected by Safe Print Rule</li>
+                </ul>
+                <button type="button" class="btn-select-pkg" data-pkg="pkg_starter">Select Package</button>
+              </div>
+
+              <!-- Package 2: Value Pack (Featured Hero: 25000 credits for 500 taka) -->
+              <div class="package-card featured" data-pkg-id="pkg_value" data-pkg-credits="25000" data-pkg-price="500">
+                <div class="pkg-popular-banner">⭐ MOST POPULAR PARTNER PACK</div>
+                <div class="pkg-header">
+                  <span class="pkg-badge featured-badge">RECOMMENDED (50x VALUE)</span>
+                  <h4 class="pkg-name">Partner Value Pack</h4>
+                </div>
+                <div class="pkg-price-row">
+                  <span class="pkg-currency">৳</span>
+                  <span class="pkg-price">500</span>
+                  <span class="pkg-period">one-time</span>
+                </div>
+                <div class="pkg-credits-highlight featured-credits">
+                  <span class="pkg-credits-num">25,000</span> Credits
+                </div>
+                <div class="pkg-value-tag highlight">৳25,000 Customer Value (50x Multiplier!)</div>
+                <ul class="pkg-specs">
+                  <li>🖨️ <strong class="pkg-calc-bw">12,500</strong> B&W sheets capacity</li>
+                  <li>🎨 <strong class="pkg-calc-color">5,000</strong> Color sheets capacity</li>
+                  <li>💰 <strong style="color:#4ade80;">৳24,500</strong> Net shop profit (98% margin!)</li>
+                  <li>🛡️ Zero credit risk on print jams</li>
+                  <li>⚡ Instant automatic activation</li>
+                </ul>
+                <button type="button" class="btn-select-pkg btn-pkg-featured" data-pkg="pkg_value">Get 25,000 Credits Now →</button>
+              </div>
+
+              <!-- Package 3: Commercial Pro -->
+              <div class="package-card" data-pkg-id="pkg_commercial" data-pkg-credits="60000" data-pkg-price="1000">
+                <div class="pkg-header">
+                  <span class="pkg-badge">HIGH FOOTFALL</span>
+                  <h4 class="pkg-name">Commercial Pro</h4>
+                </div>
+                <div class="pkg-price-row">
+                  <span class="pkg-currency">৳</span>
+                  <span class="pkg-price">1,000</span>
+                  <span class="pkg-period">one-time</span>
+                </div>
+                <div class="pkg-credits-highlight">
+                  <span class="pkg-credits-num">60,000</span> Credits
+                </div>
+                <div class="pkg-value-tag">৳60,000 Customer Value (60x)</div>
+                <ul class="pkg-specs">
+                  <li>🖨️ <strong class="pkg-calc-bw">30,000</strong> B&W sheets capacity</li>
+                  <li>🎨 <strong class="pkg-calc-color">12,000</strong> Color sheets capacity</li>
+                  <li>💰 <strong>৳59,000</strong> Net shop profit</li>
+                  <li>🛡️ Protected by Safe Print Rule</li>
+                </ul>
+                <button type="button" class="btn-select-pkg" data-pkg="pkg_commercial">Select Package</button>
+              </div>
+
+              <!-- Package 4: Campus Enterprise -->
+              <div class="package-card" data-pkg-id="pkg_enterprise" data-pkg-credits="150000" data-pkg-price="2200">
+                <div class="pkg-header">
+                  <span class="pkg-badge">CAMPUS HUB</span>
+                  <h4 class="pkg-name">Campus Enterprise</h4>
+                </div>
+                <div class="pkg-price-row">
+                  <span class="pkg-currency">৳</span>
+                  <span class="pkg-price">2,200</span>
+                  <span class="pkg-period">one-time</span>
+                </div>
+                <div class="pkg-credits-highlight">
+                  <span class="pkg-credits-num">150,000</span> Credits
+                </div>
+                <div class="pkg-value-tag">৳150,000 Customer Value (68x)</div>
+                <ul class="pkg-specs">
+                  <li>🖨️ <strong class="pkg-calc-bw">75,000</strong> B&W sheets capacity</li>
+                  <li>🎨 <strong class="pkg-calc-color">30,000</strong> Color sheets capacity</li>
+                  <li>💰 <strong>৳147,800</strong> Net shop profit</li>
+                  <li>🛡️ Protected by Safe Print Rule</li>
+                </ul>
+                <button type="button" class="btn-select-pkg" data-pkg="pkg_enterprise">Select Package</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 2: INTERACTIVE PROFIT & PAGE CALCULATOR -->
+          <div id="subtab-calculator" class="subtab-content">
+            <div class="calculator-panel">
+              <div class="calc-header-box">
+                <h3>Live Partner Earnings & Capacity Calculator</h3>
+                <p>Drag the slider below to see how credits translate into printable pages and net shop revenue at your station's active dynamic pricing.</p>
+              </div>
+
+              <div class="calc-slider-box">
+                <div class="calc-slider-header">
+                  <span class="slider-lbl">Choose Desired Credits:</span>
+                  <span class="slider-credits-badge"><strong id="calc-slider-val">25,000</strong> Credits</span>
+                </div>
+                <input type="range" id="credit-calc-slider" min="5000" max="150000" step="5000" value="25000" class="credit-range-slider" />
+                <div class="slider-marks">
+                  <span>5,000</span>
+                  <span>25,000 (Popular)</span>
+                  <span>50,000</span>
+                  <span>100,000</span>
+                  <span>150,000</span>
+                </div>
+              </div>
+
+              <div class="calc-results-grid">
+                <div class="calc-result-card">
+                  <div class="calc-res-label">Wholesale Cost to You</div>
+                  <div class="calc-res-val cost" id="calc-res-cost">৳500</div>
+                  <div class="calc-res-sub">What you pay PrintKoro</div>
+                </div>
+
+                <div class="calc-result-card">
+                  <div class="calc-res-label">Gross Customer Print Value</div>
+                  <div class="calc-res-val value" id="calc-res-revenue">৳25,000</div>
+                  <div class="calc-res-sub">100% collected by your shop</div>
+                </div>
+
+                <div class="calc-result-card highlight">
+                  <div class="calc-res-label">Net Shop Profit (Estimated)</div>
+                  <div class="calc-res-val profit" id="calc-res-profit">৳24,500</div>
+                  <div class="calc-res-sub">Gross margin: <strong id="calc-res-margin">98.0%</strong></div>
+                </div>
+              </div>
+
+              <div class="calc-breakdown-banner">
+                <div class="breakdown-col">
+                  <div class="breakdown-title">🖨️ Black & White Printing</div>
+                  <div class="breakdown-stat"><strong id="calc-res-bw-sheets">12,500</strong> Sheets</div>
+                  <div class="breakdown-formula">At ৳<span id="calc-res-bw-price">2.00</span> / page (25,000 ÷ 2.00)</div>
+                </div>
+                <div class="breakdown-divider"></div>
+                <div class="breakdown-col">
+                  <div class="breakdown-title">🎨 Full Color Printing</div>
+                  <div class="breakdown-stat"><strong id="calc-res-color-sheets">5,000</strong> Sheets</div>
+                  <div class="breakdown-formula">At ৳<span id="calc-res-color-price">5.00</span> / page (25,000 ÷ 5.00)</div>
+                </div>
+              </div>
+
+              <div class="calc-cta-row">
+                <button type="button" class="btn-signin-white" id="btn-calc-apply">
+                  Top Up This Amount Now (<span id="calc-cta-text">25,000 Credits for ৳500</span>) →
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 3: INSTANT TOP-UP / PAYMENT -->
+          <div id="subtab-recharge" class="subtab-content">
+            <div class="recharge-box">
+              <div class="recharge-summary-strip">
+                <div class="rec-sum-item">
+                  <span class="rec-sum-lbl">Selected Package:</span>
+                  <strong class="rec-sum-val" id="recharge-pkg-name">Partner Value Pack</strong>
+                </div>
+                <div class="rec-sum-item">
+                  <span class="rec-sum-lbl">Credits to Add:</span>
+                  <strong class="rec-sum-val text-blue" id="recharge-pkg-credits">+25,000 Credits</strong>
+                </div>
+                <div class="rec-sum-item">
+                  <span class="rec-sum-lbl">Payable Amount:</span>
+                  <strong class="rec-sum-val text-green" id="recharge-pkg-amount">৳500.00</strong>
+                </div>
+              </div>
+
+              <div class="payment-methods-selector">
+                <label class="pay-method-card active">
+                  <input type="radio" name="rechargeMethod" value="bkash" checked />
+                  <div class="pay-method-content">
+                    <span class="pay-brand bkash">bKash</span>
+                    <span class="pay-desc">Instant mobile financial settlement</span>
+                  </div>
+                </label>
+
+                <label class="pay-method-card">
+                  <input type="radio" name="rechargeMethod" value="nagad" />
+                  <div class="pay-method-content">
+                    <span class="pay-brand nagad">Nagad</span>
+                    <span class="pay-desc">Post Office digital wallet top-up</span>
+                  </div>
+                </label>
+
+                <label class="pay-method-card">
+                  <input type="radio" name="rechargeMethod" value="voucher" />
+                  <div class="pay-method-content">
+                    <span class="pay-brand voucher">Voucher / Admin Code</span>
+                    <span class="pay-desc">Redeem scratch card or promo code</span>
+                  </div>
+                </label>
+              </div>
+
+              <!-- Voucher Code Input (visible if voucher chosen) -->
+              <div id="voucher-field-wrap" class="voucher-input-group hidden">
+                <label for="input-voucher-code">Enter 12-Digit PrintKoro Partner Recharge Voucher:</label>
+                <div class="voucher-input-row">
+                  <input type="text" id="input-voucher-code" placeholder="e.g. PK-RECH-25000-XYZ" class="auth-field font-mono" />
+                  <button type="button" id="btn-apply-voucher" class="btn-secondary">Apply Code</button>
+                </div>
+              </div>
+
+              <!-- Top-Up Action -->
+              <div class="recharge-action-box">
+                <div id="recharge-status-msg" class="recharge-status-alert hidden"></div>
+
+                <button type="button" id="btn-submit-recharge" class="btn-signin-white btn-large">
+                  <span class="spinner hidden" id="recharge-spinner"></span>
+                  <span id="recharge-btn-text">Confirm Top-Up & Activate 25,000 Credits (৳500) →</span>
+                </button>
+                <p class="recharge-guarantee-note">
+                  🔒 Instant automated activation. All payments backed by PrintKoro Safe-Print physical output guarantee.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- SUB-TAB 4: TRANSACTION AUDIT LEDGER -->
+          <div id="subtab-history" class="subtab-content">
+            <div class="ledger-header-row">
+              <div>
+                <h3>Station Credit Transaction Ledger</h3>
+                <p>Complete audit history of welcome bonus, top-ups, and safe print deductions.</p>
+              </div>
+              <button type="button" id="btn-refresh-ledger" class="btn-secondary">⟳ Refresh Ledger</button>
+            </div>
+
+            <div class="ledger-table-wrap">
+              <table class="ledger-table">
+                <thead>
+                  <tr>
+                    <th>Date / Time</th>
+                    <th>Transaction Type</th>
+                    <th>Description</th>
+                    <th>Credits Impact</th>
+                    <th>Balance After</th>
+                  </tr>
+                </thead>
+                <tbody id="ledger-table-body">
+                  <tr>
+                    <td colspan="5" class="empty-state">Loading station transaction ledger...</td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
 
         <div class="modal-footer">
-          <button id="btn-switch-account" class="btn-secondary" type="button">Switch Station / Register Another</button>
-          <button id="btn-logout-account" class="btn-secondary btn-danger-text" type="button">Log Out</button>
+          <button type="button" id="btn-sub-modal-footer-close" class="btn-secondary">Close Window</button>
         </div>
       </div>
     </div>

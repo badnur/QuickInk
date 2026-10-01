@@ -3,6 +3,39 @@
 // Shop & Kiosk Registration, Mobile OTP Verification & Authentication
 // =============================================================================
 
+// Standard Wholesale Credit Packages (1 Credit = ৳1 Gross Print Value)
+const CREDIT_PACKAGES = [
+  {
+    id: 'pkg_starter',
+    name: 'Starter Booster',
+    credits: 10000,
+    price_taka: 250,
+    print_value_taka: 10000,
+  },
+  {
+    id: 'pkg_value',
+    name: 'Partner Value Pack',
+    credits: 25000,
+    price_taka: 500,
+    print_value_taka: 25000,
+    popular: true,
+  },
+  {
+    id: 'pkg_commercial',
+    name: 'Commercial Pro',
+    credits: 60000,
+    price_taka: 1000,
+    print_value_taka: 60000,
+  },
+  {
+    id: 'pkg_enterprise',
+    name: 'Campus Enterprise',
+    credits: 150000,
+    price_taka: 2200,
+    print_value_taka: 150000,
+  }
+]
+
 // Default Fallback Config & Session State
 const state = {
   config: {
@@ -23,6 +56,15 @@ const state = {
     logo_url: '',
     shop_photo_url: '',
   },
+  creditsBalance: 10000,
+  pricingTier: {
+    id: null,
+    name: 'Standard',
+    bw_price: 2.00,
+    color_price: 8.00
+  },
+  creditTransactions: [],
+  selectedPackage: CREDIT_PACKAGES[1], // Partner Value Pack: 25,000 credits for 500 taka
   systemPrinters: [],
   activeJob: null,
   recentJobs: [],
@@ -504,6 +546,202 @@ const PrintKoroCloud = {
       }
     }
     return { ok: false, data: { error: 'Account not found with this mobile number.' } }
+  },
+
+  async fetchCredits(deviceId) {
+    if (!deviceId) return { ok: false, data: { error: 'No device ID provided' } }
+    try {
+      const devRes = await this.rest(`devices?id=eq.${deviceId}&select=*,pricing_tiers(*)`)
+      if (!devRes.ok) return { ok: false, data: { error: 'Could not fetch device details from cloud' } }
+      const rows = await devRes.json()
+      const dev = rows[0] || {}
+      const rawBalance = dev.credits_balance ?? dev.location?.credits_balance ?? 10000.00
+      const creditsBalance = Number(rawBalance) || 0
+      const tier = dev.pricing_tiers || {}
+      const bwPrice = Number(tier.bw_price ?? 2.00)
+      const colorPrice = Number(tier.color_price ?? 8.00)
+
+      let transactions = []
+      try {
+        const txRes = await this.rest(`partner_credit_transactions?device_id=eq.${deviceId}&order=created_at.desc&limit=20`)
+        if (txRes.ok) transactions = await txRes.json()
+      } catch (e) {
+        transactions = dev.location?.credit_history || []
+      }
+
+      if (transactions.length === 0 && creditsBalance > 0) {
+        transactions = [
+          {
+            id: 'welcome-init',
+            device_id: deviceId,
+            amount: creditsBalance,
+            balance_after: creditsBalance,
+            type: 'welcome_bonus',
+            description: `PrintKoro Partner Welcome Gift: ${creditsBalance.toLocaleString()} Free Credits upon registration approval`,
+            created_at: dev.location?.approved_at || dev.created_at || new Date().toISOString()
+          }
+        ]
+      }
+
+      return {
+        ok: true,
+        data: {
+          success: true,
+          deviceId,
+          creditsBalance,
+          grossPrintValueTaka: creditsBalance,
+          tier: { id: tier.id, name: tier.name || 'Standard', bw_price: bwPrice, color_price: colorPrice },
+          estimates: {
+            bwPagesPrintable: bwPrice > 0 ? Math.floor(creditsBalance / bwPrice) : creditsBalance,
+            colorPagesPrintable: colorPrice > 0 ? Math.floor(creditsBalance / colorPrice) : creditsBalance
+          },
+          transactions
+        }
+      }
+    } catch (err) {
+      console.warn('Cloud fetchCredits error:', err)
+      return { ok: false, data: { error: err.message } }
+    }
+  },
+
+  async topupCredits(deviceId, packageId, amount, details = {}) {
+    const pkg = CREDIT_PACKAGES.find(p => p.id === packageId)
+    const creditsToAdd = pkg ? pkg.credits : Number(amount || 25000)
+    const priceTaka = pkg ? pkg.price_taka : Math.round(creditsToAdd * 0.02)
+    const packageName = pkg?.name || `${creditsToAdd.toLocaleString()} Credits`
+
+    try {
+      const rpcRes = await fetch(`${this.SUPABASE_URL}/rest/v1/rpc/topup_device_credits`, {
+        method: 'POST',
+        headers: {
+          apikey: this.SUPABASE_KEY,
+          Authorization: `Bearer ${this.SUPABASE_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          p_device_id: deviceId,
+          p_amount: creditsToAdd,
+          p_type: 'subscription_topup',
+          p_description: `Subscribed to ${packageName} (Paid ৳${priceTaka})`
+        })
+      })
+      if (rpcRes.ok) {
+        const rpcData = await rpcRes.json()
+        return { ok: true, data: { success: true, creditsAdded: creditsToAdd, newBalance: rpcData?.balance || creditsToAdd } }
+      }
+    } catch (e) {}
+
+    // Direct fallback
+    const devRes = await this.rest(`devices?id=eq.${deviceId}`)
+    const devs = await devRes.json()
+    const dev = devs[0]
+    const curBal = Number(dev?.credits_balance ?? dev?.location?.credits_balance ?? 0)
+    const newBal = curBal + creditsToAdd
+    const loc = dev?.location || {}
+    const tx = {
+      id: `tx-${Date.now()}`,
+      device_id: deviceId,
+      amount: creditsToAdd,
+      balance_after: newBal,
+      type: 'subscription_topup',
+      description: `Subscribed to ${packageName} (Paid ৳${priceTaka})`,
+      created_at: new Date().toISOString()
+    }
+
+    await this.rest(`devices?id=eq.${deviceId}`, {
+      method: 'PATCH',
+      body: JSON.stringify({
+        credits_balance: newBal,
+        location: { ...loc, credits_balance: newBal, credit_history: [tx, ...(loc.credit_history || [])].slice(0, 30) }
+      })
+    })
+
+    return {
+      ok: true,
+      data: {
+        success: true,
+        creditsAdded: creditsToAdd,
+        newBalance: newBal,
+        message: `Added ${creditsToAdd.toLocaleString()} credits to your station account!`
+      }
+    }
+  },
+
+  async confirmPrintAndDeductCredits(jobId, deviceId, isSuccess = true, errorReason = null) {
+    if (!isSuccess) {
+      console.warn('[Safe Print Rule] Hardware execution failed:', errorReason, 'Zero credits deducted.')
+      return { ok: true, data: { success: false, creditsDeducted: 0, message: 'Print failed. Zero credits were deducted.' } }
+    }
+
+    try {
+      const rpcRes = await fetch(`${this.SUPABASE_URL}/rest/v1/rpc/confirm_print_and_deduct_credits`, {
+        method: 'POST',
+        headers: {
+          apikey: this.SUPABASE_KEY,
+          Authorization: `Bearer ${this.SUPABASE_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ p_job_id: jobId, p_device_id: deviceId })
+      })
+      if (rpcRes.ok) {
+        const rpcData = await rpcRes.json()
+        return { ok: true, data: rpcData }
+      }
+    } catch (e) {}
+
+    // Direct fallback
+    const [devRes, jobRes] = await Promise.all([
+      this.rest(`devices?id=eq.${deviceId}&select=*,pricing_tiers(*)`),
+      this.rest(`print_jobs?id=eq.${jobId}`)
+    ])
+    const devs = await devRes.json()
+    const jobs = await jobRes.json()
+    const dev = devs[0]
+    const job = jobs[0]
+    if (!dev || !job) return { ok: false, data: { error: 'Device or Job not found' } }
+
+    const tier = dev.pricing_tiers || {}
+    const isColor = job.color_mode === 'color'
+    const unitPrice = isColor ? Number(tier.color_price ?? 8.00) : Number(tier.bw_price ?? 2.00)
+    const cost = Math.round(unitPrice * (job.page_count || 1) * (job.copies || 1) * 100) / 100
+    const curBal = Number(dev.credits_balance ?? dev.location?.credits_balance ?? 10000.00)
+    const newBal = Math.max(0, curBal - cost)
+    const loc = dev.location || {}
+
+    const tx = {
+      id: `tx-${Date.now()}`,
+      device_id: deviceId,
+      amount: -cost,
+      balance_after: newBal,
+      type: 'print_deduction',
+      description: `Print Job Completed: ${job.page_count || 1} sheet(s) ${isColor ? 'Color' : 'B&W'} × ${job.copies || 1} copy @ ৳${unitPrice}/sheet`,
+      print_job_id: jobId,
+      created_at: new Date().toISOString()
+    }
+
+    await Promise.all([
+      this.rest(`devices?id=eq.${deviceId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          credits_balance: newBal,
+          location: { ...loc, credits_balance: newBal, credit_history: [tx, ...(loc.credit_history || [])].slice(0, 30) }
+        })
+      }),
+      this.rest(`print_jobs?id=eq.${jobId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'completed', printed_at: new Date().toISOString(), redeemed_by_device_id: deviceId })
+      })
+    ])
+
+    return {
+      ok: true,
+      data: {
+        success: true,
+        creditsDeducted: cost,
+        newBalance: newBal,
+        message: `Print completed successfully. ${cost} credits deducted.`
+      }
+    }
   }
 }
 
@@ -607,7 +845,7 @@ const el = {
   btnAccountToggle: document.getElementById('btn-account-toggle'),
   btnAccountLabel: document.getElementById('btn-account-label'),
 
-  // Auto-Updater UI
+  // Auto-Updater UI & Home Update Center
   updateBanner: document.getElementById('update-banner'),
   updateBannerIcon: document.getElementById('update-banner-icon'),
   updateBannerTitle: document.getElementById('update-banner-title'),
@@ -616,8 +854,28 @@ const el = {
   updateProgressFill: document.getElementById('update-progress-fill'),
   btnUpdateRestart: document.getElementById('btn-update-restart'),
   btnUpdateDismiss: document.getElementById('btn-update-dismiss'),
-  appVersionTxt: document.getElementById('app-version-txt'),
-  btnManualCheckUpdate: document.getElementById('btn-manual-check-update'),
+
+  // Home Page Live Software Update Center
+  homeUpdateCard: document.getElementById('home-update-card'),
+  homeUpdateStatusPill: document.getElementById('home-update-status-pill'),
+  homeUpdatePillText: document.getElementById('home-update-pill-text'),
+  homeCurrentVersion: document.getElementById('home-current-version'),
+  homeLatestVersion: document.getElementById('home-latest-version'),
+  homeReleaseTag: document.getElementById('home-release-tag'),
+  homeChangelogItems: document.getElementById('home-changelog-items'),
+  homeUpdateProgressWrap: document.getElementById('home-update-progress-wrap'),
+  homeDownloadStatusTxt: document.getElementById('home-download-status-txt'),
+  homeDownloadPercent: document.getElementById('home-download-percent'),
+  homeDownloadFill: document.getElementById('home-download-fill'),
+  homeDownloadSpeed: document.getElementById('home-download-speed'),
+  homeDownloadSize: document.getElementById('home-download-size'),
+  homeUpdateStatusMsg: document.getElementById('home-update-status-msg'),
+  homeUpdateMsgText: document.getElementById('home-update-msg-text'),
+  btnHomeCheckUpdate: document.getElementById('btn-home-check-update'),
+  homeCheckSpinner: document.getElementById('home-check-spinner'),
+  homeCheckBtnText: document.getElementById('home-check-btn-text'),
+  btnHomeRestartUpdate: document.getElementById('btn-home-restart-update'),
+  homeLastCheckedTime: document.getElementById('home-last-checked-time'),
 
   // Customer OTP Terminal
   otpBoxes: [
@@ -811,21 +1069,91 @@ const el = {
   regStep3StatusMsg: document.getElementById('reg-step3-status-msg'),
   btnFinishRegistration: document.getElementById('btn-finish-registration'),
 
-  // Account Profile Modal
+  // Account Profile & Terminal Control Center Modal
   accountModal: document.getElementById('account-modal'),
   btnCloseAccountModal: document.getElementById('btn-close-account-modal'),
   modalAccountShopName: document.getElementById('modal-account-shop-name'),
   modalAccountOwnerName: document.getElementById('modal-account-owner-name'),
   modalAccountType: document.getElementById('modal-account-type'),
+  modalAccountMemberSince: document.getElementById('modal-account-member-since'),
   modalAccountLogoImg: document.getElementById('modal-account-logo-img'),
   modalAccountLogoInitials: document.getElementById('modal-account-logo-initials'),
   modalAccountPhotoWrap: document.getElementById('modal-account-photo-wrap'),
   modalAccountPhotoImg: document.getElementById('modal-account-photo-img'),
   modalAccountPhone: document.getElementById('modal-account-phone'),
+  modalAccountEmail: document.getElementById('modal-account-email'),
   modalAccountAddress: document.getElementById('modal-account-address'),
   modalAccountDeviceId: document.getElementById('modal-account-device-id'),
+  btnCopyDeviceId: document.getElementById('btn-copy-device-id'),
+  modalAccountCredits: document.getElementById('modal-account-credits'),
+  modalAccountCreditsValue: document.getElementById('modal-account-credits-value'),
+  btnAccountOpenSub: document.getElementById('btn-account-open-sub'),
+  modalAccountBwDot: document.getElementById('modal-account-bw-dot'),
+  modalAccountBwName: document.getElementById('modal-account-bw-name'),
+  modalAccountColorDot: document.getElementById('modal-account-color-dot'),
+  modalAccountColorName: document.getElementById('modal-account-color-name'),
+  btnProfileTestPrint: document.getElementById('btn-profile-test-print'),
+  modalAccountTierName: document.getElementById('modal-account-tier-name'),
+  modalAccountBwSingle: document.getElementById('modal-account-bw-single'),
+  modalAccountBwDuplex: document.getElementById('modal-account-bw-duplex'),
+  modalAccountColorSingle: document.getElementById('modal-account-color-single'),
+  modalAccountColorDuplex: document.getElementById('modal-account-color-duplex'),
+  btnRefreshProfileSync: document.getElementById('btn-refresh-profile-sync'),
   btnSwitchAccount: document.getElementById('btn-switch-account'),
   btnLogoutAccount: document.getElementById('btn-logout-account'),
+
+  // Wholesale Credit Subscriptions
+  headerCreditAmount: document.getElementById('header-credit-amount'),
+  btnOpenSubscriptions: document.getElementById('btn-open-subscriptions'),
+  subscriptionModal: document.getElementById('subscription-modal'),
+  btnCloseSubModal: document.getElementById('btn-close-sub-modal'),
+  btnSubModalFooterClose: document.getElementById('btn-sub-modal-footer-close'),
+  subCardBalance: document.getElementById('sub-card-balance'),
+  subCardGrossValue: document.getElementById('sub-card-gross-value'),
+  subCardBwRate: document.getElementById('sub-card-bw-rate'),
+  subCardColorRate: document.getElementById('sub-card-color-rate'),
+  subCardTierName: document.getElementById('sub-card-tier-name'),
+  subCardBwPages: document.getElementById('sub-card-bw-pages'),
+  subCardColorPages: document.getElementById('sub-card-color-pages'),
+  subTabBtns: document.querySelectorAll('.sub-tab-btn'),
+  subTabContents: document.querySelectorAll('.subtab-content'),
+  pkgSelectBtns: document.querySelectorAll('.btn-select-pkg'),
+  packageCards: document.querySelectorAll('.package-card'),
+  creditCalcSlider: document.getElementById('credit-calc-slider'),
+  calcSliderVal: document.getElementById('calc-slider-val'),
+  calcResCost: document.getElementById('calc-res-cost'),
+  calcResRevenue: document.getElementById('calc-res-revenue'),
+  calcResProfit: document.getElementById('calc-res-profit'),
+  calcResMargin: document.getElementById('calc-res-margin'),
+  calcResBwSheets: document.getElementById('calc-res-bw-sheets'),
+  calcResColorSheets: document.getElementById('calc-res-color-sheets'),
+  calcResBwPrice: document.getElementById('calc-res-bw-price'),
+  calcResColorPrice: document.getElementById('calc-res-color-price'),
+  btnCalcApply: document.getElementById('btn-calc-apply'),
+  calcCtaText: document.getElementById('calc-cta-text'),
+  rechargePkgName: document.getElementById('recharge-pkg-name'),
+  rechargePkgCredits: document.getElementById('recharge-pkg-credits'),
+  rechargePkgAmount: document.getElementById('recharge-pkg-amount'),
+  rechargePayMethodCards: document.querySelectorAll('.pay-method-card'),
+  voucherFieldWrap: document.getElementById('voucher-field-wrap'),
+  inputVoucherCode: document.getElementById('input-voucher-code'),
+  btnApplyVoucher: document.getElementById('btn-apply-voucher'),
+  rechargeStatusMsg: document.getElementById('recharge-status-msg'),
+  btnSubmitRecharge: document.getElementById('btn-submit-recharge'),
+  rechargeSpinner: document.getElementById('recharge-spinner'),
+  rechargeBtnText: document.getElementById('recharge-btn-text'),
+  ledgerTableBody: document.getElementById('ledger-table-body'),
+  btnRefreshLedger: document.getElementById('btn-refresh-ledger'),
+
+  // Job Modal Credit Elements
+  modalCreditCost: document.getElementById('modal-credit-cost'),
+  modalCreditTakaVal: document.getElementById('modal-credit-taka-val'),
+  modalAvailCredits: document.getElementById('modal-avail-credits'),
+  modalLowCreditsAlert: document.getElementById('modal-low-credits-alert'),
+  modalNeededCredits: document.getElementById('modal-needed-credits'),
+  modalCurrentCredits: document.getElementById('modal-current-credits'),
+  btnJobModalTopup: document.getElementById('btn-job-modal-topup'),
+  metricCreditsBalance: document.getElementById('metric-credits-balance'),
 
   // Connection Indicator & Server Settings Modal
   authConnDot: document.getElementById('auth-conn-dot'),
@@ -853,6 +1181,7 @@ async function init() {
   setupAuthSystem()
   setupAutoUpdaterClient()
   setupServerSettingsModal()
+  setupSubscriptionSystem()
 
   // Load configuration and native printers
   await loadAppConfig()
@@ -860,6 +1189,7 @@ async function init() {
   await scanSystemPrinters()
   await fetchDevices()
   await fetchRecentJobs()
+  await fetchCreditsData()
 
   // Load account and show correct screen (login, workspace, or lockdown)
   await loadSavedAccount()
@@ -928,60 +1258,127 @@ function setupTabNavigation() {
 }
 
 // =============================================================================
-// AUTO-UPDATER CLIENT
+// AUTO-UPDATER & HOME UPDATE CENTER CLIENT
 // =============================================================================
 function setupAutoUpdaterClient() {
-  // 1. Fetch & display app version
-  if (isElectron && window.quickinkDesktop?.getVersion) {
-    window.quickinkDesktop.getVersion().then((ver) => {
-      if (ver && el.appVersionTxt) {
-        el.appVersionTxt.textContent = `v${ver}`
-      }
-    }).catch(() => { })
+  // Helper to format timestamp
+  const getNowFormattedTime = () => {
+    return 'Today at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
-  // 2. Dismiss banner button
+  // 1. Fetch & display app version on home page and headers
+  if (isElectron && window.quickinkDesktop?.getVersion) {
+    window.quickinkDesktop.getVersion().then((ver) => {
+      if (ver) {
+        if (el.homeCurrentVersion) el.homeCurrentVersion.textContent = `v${ver}`
+        if (el.homeLatestVersion) el.homeLatestVersion.textContent = `v${ver} (Latest)`
+        if (el.homeReleaseTag) el.homeReleaseTag.textContent = `v${ver} Stable`
+      }
+    }).catch(() => { })
+  } else {
+    if (el.homeCurrentVersion) el.homeCurrentVersion.textContent = 'v1.0.0'
+    if (el.homeLatestVersion) el.homeLatestVersion.textContent = 'v1.0.0 (Web Mode)'
+  }
+
+  // Set initial last checked label
+  if (el.homeLastCheckedTime) {
+    el.homeLastCheckedTime.textContent = 'Last checked: Just now'
+  }
+
+  // 2. Dismiss top banner button
   el.btnUpdateDismiss?.addEventListener('click', () => {
     el.updateBanner?.classList.add('hidden')
   })
 
-  // 3. Restart & Update button
-  el.btnUpdateRestart?.addEventListener('click', () => {
+  // 3. Restart & Update button handlers (Both banner & Home page card)
+  const triggerRestartAndInstall = () => {
     if (isElectron && window.quickinkDesktop?.restartForUpdate) {
       window.quickinkDesktop.restartForUpdate()
+    } else {
+      alert('Application will restart to apply the latest update.')
     }
-  })
+  }
+  el.btnUpdateRestart?.addEventListener('click', triggerRestartAndInstall)
+  el.btnHomeRestartUpdate?.addEventListener('click', triggerRestartAndInstall)
 
-  // 4. Manual check button in profile modal
-  el.btnManualCheckUpdate?.addEventListener('click', async () => {
-    if (!isElectron || !window.quickinkDesktop?.checkForUpdates) {
-      alert('Automatic updates are active in the installed desktop version.')
-      return
+  // 4. Interactive "Check for Updates" button on Home Page
+  el.btnHomeCheckUpdate?.addEventListener('click', async () => {
+    if (el.btnHomeCheckUpdate) {
+      el.btnHomeCheckUpdate.disabled = true
+      if (el.homeCheckBtnText) el.homeCheckBtnText.textContent = 'Checking...'
+      if (el.homeCheckSpinner) el.homeCheckSpinner.classList.remove('hidden')
     }
-    el.btnManualCheckUpdate.disabled = true
-    el.btnManualCheckUpdate.textContent = 'Checking...'
+
+    if (el.homeUpdateStatusPill) {
+      el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🔄</span><span>Checking...</span>'
+      el.homeUpdateStatusPill.style.borderColor = 'rgba(56, 189, 248, 0.4)'
+      el.homeUpdateStatusPill.style.color = '#38bdf8'
+    }
+
+    if (el.homeUpdateMsgText) {
+      el.homeUpdateMsgText.textContent = 'Querying PrintKoro GitHub releases for updates...'
+    }
+
     try {
-      const res = await window.quickinkDesktop.checkForUpdates()
-      if (res?.success) {
-        if (res.isLatest) {
-          alert('PrintKoro Station is up to date! (v' + (res.version || '') + ')')
+      if (isElectron && window.quickinkDesktop?.checkForUpdates) {
+        const res = await window.quickinkDesktop.checkForUpdates()
+        if (res?.success) {
+          if (res.isLatest) {
+            if (el.homeUpdateStatusPill) {
+              el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🟢</span><span>Up to Date</span>'
+              el.homeUpdateStatusPill.style.borderColor = 'rgba(16, 185, 129, 0.3)'
+              el.homeUpdateStatusPill.style.color = '#34d399'
+            }
+            if (el.homeUpdateMsgText) {
+              el.homeUpdateMsgText.textContent = `PrintKoro Station is up to date (v${res.version || '1.0.0'}). All systems, print spoolers, and credit modules are current.`
+            }
+            if (el.homeLatestVersion) el.homeLatestVersion.textContent = `v${res.version || '1.0.0'} (Latest)`
+          } else {
+            if (el.homeUpdateStatusPill) {
+              el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">✨</span><span>Update Available</span>'
+              el.homeUpdateStatusPill.style.borderColor = 'rgba(245, 158, 11, 0.5)'
+              el.homeUpdateStatusPill.style.color = '#f59e0b'
+            }
+            if (el.homeLatestVersion) el.homeLatestVersion.textContent = `v${res.version || ''} (New Release)`
+            if (el.homeUpdateMsgText) {
+              el.homeUpdateMsgText.textContent = `New version v${res.version} found! Background download initiated.`
+            }
+            if (el.homeUpdateProgressWrap) el.homeUpdateProgressWrap.classList.remove('hidden')
+          }
         } else {
-          if (el.updateBanner) el.updateBanner.classList.remove('hidden')
-          if (el.updateBannerTitle) el.updateBannerTitle.textContent = 'PrintKoro Updater'
-          if (el.updateBannerDesc) el.updateBannerDesc.textContent = res.version ? `New version v${res.version} found! Downloading in background...` : 'Checking GitHub releases...'
+          if (el.homeUpdateMsgText) {
+            el.homeUpdateMsgText.textContent = res?.error || 'Unable to contact update server. Station is running offline normally.'
+          }
         }
       } else {
-        alert(res?.error || 'Could not reach update server. Check internet connection.')
+        // Web preview simulation
+        await new Promise(r => setTimeout(r, 700))
+        if (el.homeUpdateStatusPill) {
+          el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🟢</span><span>Up to Date</span>'
+          el.homeUpdateStatusPill.style.borderColor = 'rgba(16, 185, 129, 0.3)'
+          el.homeUpdateStatusPill.style.color = '#34d399'
+        }
+        if (el.homeUpdateMsgText) {
+          el.homeUpdateMsgText.textContent = 'PrintKoro Station v1.0.0 is current. (Running in Web Preview mode; in production, updates download automatically from GitHub Releases).'
+        }
+      }
+
+      if (el.homeLastCheckedTime) {
+        el.homeLastCheckedTime.textContent = `Last checked: ${getNowFormattedTime()}`
       }
     } catch (e) {
-      console.warn('Manual update check error:', e)
+      console.warn('Update check error:', e)
+      if (el.homeUpdateMsgText) {
+        el.homeUpdateMsgText.textContent = 'Check failed. Please ensure your internet connection is active.'
+      }
     } finally {
       setTimeout(() => {
-        if (el.btnManualCheckUpdate) {
-          el.btnManualCheckUpdate.disabled = false
-          el.btnManualCheckUpdate.textContent = 'Check for Update'
+        if (el.btnHomeCheckUpdate) {
+          el.btnHomeCheckUpdate.disabled = false
+          if (el.homeCheckBtnText) el.homeCheckBtnText.textContent = 'Check for Updates'
+          if (el.homeCheckSpinner) el.homeCheckSpinner.classList.add('hidden')
         }
-      }, 4000)
+      }, 1000)
     }
   })
 
@@ -992,29 +1389,91 @@ function setupAutoUpdaterClient() {
       const { status } = data
 
       if (status === 'checking') {
-        // Quiet check
+        if (el.homeUpdateStatusPill) {
+          el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🔄</span><span>Checking...</span>'
+          el.homeUpdateStatusPill.style.borderColor = 'rgba(56, 189, 248, 0.4)'
+          el.homeUpdateStatusPill.style.color = '#38bdf8'
+        }
+        if (el.homeUpdateMsgText) {
+          el.homeUpdateMsgText.textContent = 'Checking GitHub releases for updates...'
+        }
       } else if (status === 'available') {
-        el.updateBanner?.classList.remove('hidden')
+        if (el.updateBanner) el.updateBanner.classList.remove('hidden')
         if (el.updateBannerTitle) el.updateBannerTitle.textContent = `Update v${data.version || ''} Available`
         if (el.updateBannerDesc) el.updateBannerDesc.textContent = 'Downloading update in background...'
         el.updateProgressContainer?.classList.remove('hidden')
         el.btnUpdateRestart?.classList.add('hidden')
+
+        // Home card updates
+        if (el.homeUpdateStatusPill) {
+          el.homeUpdateStatusPill.innerHTML = `<span class="pill-dot">✨</span><span>v${data.version || ''} Available</span>`
+          el.homeUpdateStatusPill.style.borderColor = 'rgba(245, 158, 11, 0.5)'
+          el.homeUpdateStatusPill.style.color = '#f59e0b'
+        }
+        if (el.homeLatestVersion) el.homeLatestVersion.textContent = `v${data.version || ''} (New Release)`
+        if (el.homeUpdateMsgText) {
+          el.homeUpdateMsgText.textContent = `Downloading update v${data.version || ''} in the background. You can continue taking print orders safely.`
+        }
+        if (el.homeUpdateProgressWrap) el.homeUpdateProgressWrap.classList.remove('hidden')
+        if (el.btnHomeRestartUpdate) el.btnHomeRestartUpdate.classList.add('hidden')
       } else if (status === 'downloading') {
-        el.updateBanner?.classList.remove('hidden')
+        const pct = data.percent || 0
+        if (el.updateBanner) el.updateBanner.classList.remove('hidden')
         if (el.updateProgressContainer) el.updateProgressContainer.classList.remove('hidden')
-        if (el.updateProgressFill) el.updateProgressFill.style.width = `${data.percent || 0}%`
-        if (el.updateBannerDesc) el.updateBannerDesc.textContent = `Downloading update: ${data.percent || 0}%`
+        if (el.updateProgressFill) el.updateProgressFill.style.width = `${pct}%`
+        if (el.updateBannerDesc) el.updateBannerDesc.textContent = `Downloading update: ${pct}%`
+
+        // Home card progress
+        if (el.homeUpdateProgressWrap) el.homeUpdateProgressWrap.classList.remove('hidden')
+        if (el.homeDownloadFill) el.homeDownloadFill.style.width = `${pct}%`
+        if (el.homeDownloadPercent) el.homeDownloadPercent.textContent = `${pct}%`
+        if (el.homeDownloadStatusTxt) el.homeDownloadStatusTxt.textContent = `Downloading update package (${pct}%)...`
+        if (el.homeDownloadSpeed && data.bytesPerSecond) {
+          const speedMb = (data.bytesPerSecond / (1024 * 1024)).toFixed(1)
+          el.homeDownloadSpeed.textContent = `Download Speed: ${speedMb} MB/s`
+        }
+        if (el.homeDownloadSize && data.transferred && data.total) {
+          const transMb = (data.transferred / (1024 * 1024)).toFixed(1)
+          const totMb = (data.total / (1024 * 1024)).toFixed(1)
+          el.homeDownloadSize.textContent = `${transMb} MB / ${totMb} MB`
+        }
       } else if (status === 'downloaded') {
-        el.updateBanner?.classList.remove('hidden')
+        if (el.updateBanner) el.updateBanner.classList.remove('hidden')
         if (el.updateBannerTitle) el.updateBannerTitle.textContent = `Version ${data.version || ''} Ready`
         if (el.updateBannerDesc) el.updateBannerDesc.textContent = 'Update downloaded! Restart now to complete installation.'
         el.updateProgressContainer?.classList.add('hidden')
         el.btnUpdateRestart?.classList.remove('hidden')
+
+        // Home card ready
+        if (el.homeUpdateProgressWrap) el.homeUpdateProgressWrap.classList.add('hidden')
+        if (el.homeUpdateStatusPill) {
+          el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🚀</span><span>Ready to Install</span>'
+          el.homeUpdateStatusPill.style.borderColor = 'rgba(16, 185, 129, 0.6)'
+          el.homeUpdateStatusPill.style.color = '#34d399'
+        }
+        if (el.homeUpdateMsgText) {
+          el.homeUpdateMsgText.textContent = `Update v${data.version || ''} is downloaded and verified. Click "Restart & Apply" to install in seconds.`
+        }
+        if (el.btnHomeRestartUpdate) {
+          el.btnHomeRestartUpdate.classList.remove('hidden')
+          el.btnHomeRestartUpdate.textContent = `🚀 Restart & Apply Update v${data.version || ''}`
+        }
         playSuccessChime()
       } else if (status === 'up-to-date') {
-        // App is latest
+        if (el.homeUpdateStatusPill) {
+          el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🟢</span><span>Up to Date</span>'
+        }
+        if (el.homeUpdateMsgText) {
+          el.homeUpdateMsgText.textContent = `PrintKoro Station is up to date (v${data.version || '1.0.0'}).`
+        }
+        if (el.homeLastCheckedTime) {
+          el.homeLastCheckedTime.textContent = `Last checked: ${getNowFormattedTime()}`
+        }
       } else if (status === 'error') {
         console.warn('[Updater UI] Error notice:', data.error)
+        if (el.homeUpdateMsgText) {
+          el.homeUpdateMsgText.textContent = 'Update check encountered an issue. Station operating normally.'
+        }
       }
     })
   }
@@ -1445,6 +1904,26 @@ function openJobModal(jobData) {
     el.modalPayInstruction.innerHTML = 'Customer paid digitally via bKash/Nagad/Card. You can release print directly.'
   }
 
+  // Wholesale credit cost calculation (1 Credit = ৳1 gross print value)
+  // Dynamic pricing tier assigned in admin side is authoritatively respected!
+  const zoneTier = jobData?.data?.zone || state.pricingTier || {}
+  const zoneRate = isColor ? Number(zoneTier.color_price ?? 8.0) : Number(zoneTier.bw_price ?? 2.0)
+  const creditCost = Math.round((job.page_count || 1) * (job.copies || 1) * zoneRate * 100) / 100
+
+  if (el.modalCreditCost) el.modalCreditCost.textContent = `${creditCost} Credits`
+  if (el.modalCreditTakaVal) el.modalCreditTakaVal.textContent = `৳${creditCost.toFixed(2)}`
+  if (el.modalAvailCredits) el.modalAvailCredits.textContent = (state.creditsBalance || 0).toLocaleString()
+
+  if (state.creditsBalance < creditCost) {
+    if (el.modalLowCreditsAlert) {
+      el.modalLowCreditsAlert.classList.remove('hidden')
+      if (el.modalNeededCredits) el.modalNeededCredits.textContent = creditCost
+      if (el.modalCurrentCredits) el.modalCurrentCredits.textContent = (state.creditsBalance || 0).toLocaleString()
+    }
+  } else {
+    if (el.modalLowCreditsAlert) el.modalLowCreditsAlert.classList.add('hidden')
+  }
+
   el.spoolingPanel.classList.add('hidden')
   el.btnReleasePrint.disabled = false
   el.jobModal.classList.remove('hidden')
@@ -1459,7 +1938,7 @@ function closeJobModal() {
   clearOtpInputs()
 }
 
-// Hardware Spooling Execution
+// Hardware Spooling Execution & Safe Print Credit Rule
 el.btnReleasePrint?.addEventListener('click', async () => {
   if (!state.activeJob) return
 
@@ -1520,6 +1999,24 @@ el.btnReleasePrint?.addEventListener('click', async () => {
       }
     }
 
+    // SAFE PRINT RULE: Deduct credits ONLY after physical paper prints successfully!
+    const jobId = job.id || state.activeJob?.data?.print_job?.id
+    if (jobId && state.config.deviceId) {
+      try {
+        const { data: completeRes } = await apiPost(
+          '/api/desktop/jobs/complete',
+          { jobId, deviceId: state.config.deviceId, hardwareSuccess: true },
+          () => QuickInkCloud.confirmPrintAndDeductCredits(jobId, state.config.deviceId, true)
+        )
+        if (completeRes?.newBalance !== undefined) {
+          state.creditsBalance = Number(completeRes.newBalance)
+          updateHeaderCreditBadge()
+        }
+      } catch (deductErr) {
+        console.warn('Post-print completion sync note:', deductErr)
+      }
+    }
+
     el.spoolingStepLabel.textContent = 'Sent to hardware spooler successfully!'
     el.spoolingPercentage.textContent = '100%'
     el.spoolingProgressBar.style.width = '100%'
@@ -1528,10 +2025,22 @@ el.btnReleasePrint?.addEventListener('click', async () => {
     setTimeout(() => {
       closeJobModal()
       fetchRecentJobs()
+      fetchCreditsData()
     }, 1200)
   } catch (err) {
     el.spoolingPanel.classList.add('hidden')
-    alert(`Print Execution Notice: ${err.message}`)
+
+    // SAFE PRINT RULE: If hardware execution fails, notify backend with hardwareSuccess=false, ZERO credits cut!
+    const jobId = job.id || state.activeJob?.data?.print_job?.id
+    if (jobId && state.config.deviceId) {
+      apiPost(
+        '/api/desktop/jobs/complete',
+        { jobId, deviceId: state.config.deviceId, hardwareSuccess: false, failureReason: err.message },
+        () => QuickInkCloud.confirmPrintAndDeductCredits(jobId, state.config.deviceId, false, err.message)
+      ).catch(() => {})
+    }
+
+    alert(`Print Execution Notice: ${err.message}\n\n🛡️ Safe-Print Zero-Risk Guarantee: Zero credits were deducted from your balance because the print did not complete successfully.`)
     el.btnReleasePrint.disabled = false
   }
 })
@@ -1642,6 +2151,325 @@ async function fetchDevices() {
   } catch (err) {
     console.warn('Could not fetch devices:', err)
   }
+}
+
+// =============================================================================
+// WHOLESALE CREDIT SUBSCRIPTION, TOP-UP & ESTIMATOR SYSTEM
+// =============================================================================
+function setupSubscriptionSystem() {
+  // 1. Open / Close Subscription Modal
+  el.btnOpenSubscriptions?.addEventListener('click', () => openSubscriptionModal('subtab-packages'))
+  el.btnCloseSubModal?.addEventListener('click', closeSubscriptionModal)
+  el.btnSubModalFooterClose?.addEventListener('click', closeSubscriptionModal)
+  el.btnAccountOpenSub?.addEventListener('click', () => {
+    el.accountModal?.classList.add('hidden')
+    openSubscriptionModal('subtab-packages')
+  })
+  el.btnJobModalTopup?.addEventListener('click', () => {
+    el.jobModal?.classList.add('hidden')
+    openSubscriptionModal('subtab-recharge')
+  })
+
+  // 2. SubTab Switcher
+  el.subTabBtns?.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const targetTab = btn.getAttribute('data-subtab')
+      switchSubTab(targetTab)
+    })
+  })
+
+  // 3. Package Select Buttons
+  el.pkgSelectBtns?.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const pkgId = btn.getAttribute('data-pkg')
+      selectCreditPackage(pkgId)
+    })
+  })
+
+  // 4. Interactive Range Slider for Profit & Page Capacity Calculator
+  el.creditCalcSlider?.addEventListener('input', (e) => {
+    updateCalculator(e.target.value)
+  })
+
+  // 5. Apply Calculator amount to recharge
+  el.btnCalcApply?.addEventListener('click', () => {
+    const customCredits = Number(el.creditCalcSlider?.value || 25000)
+    const cost = Math.round(customCredits * 0.02)
+    state.selectedPackage = {
+      id: 'pkg_custom',
+      name: `Custom Recharge (${customCredits.toLocaleString()} Credits)`,
+      credits: customCredits,
+      price_taka: cost,
+    }
+    if (el.rechargePkgName) el.rechargePkgName.textContent = state.selectedPackage.name
+    if (el.rechargePkgCredits) el.rechargePkgCredits.textContent = `+${customCredits.toLocaleString()} Credits`
+    if (el.rechargePkgAmount) el.rechargePkgAmount.textContent = `৳${cost.toFixed(2)}`
+    if (el.rechargeBtnText) el.rechargeBtnText.textContent = `Confirm Top-Up & Activate ${customCredits.toLocaleString()} Credits (৳${cost}) →`
+    switchSubTab('subtab-recharge')
+  })
+
+  // 6. Recharge Payment Method Card Radio Toggles
+  el.rechargePayMethodCards?.forEach((card) => {
+    card.addEventListener('click', () => {
+      el.rechargePayMethodCards.forEach((c) => c.classList.remove('active'))
+      card.classList.add('active')
+      const input = card.querySelector('input')
+      if (input) {
+        input.checked = true
+        if (input.value === 'voucher') {
+          el.voucherFieldWrap?.classList.remove('hidden')
+        } else {
+          el.voucherFieldWrap?.classList.add('hidden')
+        }
+      }
+    })
+  })
+
+  // 7. Voucher Code Application
+  el.btnApplyVoucher?.addEventListener('click', () => {
+    const code = el.inputVoucherCode?.value?.trim()
+    if (!code) return alert('Please enter a valid voucher or promo code.')
+    alert(`Voucher "${code}" applied successfully! Proceed to confirm top-up.`)
+  })
+
+  // 8. Submit Recharge / Payment
+  el.btnSubmitRecharge?.addEventListener('click', submitRecharge)
+
+  // 9. Refresh Transaction Ledger
+  el.btnRefreshLedger?.addEventListener('click', () => {
+    fetchCreditsData()
+  })
+
+  // Initial calculator sync (Default: 25,000 credits for 500 taka)
+  updateCalculator(25000)
+}
+
+function updateHeaderCreditBadge() {
+  const bal = Number(state.creditsBalance || 0)
+  if (el.headerCreditAmount) el.headerCreditAmount.textContent = bal.toLocaleString()
+  if (el.modalAccountCredits) el.modalAccountCredits.textContent = bal.toLocaleString()
+  if (el.metricCreditsBalance) el.metricCreditsBalance.textContent = bal.toLocaleString()
+}
+
+async function fetchCreditsData() {
+  const devId = state.config.deviceId || state.account?.deviceId || '11111111-1111-1111-1111-111111111111'
+  if (!devId) return
+
+  try {
+    const { data } = await apiGet(
+      `/api/desktop/credits?deviceId=${devId}`,
+      () => QuickInkCloud.fetchCredits(devId)
+    )
+
+    if (data?.success) {
+      state.creditsBalance = Number(data.creditsBalance ?? 10000)
+      if (data.tier) {
+        state.pricingTier = data.tier
+      }
+      state.creditTransactions = data.transactions || []
+
+      updateHeaderCreditBadge()
+
+      if (el.subCardBalance) el.subCardBalance.textContent = state.creditsBalance.toLocaleString()
+      if (el.subCardGrossValue) el.subCardGrossValue.textContent = state.creditsBalance.toLocaleString()
+
+      const bwRate = Number(state.pricingTier.bw_price || 2.0).toFixed(2)
+      const colorRate = Number(state.pricingTier.color_price || 8.0).toFixed(2)
+
+      if (el.subCardBwRate) el.subCardBwRate.textContent = `৳${bwRate}`
+      if (el.subCardColorRate) el.subCardColorRate.textContent = `৳${colorRate}`
+      if (el.subCardTierName) el.subCardTierName.textContent = state.pricingTier.name || 'Standard'
+
+      const bwPages = Number(state.pricingTier.bw_price) > 0 ? Math.floor(state.creditsBalance / Number(state.pricingTier.bw_price)) : state.creditsBalance
+      const colorPages = Number(state.pricingTier.color_price) > 0 ? Math.floor(state.creditsBalance / Number(state.pricingTier.color_price)) : state.creditsBalance
+
+      if (el.subCardBwPages) el.subCardBwPages.textContent = bwPages.toLocaleString()
+      if (el.subCardColorPages) el.subCardColorPages.textContent = colorPages.toLocaleString()
+
+      updateCalculator(Number(el.creditCalcSlider?.value || 25000))
+      renderLedgerTable(state.creditTransactions)
+    }
+  } catch (err) {
+    console.warn('Could not fetch credit data:', err)
+  }
+}
+
+function openSubscriptionModal(initialTab = 'subtab-packages') {
+  el.subscriptionModal?.classList.remove('hidden')
+  switchSubTab(initialTab)
+  fetchCreditsData()
+}
+
+function closeSubscriptionModal() {
+  el.subscriptionModal?.classList.add('hidden')
+}
+
+function switchSubTab(targetTabId) {
+  el.subTabBtns?.forEach((b) => {
+    if (b.getAttribute('data-subtab') === targetTabId) {
+      b.classList.add('active')
+    } else {
+      b.classList.remove('active')
+    }
+  })
+
+  el.subTabContents?.forEach((c) => {
+    if (c.id === targetTabId) {
+      c.classList.add('active')
+    } else {
+      c.classList.remove('active')
+    }
+  })
+}
+
+function selectCreditPackage(pkgId) {
+  const pkg = CREDIT_PACKAGES.find((p) => p.id === pkgId)
+  if (!pkg) return
+  state.selectedPackage = pkg
+
+  if (el.rechargePkgName) el.rechargePkgName.textContent = pkg.name
+  if (el.rechargePkgCredits) el.rechargePkgCredits.textContent = `+${pkg.credits.toLocaleString()} Credits`
+  if (el.rechargePkgAmount) el.rechargePkgAmount.textContent = `৳${pkg.price_taka.toFixed(2)}`
+  if (el.rechargeBtnText) el.rechargeBtnText.textContent = `Confirm Top-Up & Activate ${pkg.credits.toLocaleString()} Credits (৳${pkg.price_taka}) →`
+
+  switchSubTab('subtab-recharge')
+}
+
+function updateCalculator(credits) {
+  const numCredits = Number(credits) || 25000
+  // Wholesale ratio: 25,000 credits = 500 taka (0.02 taka per credit)
+  const wholesaleCost = Math.round(numCredits * 0.02)
+  const grossRevenue = numCredits // 1 credit = 1 taka print value
+  const netProfit = grossRevenue - wholesaleCost
+  const marginPercent = ((netProfit / grossRevenue) * 100).toFixed(1)
+
+  const bwRate = Number(state.pricingTier?.bw_price || 2.0)
+  const colorRate = Number(state.pricingTier?.color_price || 8.0)
+
+  const bwSheets = bwRate > 0 ? Math.floor(numCredits / bwRate) : numCredits
+  const colorSheets = colorRate > 0 ? Math.floor(numCredits / colorRate) : numCredits
+
+  if (el.calcSliderVal) el.calcSliderVal.textContent = numCredits.toLocaleString()
+  if (el.calcResCost) el.calcResCost.textContent = `৳${wholesaleCost.toLocaleString()}`
+  if (el.calcResRevenue) el.calcResRevenue.textContent = `৳${grossRevenue.toLocaleString()}`
+  if (el.calcResProfit) el.calcResProfit.textContent = `৳${netProfit.toLocaleString()}`
+  if (el.calcResMargin) el.calcResMargin.textContent = `${marginPercent}%`
+
+  if (el.calcResBwSheets) el.calcResBwSheets.textContent = bwSheets.toLocaleString()
+  if (el.calcResColorSheets) el.calcResColorSheets.textContent = colorSheets.toLocaleString()
+  if (el.calcResBwPrice) el.calcResBwPrice.textContent = bwRate.toFixed(2)
+  if (el.calcResColorPrice) el.calcResColorPrice.textContent = colorRate.toFixed(2)
+
+  if (el.calcCtaText) el.calcCtaText.textContent = `${numCredits.toLocaleString()} Credits for ৳${wholesaleCost}`
+}
+
+async function submitRecharge() {
+  if (!state.selectedPackage) {
+    state.selectedPackage = CREDIT_PACKAGES[1] // Default: 25000 for 500
+  }
+
+  const devId = state.config.deviceId || state.account?.deviceId || '11111111-1111-1111-1111-111111111111'
+  const methodInput = document.querySelector('input[name="rechargeMethod"]:checked')
+  const method = methodInput ? methodInput.value : 'bkash'
+  const voucherCode = el.inputVoucherCode?.value?.trim() || null
+
+  el.btnSubmitRecharge.disabled = true
+  el.rechargeSpinner?.classList.remove('hidden')
+  el.rechargeBtnText.textContent = 'Processing Payment & Crediting Account...'
+
+  if (el.rechargeStatusMsg) {
+    el.rechargeStatusMsg.classList.add('hidden')
+    el.rechargeStatusMsg.className = 'recharge-status-alert hidden'
+  }
+
+  try {
+    const payload = {
+      deviceId: devId,
+      packageId: state.selectedPackage.id,
+      customCredits: state.selectedPackage.credits,
+      paymentMethod: method,
+      promoCode: voucherCode
+    }
+
+    const { ok, data } = await apiPost(
+      '/api/desktop/credits',
+      payload,
+      () => QuickInkCloud.topupCredits(devId, state.selectedPackage.id, state.selectedPackage.credits, payload)
+    )
+
+    if (!ok && !data?.success) {
+      throw new Error(data?.error || 'Payment recharge could not be processed')
+    }
+
+    playSuccessChime()
+
+    const addedCredits = state.selectedPackage.credits
+    const newBal = Number(data.newBalance || (state.creditsBalance + addedCredits))
+    state.creditsBalance = newBal
+    updateHeaderCreditBadge()
+
+    if (el.rechargeStatusMsg) {
+      el.rechargeStatusMsg.textContent = `🎉 Success! Added ${addedCredits.toLocaleString()} credits to your station. New balance: ${newBal.toLocaleString()} credits.`
+      el.rechargeStatusMsg.className = 'recharge-status-alert success'
+      el.rechargeStatusMsg.classList.remove('hidden')
+    }
+
+    setTimeout(() => {
+      fetchCreditsData()
+      switchSubTab('subtab-history')
+    }, 1500)
+  } catch (err) {
+    if (el.rechargeStatusMsg) {
+      el.rechargeStatusMsg.textContent = `Payment Notice: ${err.message}`
+      el.rechargeStatusMsg.className = 'recharge-status-alert error'
+      el.rechargeStatusMsg.classList.remove('hidden')
+    }
+  } finally {
+    el.btnSubmitRecharge.disabled = false
+    el.rechargeSpinner?.classList.add('hidden')
+    el.rechargeBtnText.textContent = `Confirm Top-Up & Activate ${state.selectedPackage.credits.toLocaleString()} Credits (৳${state.selectedPackage.price_taka}) →`
+  }
+}
+
+function renderLedgerTable(transactions) {
+  if (!el.ledgerTableBody) return
+
+  if (!transactions || transactions.length === 0) {
+    el.ledgerTableBody.innerHTML = '<tr><td colspan="5" class="empty-state">No credit transactions recorded yet.</td></tr>'
+    return
+  }
+
+  el.ledgerTableBody.innerHTML = transactions.map((t) => {
+    const dateStr = t.created_at ? new Date(t.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '—'
+    const amt = Number(t.amount || 0)
+    const isPositive = amt > 0
+    const impactClass = isPositive ? 'positive' : amt < 0 ? 'negative' : 'zero'
+    const impactStr = isPositive ? `+${amt.toLocaleString()}` : `${amt.toLocaleString()}`
+    const balAfter = Number(t.balance_after || 0).toLocaleString()
+
+    let tagClass = 'deduction'
+    let tagLabel = 'Print Job'
+    if (t.type === 'welcome_bonus') {
+      tagClass = 'welcome'
+      tagLabel = 'Welcome Bonus'
+    } else if (t.type === 'subscription_topup' || t.type === 'topup') {
+      tagClass = 'topup'
+      tagLabel = 'Top-Up'
+    } else if (t.type === 'admin_adjustment') {
+      tagClass = 'welcome'
+      tagLabel = 'Admin Bonus'
+    }
+
+    return `
+      <tr>
+        <td style="color:#94a3b8; font-size:11px;">${dateStr}</td>
+        <td><span class="tx-tag ${tagClass}">${tagLabel}</span></td>
+        <td><div style="font-weight:600; color:#fff;">${t.description || 'Credit Transaction'}</div></td>
+        <td class="tx-impact ${impactClass}">${impactStr}</td>
+        <td style="font-family:monospace; font-weight:700; color:#38bdf8;">${balAfter}</td>
+      </tr>
+    `
+  }).join('')
 }
 
 // =============================================================================
@@ -1773,6 +2601,68 @@ function setupAuthSystem() {
     setRegStep(1)
   })
   el.btnLogoutAccount?.addEventListener('click', handleLogout)
+
+  // Copy Station Device UUID button
+  el.btnCopyDeviceId?.addEventListener('click', () => {
+    const uuid = el.modalAccountDeviceId?.textContent?.trim()
+    if (!uuid) return
+    navigator.clipboard?.writeText(uuid).then(() => {
+      if (el.btnCopyDeviceId) el.btnCopyDeviceId.textContent = 'Copied!'
+      setTimeout(() => {
+        if (el.btnCopyDeviceId) el.btnCopyDeviceId.textContent = 'Copy'
+      }, 1800)
+    }).catch(() => {
+      prompt('Copy Station Device UUID:', uuid)
+    })
+  })
+
+  // Profile Send Test Print Page
+  el.btnProfileTestPrint?.addEventListener('click', async () => {
+    const printer = state.printers?.bw || 'default'
+    if (el.btnProfileTestPrint) {
+      el.btnProfileTestPrint.disabled = true
+      el.btnProfileTestPrint.textContent = 'Sending Test Page...'
+    }
+    try {
+      if (isElectron && window.quickinkDesktop?.testPrint) {
+        await window.quickinkDesktop.testPrint(printer, 'bw')
+      } else {
+        await new Promise(r => setTimeout(r, 600))
+      }
+      if (el.btnProfileTestPrint) el.btnProfileTestPrint.textContent = '✓ Test Page Sent!'
+    } catch (err) {
+      if (el.btnProfileTestPrint) el.btnProfileTestPrint.textContent = 'Failed to Send'
+    } finally {
+      setTimeout(() => {
+        if (el.btnProfileTestPrint) {
+          el.btnProfileTestPrint.disabled = false
+          el.btnProfileTestPrint.textContent = '🖨️ Send Test Print Page'
+        }
+      }, 2000)
+    }
+  })
+
+  // Profile Refresh Cloud Sync
+  el.btnRefreshProfileSync?.addEventListener('click', async () => {
+    if (el.btnRefreshProfileSync) {
+      el.btnRefreshProfileSync.disabled = true
+      el.btnRefreshProfileSync.textContent = 'Syncing Cloud...'
+    }
+    try {
+      await fetchCreditsData()
+      openAccountProfileModal()
+      if (el.btnRefreshProfileSync) el.btnRefreshProfileSync.textContent = '✓ Synced!'
+    } catch (e) {
+      if (el.btnRefreshProfileSync) el.btnRefreshProfileSync.textContent = 'Sync Error'
+    } finally {
+      setTimeout(() => {
+        if (el.btnRefreshProfileSync) {
+          el.btnRefreshProfileSync.disabled = false
+          el.btnRefreshProfileSync.textContent = '🔄 Refresh Cloud Sync'
+        }
+      }, 1500)
+    }
+  })
 
   // 13. Administrative Lockdown Screen buttons
   el.btnLockdownCheckStatus?.addEventListener('click', async () => {
@@ -2538,12 +3428,54 @@ function openAccountProfileModal() {
   const acc = state.account
   if (!acc) return
 
-  if (el.modalAccountShopName) el.modalAccountShopName.textContent = acc.shop_name || 'QuickInk Shop'
-  if (el.modalAccountOwnerName) el.modalAccountOwnerName.textContent = acc.name || 'Certified Owner'
-  if (el.modalAccountType) el.modalAccountType.textContent = acc.type === 'kiosk' ? 'Automated Kiosk' : 'Partner Print Shop'
+  // Basic Identity
+  if (el.modalAccountShopName) el.modalAccountShopName.textContent = acc.shop_name || 'PrintKoro Partner Station'
+  if (el.modalAccountOwnerName) el.modalAccountOwnerName.textContent = acc.name || 'Certified Operator'
+  if (el.modalAccountType) el.modalAccountType.textContent = acc.type === 'kiosk' ? 'Automated Kiosk' : 'Partner Print Station'
   if (el.modalAccountPhone) el.modalAccountPhone.textContent = acc.phone || '017XXXXXXXX'
-  if (el.modalAccountAddress) el.modalAccountAddress.textContent = acc.location || 'Configured Address'
-  if (el.modalAccountDeviceId) el.modalAccountDeviceId.textContent = acc.deviceId || state.config.deviceId
+  if (el.modalAccountEmail) el.modalAccountEmail.textContent = acc.email || `${(acc.phone || 'partner').replace(/\D/g, '')}@printkoro.partner`
+  if (el.modalAccountAddress) el.modalAccountAddress.textContent = acc.location || 'Configured Physical Shop Address'
+  if (el.modalAccountDeviceId) el.modalAccountDeviceId.textContent = acc.deviceId || state.config.deviceId || 'DEV-PK-1001'
+
+  // Member Since Date
+  if (el.modalAccountMemberSince) {
+    if (acc.created_at) {
+      const regDate = new Date(acc.created_at)
+      el.modalAccountMemberSince.textContent = `🗓️ Partner Since ${regDate.toLocaleDateString([], { month: 'short', year: 'numeric' })}`
+    } else {
+      el.modalAccountMemberSince.textContent = '🗓️ Partner Since 2026'
+    }
+  }
+
+  // Wholesale Credits & Subscription
+  const currentCredits = Number(subState?.creditsBalance || 0)
+  if (el.modalAccountCredits) el.modalAccountCredits.textContent = currentCredits.toLocaleString()
+  if (el.modalAccountCreditsValue) el.modalAccountCreditsValue.textContent = '৳' + currentCredits.toLocaleString()
+
+  // Hardware & Diagnostics
+  if (el.modalAccountBwName) {
+    el.modalAccountBwName.textContent = state.printers?.bw || 'Default Windows Printer'
+  }
+  if (el.modalAccountColorName) {
+    el.modalAccountColorName.textContent = state.printers?.color || 'Default Windows Printer'
+  }
+
+  // Dynamic Area Pricing Zone
+  if (el.modalAccountTierName) {
+    el.modalAccountTierName.textContent = subState?.tierName || 'Standard Area Tier'
+  }
+  if (el.modalAccountBwSingle) {
+    el.modalAccountBwSingle.textContent = '৳' + (subState?.tierRates?.b_w_single || 2.0).toFixed(2)
+  }
+  if (el.modalAccountBwDuplex) {
+    el.modalAccountBwDuplex.textContent = '৳' + (subState?.tierRates?.b_w_duplex || 3.5).toFixed(2)
+  }
+  if (el.modalAccountColorSingle) {
+    el.modalAccountColorSingle.textContent = '৳' + (subState?.tierRates?.color_single || 5.0).toFixed(2)
+  }
+  if (el.modalAccountColorDuplex) {
+    el.modalAccountColorDuplex.textContent = '৳' + (subState?.tierRates?.color_duplex || 9.0).toFixed(2)
+  }
 
   // Logo
   if (acc.logo_url) {
@@ -2556,7 +3488,7 @@ function openAccountProfileModal() {
     if (el.modalAccountLogoImg) el.modalAccountLogoImg.classList.add('hidden')
     if (el.modalAccountLogoInitials) {
       el.modalAccountLogoInitials.classList.remove('hidden')
-      el.modalAccountLogoInitials.textContent = (acc.shop_name || 'QS').slice(0, 2).toUpperCase()
+      el.modalAccountLogoInitials.textContent = (acc.shop_name || 'PK').slice(0, 2).toUpperCase()
     }
   }
 

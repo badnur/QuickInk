@@ -544,19 +544,19 @@ export default function AdminDevicesPage() {
                     )}
                   </div>
 
-                  {/* SaaS Subscription Info */}
-                  <div className="bg-emerald-950/20 border border-emerald-800/30 rounded-xl p-2.5 mb-3 flex items-center justify-between text-xs">
+                  {/* Wholesale Credit Subscription Info */}
+                  <div className="bg-sky-950/20 border border-sky-800/30 rounded-xl p-2.5 mb-3 flex items-center justify-between text-xs">
                     <div>
-                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">SaaS Subscription</div>
-                      <div className="font-bold text-emerald-400 text-xs mt-0.5">{loc.subscription_plan || 'Pro SaaS'} · 100% Retained</div>
+                      <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Wholesale Credits</div>
+                      <div className="font-bold text-sky-400 text-xs mt-0.5 flex items-center gap-1.5">
+                        <span>💎</span>
+                        <span>{Number(device.credits_balance ?? loc.credits_balance ?? 10000).toLocaleString()} Credits</span>
+                        <span className="text-[10px] font-normal text-slate-400">(৳{Number(device.credits_balance ?? loc.credits_balance ?? 10000).toLocaleString()} Value)</span>
+                      </div>
                     </div>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase ${
-                      (loc.subscription_status || 'active') === 'active'
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                    }`}>
-                      {loc.subscription_status || 'active'}
-                    </span>
+                    <Badge className="bg-sky-500/10 text-sky-300 border-sky-500/30 text-[10px]">
+                      1 Credit = ৳1
+                    </Badge>
                   </div>
 
                   {/* Desktop Pairing Key Box */}

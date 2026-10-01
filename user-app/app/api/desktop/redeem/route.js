@@ -16,12 +16,13 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Please enter a valid 6-digit OTP code' }, { status: 400 })
     }
 
-    // Check if device is suspended by admin; also fetch its pricing tier
+    // Check if device is suspended by admin; also fetch its pricing tier and credit balance
     const { data: devCheck } = await supabase
       .from('devices')
       .select(`
         status,
         location,
+        credits_balance,
         pricing_tiers (
           id,
           name,
@@ -223,6 +224,8 @@ export async function POST(request) {
           bw_price: zoneBwPrice,
           color_price: zoneColorPrice,
         },
+        credits_balance: Number(devCheck?.credits_balance ?? devCheck?.location?.credits_balance ?? 10000),
+        credit_cost: Number(calculatedAmount),
       },
     })
   } catch (err) {

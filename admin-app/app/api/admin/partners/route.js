@@ -162,6 +162,9 @@ export async function POST(request) {
     const type = existingDev?.type || 'shop'
     const refId = existingDev?.location?.reference_id || `QIK-REG-${cleanPhone.slice(-6) || '729410'}`
 
+    const currentCredits = existingDev?.credits_balance ?? existingDev?.location?.credits_balance ?? 0
+    const welcomeCredits = currentCredits > 0 ? currentCredits : 10000.00
+
     const locationObj = {
       ...(existingDev?.location || {}),
       address,
@@ -174,26 +177,29 @@ export async function POST(request) {
       rejection_reason: null,
       is_partner_application: true,
       reference_id: refId,
+      credits_balance: welcomeCredits,
+      welcome_bonus_granted: true,
       approved_at: new Date().toISOString(),
     }
 
     let provisionedDevice = null
 
     if (existingDev) {
-      // Update existing device to online & approved
+      // Update existing device to online & approved with 10,000 welcome credits
       const { data: updatedDev, error: upErr } = await supabase
         .from('devices')
         .update({
           status: 'online',
           location: locationObj,
+          credits_balance: welcomeCredits,
         })
         .eq('id', existingDev.id)
         .select()
         .single()
 
-      provisionedDevice = updatedDev || { ...existingDev, status: 'online', location: locationObj }
+      provisionedDevice = updatedDev || { ...existingDev, status: 'online', location: locationObj, credits_balance: welcomeCredits }
     } else {
-      // Insert brand new device with status 'online'
+      // Insert brand new device with status 'online' and 10,000 welcome credits
       const { data: newDev, error: devErr } = await supabase
         .from('devices')
         .insert([
@@ -201,6 +207,7 @@ export async function POST(request) {
             name: type === 'kiosk' ? `PrintKoro Kiosk — ${shopName}` : `PrintKoro Shop — ${shopName}`,
             type: type === 'kiosk' ? 'kiosk' : 'shop',
             location: locationObj,
+            credits_balance: welcomeCredits,
             status: 'online',
           },
         ])
@@ -212,7 +219,25 @@ export async function POST(request) {
         name: `PrintKoro Shop — ${shopName}`,
         type,
         location: locationObj,
+        credits_balance: welcomeCredits,
         status: 'online',
+      }
+    }
+
+    // Record welcome bonus transaction in partner_credit_transactions
+    if (provisionedDevice?.id) {
+      try {
+        await supabase.from('partner_credit_transactions').insert([
+          {
+            device_id: provisionedDevice.id,
+            amount: welcomeCredits,
+            balance_after: welcomeCredits,
+            type: 'welcome_bonus',
+            description: `PrintKoro Partner Welcome Gift: ${welcomeCredits.toLocaleString()} Free Credits upon verified registration approval`,
+          }
+        ])
+      } catch (txErr) {
+        console.warn('Could not record welcome bonus transaction in table (safe fallback used):', txErr.message)
       }
     }
 

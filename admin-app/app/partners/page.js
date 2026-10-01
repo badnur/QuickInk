@@ -470,6 +470,20 @@ export default function AdminPartnersPage() {
                 </div>
               </div>
 
+              {/* Welcome Bonus Notice */}
+              <div className="bg-sky-50 dark:bg-sky-950/20 border border-sky-300 dark:border-sky-800/40 rounded-xl p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-xl">🎁</span>
+                  <div>
+                    <div className="text-sky-700 dark:text-sky-300 font-bold text-xs">10,000 Free Welcome Credits</div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">Granted automatically upon admin approval (৳10,000 print value)</div>
+                  </div>
+                </div>
+                <Badge className="bg-sky-500/10 text-sky-400 border-sky-500/30 text-[10px]">
+                  Verified Benefit
+                </Badge>
+              </div>
+
               {selectedPartner.status === 'pending' && (
                 <div className="pt-2 flex justify-end gap-2 border-t border-slate-800">
                   <Button
@@ -489,7 +503,7 @@ export default function AdminPartnersPage() {
                     }}
                     className="bg-[#00bf63] hover:bg-[#00a656] text-slate-950 font-bold text-xs h-9"
                   >
-                    Approve & Provision Device
+                    Approve & Grant 10,000 Free Credits
                   </Button>
                 </div>
               )}
@@ -523,6 +537,16 @@ export default function AdminPartnersPage() {
               <div className="bg-slate-50 dark:bg-[#0a0a0a] border border-slate-200 dark:border-slate-800 rounded-xl p-3 space-y-1">
                 <div className="text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold">Device UUID (Desktop POS ID)</div>
                 <div className="font-mono text-emerald-600 dark:text-emerald-400 font-bold text-xs break-all">{provisionResult.device?.id}</div>
+              </div>
+
+              <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-800/40 rounded-xl p-3 flex items-center justify-between">
+                <div>
+                  <div className="text-emerald-700 dark:text-emerald-400 text-[10px] uppercase font-bold">Welcome Bonus Credited</div>
+                  <div className="text-emerald-900 dark:text-emerald-200 font-extrabold text-sm">10,000 Free Credits</div>
+                </div>
+                <Badge className="bg-emerald-500/20 text-[#00bf63] border-emerald-500/40 text-[10px]">
+                  ৳10,000 Value
+                </Badge>
               </div>
 
               <div className="pt-2 flex flex-col gap-2">
