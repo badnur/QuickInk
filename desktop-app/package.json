@@ -1,5 +1,5 @@
 {
-  "name": "quickink-desktop",
+  "name": "printkoro-station",
   "version": "1.1.0",
   "description": "PrintKoro Partner Shop & Kiosk Native Desktop Application",
   "main": "main.js",
@@ -7,6 +7,7 @@
     "start": "electron .",
     "dev": "electron .",
     "desktop:dev": "electron .",
+    "generate:icon": "node scripts/generate-icon.js",
     "pack": "electron-builder --dir",
     "build": "electron-builder --win",
     "release": "electron-builder --win --publish always"
@@ -36,10 +37,13 @@
     "directories": {
       "output": "dist"
     },
+    "icon": "build/icon.ico",
     "files": [
       "main.js",
       "preload.js",
       "src/**/*",
+      "assets/**/*",
+      "build/**/*",
       "package.json"
     ],
     "publish": {
@@ -49,6 +53,7 @@
       "releaseType": "release"
     },
     "win": {
+      "icon": "build/icon.ico",
       "target": [
         {
           "target": "nsis",
@@ -66,6 +71,9 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "PrintKoro Station",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
       "runAfterFinish": true
     }
   }

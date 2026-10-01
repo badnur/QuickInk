@@ -77,8 +77,32 @@ const state = {
   }
 }
 
-// Check if running inside Electron desktop container
-const isElectron = Boolean(window.printkoroDesktop || window.quickinkDesktop)
+// Check if running inside Electron desktop container (PrintKoro Desktop)
+const desktopAPI = window.printkoroDesktop || desktopAPI
+const isElectron = Boolean(desktopAPI)
+
+// Account persistence with backward compatibility
+const ACCOUNT_STORAGE_KEY = 'printkoro_shop_account'
+const LEGACY_ACCOUNT_STORAGE_KEY = 'quickink_shop_account'
+
+function getStoredAccount() {
+  try {
+    const raw = localStorage.getItem(ACCOUNT_STORAGE_KEY) || localStorage.getItem(LEGACY_ACCOUNT_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : null
+  } catch (e) {
+    return null
+  }
+}
+
+function setStoredAccount(acc) {
+  const str = JSON.stringify(acc)
+  localStorage.setItem(ACCOUNT_STORAGE_KEY, str)
+}
+
+function clearStoredAccount() {
+  localStorage.removeItem(ACCOUNT_STORAGE_KEY)
+  localStorage.removeItem(LEGACY_ACCOUNT_STORAGE_KEY)
+}
 
 // Audio Synthesizer Chime (Web Audio API)
 function playSuccessChime() {
@@ -239,7 +263,7 @@ const PrintKoroCloud = {
         data: {
           pending: true,
           status: 'pending',
-          error: 'Application Under Review. Quick Ink administration must approve your shop before dashboard access is granted.',
+          error: 'Application Under Review. PrintKoro administration must approve your shop before dashboard access is granted.',
           account
         }
       }
@@ -447,7 +471,7 @@ const PrintKoroCloud = {
 
   async register(draft) {
     const cleanPhone = draft.phone.trim().replace(/[^0-9]/g, '')
-    const reference_id = `QIK-REG-${Math.floor(100000 + Math.random() * 900000)}`
+    const reference_id = `PK-REG-${Math.floor(100000 + Math.random() * 900000)}`
     const resolvedHours = draft.operating_hours || (draft.type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM')
 
     const locationObj = {
@@ -744,8 +768,6 @@ const PrintKoroCloud = {
     }
   }
 }
-
-const QuickInkCloud = PrintKoroCloud
 
 // Universal API POST wrapper with transparent auto-fallback to Cloud
 async function apiPost(endpoint, body, fallbackCloudFn) {
@@ -1230,10 +1252,10 @@ function setupClock() {
 // Window Controls (Electron IPC)
 function setupWindowControls() {
   if (isElectron) {
-    el.btnWinMin?.addEventListener('click', () => window.quickinkDesktop.minimize())
-    el.btnWinMax?.addEventListener('click', () => window.quickinkDesktop.maximize())
-    el.btnWinClose?.addEventListener('click', () => window.quickinkDesktop.close())
-    el.btnToggleKiosk?.addEventListener('click', () => window.quickinkDesktop.toggleKiosk())
+    el.btnWinMin?.addEventListener('click', () => desktopAPI.minimize())
+    el.btnWinMax?.addEventListener('click', () => desktopAPI.maximize())
+    el.btnWinClose?.addEventListener('click', () => desktopAPI.close())
+    el.btnToggleKiosk?.addEventListener('click', () => desktopAPI.toggleKiosk())
   }
 }
 
@@ -1267,8 +1289,8 @@ function setupAutoUpdaterClient() {
   }
 
   // 1. Fetch & display app version on home page and headers
-  if (isElectron && window.quickinkDesktop?.getVersion) {
-    window.quickinkDesktop.getVersion().then((ver) => {
+  if (isElectron && desktopAPI?.getVersion) {
+    desktopAPI.getVersion().then((ver) => {
       if (ver) {
         if (el.homeCurrentVersion) el.homeCurrentVersion.textContent = `v${ver}`
         if (el.homeLatestVersion) el.homeLatestVersion.textContent = `v${ver} (Latest)`
@@ -1292,8 +1314,8 @@ function setupAutoUpdaterClient() {
 
   // 3. Restart & Update button handlers (Both banner & Home page card)
   const triggerRestartAndInstall = () => {
-    if (isElectron && window.quickinkDesktop?.restartForUpdate) {
-      window.quickinkDesktop.restartForUpdate()
+    if (isElectron && desktopAPI?.restartForUpdate) {
+      desktopAPI.restartForUpdate()
     } else {
       alert('Application will restart to apply the latest update.')
     }
@@ -1320,8 +1342,8 @@ function setupAutoUpdaterClient() {
     }
 
     try {
-      if (isElectron && window.quickinkDesktop?.checkForUpdates) {
-        const res = await window.quickinkDesktop.checkForUpdates()
+      if (isElectron && desktopAPI?.checkForUpdates) {
+        const res = await desktopAPI.checkForUpdates()
         if (res?.success) {
           if (res.isLatest) {
             if (el.homeUpdateStatusPill) {
@@ -1383,8 +1405,8 @@ function setupAutoUpdaterClient() {
   })
 
   // 5. Listen for updates from Electron main process
-  if (isElectron && window.quickinkDesktop?.onUpdateStatus) {
-    window.quickinkDesktop.onUpdateStatus((data) => {
+  if (isElectron && desktopAPI?.onUpdateStatus) {
+    desktopAPI.onUpdateStatus((data) => {
       console.log('[Updater Client] Status received:', data)
       const { status } = data
 
@@ -1483,7 +1505,7 @@ function setupAutoUpdaterClient() {
 async function loadAppConfig() {
   if (isElectron) {
     try {
-      const cfg = await window.quickinkDesktop.getConfig()
+      const cfg = await desktopAPI.getConfig()
       if (cfg) {
         state.config = { ...state.config, ...cfg }
         if (cfg.deviceId && el.stationSelect) {
@@ -1499,7 +1521,7 @@ async function loadAppConfig() {
     el.stationSelect.addEventListener('change', async () => {
       state.config.deviceId = el.stationSelect.value
       if (isElectron) {
-        await window.quickinkDesktop.saveConfig({ deviceId: state.config.deviceId })
+        await desktopAPI.saveConfig({ deviceId: state.config.deviceId })
       }
       fetchRecentJobs()
     })
@@ -1556,7 +1578,7 @@ function setupServerSettingsModal() {
 
     if (isCloud) {
       try {
-        const res = await QuickInkCloud.rest('devices?limit=1')
+        const res = await PrintKoroCloud.rest('devices?limit=1')
         if (res.ok) {
           el.serverPingResult.innerHTML = '<span style="color: #4ade80;">✓ PrintKoro Cloud is online & accessible!</span>'
         } else {
@@ -1593,7 +1615,7 @@ function setupServerSettingsModal() {
 
     state.config.apiBaseUrl = newBaseUrl
     if (isElectron) {
-      await window.quickinkDesktop.saveConfig({ apiBaseUrl: newBaseUrl })
+      await desktopAPI.saveConfig({ apiBaseUrl: newBaseUrl })
     }
     updateConnectionBadge()
     closeModal()
@@ -1615,7 +1637,7 @@ async function scanSystemPrinters() {
   let printers = []
   if (isElectron) {
     try {
-      const res = await window.quickinkDesktop.getPrinters()
+      const res = await desktopAPI.getPrinters()
       if (res.success && res.printers) {
         printers = res.printers
       }
@@ -1689,7 +1711,7 @@ el.btnTestBw?.addEventListener('click', async () => {
   el.btnTestBw.textContent = 'Printing B&W Test...'
 
   if (isElectron) {
-    const res = await window.quickinkDesktop.testPrint(printerName, 'bw')
+    const res = await desktopAPI.testPrint(printerName, 'bw')
     alert(res.message || res.error)
   } else {
     setTimeout(() => alert(`[Test Print] Simulated B&W test page sent to ${printerName}`), 600)
@@ -1703,7 +1725,7 @@ el.btnTestColor?.addEventListener('click', async () => {
   el.btnTestColor.textContent = 'Printing Color Test...'
 
   if (isElectron) {
-    const res = await window.quickinkDesktop.testPrint(printerName, 'color')
+    const res = await desktopAPI.testPrint(printerName, 'color')
     alert(res.message || res.error)
   } else {
     setTimeout(() => alert(`[Test Print] Simulated Color test page sent to ${printerName}`), 600)
@@ -1716,7 +1738,7 @@ el.btnSavePrinters?.addEventListener('click', async () => {
   state.config.colorPrinterName = el.selectColorPrinter.value
 
   if (isElectron) {
-    await window.quickinkDesktop.saveConfig({
+    await desktopAPI.saveConfig({
       bwPrinterName: state.config.bwPrinterName,
       colorPrinterName: state.config.colorPrinterName
     })
@@ -1832,7 +1854,7 @@ async function verifyAndFetchJob() {
     const { ok, data } = await apiPost(
       '/api/desktop/redeem',
       { code, deviceId: state.config.deviceId },
-      () => QuickInkCloud.redeemOtp(code, state.config.deviceId)
+      () => PrintKoroCloud.redeemOtp(code, state.config.deviceId)
     )
 
     if (!ok || !data?.success) {
@@ -1983,7 +2005,7 @@ el.btnReleasePrint?.addEventListener('click', async () => {
     el.spoolingProgressBar.style.width = '65%'
 
     if (isElectron) {
-      const printResult = await window.quickinkDesktop.printJob({
+      const printResult = await desktopAPI.printJob({
         fileUrl: fileToPrint,
         printerName: chosenPrinter,
         color: isColor,
@@ -2006,7 +2028,7 @@ el.btnReleasePrint?.addEventListener('click', async () => {
         const { data: completeRes } = await apiPost(
           '/api/desktop/jobs/complete',
           { jobId, deviceId: state.config.deviceId, hardwareSuccess: true },
-          () => QuickInkCloud.confirmPrintAndDeductCredits(jobId, state.config.deviceId, true)
+          () => PrintKoroCloud.confirmPrintAndDeductCredits(jobId, state.config.deviceId, true)
         )
         if (completeRes?.newBalance !== undefined) {
           state.creditsBalance = Number(completeRes.newBalance)
@@ -2036,7 +2058,7 @@ el.btnReleasePrint?.addEventListener('click', async () => {
       apiPost(
         '/api/desktop/jobs/complete',
         { jobId, deviceId: state.config.deviceId, hardwareSuccess: false, failureReason: err.message },
-        () => QuickInkCloud.confirmPrintAndDeductCredits(jobId, state.config.deviceId, false, err.message)
+        () => PrintKoroCloud.confirmPrintAndDeductCredits(jobId, state.config.deviceId, false, err.message)
       ).catch(() => {})
     }
 
@@ -2052,7 +2074,7 @@ async function fetchRecentJobs() {
   try {
     const { data } = await apiGet(
       `/api/desktop/jobs?deviceId=${state.config.deviceId}`,
-      () => QuickInkCloud.fetchJobs(state.config.deviceId)
+      () => PrintKoroCloud.fetchJobs(state.config.deviceId)
     )
     if (data?.jobs) {
       state.recentJobs = data.jobs
@@ -2137,7 +2159,7 @@ async function fetchDevices() {
   try {
     const { data } = await apiGet(
       '/api/desktop/devices',
-      () => QuickInkCloud.fetchDevices()
+      () => PrintKoroCloud.fetchDevices()
     )
     if (data?.devices && data.devices.length > 0) {
       el.stationSelect.innerHTML = data.devices
@@ -2258,7 +2280,7 @@ async function fetchCreditsData() {
   try {
     const { data } = await apiGet(
       `/api/desktop/credits?deviceId=${devId}`,
-      () => QuickInkCloud.fetchCredits(devId)
+      () => PrintKoroCloud.fetchCredits(devId)
     )
 
     if (data?.success) {
@@ -2394,7 +2416,7 @@ async function submitRecharge() {
     const { ok, data } = await apiPost(
       '/api/desktop/credits',
       payload,
-      () => QuickInkCloud.topupCredits(devId, state.selectedPackage.id, state.selectedPackage.credits, payload)
+      () => PrintKoroCloud.topupCredits(devId, state.selectedPackage.id, state.selectedPackage.credits, payload)
     )
 
     if (!ok && !data?.success) {
@@ -2624,8 +2646,8 @@ function setupAuthSystem() {
       el.btnProfileTestPrint.textContent = 'Sending Test Page...'
     }
     try {
-      if (isElectron && window.quickinkDesktop?.testPrint) {
-        await window.quickinkDesktop.testPrint(printer, 'bw')
+      if (isElectron && desktopAPI?.testPrint) {
+        await desktopAPI.testPrint(printer, 'bw')
       } else {
         await new Promise(r => setTimeout(r, 600))
       }
@@ -2674,13 +2696,13 @@ function setupAuthSystem() {
       const data = await res.json()
 
       if (!data.suspended) {
-        alert('🎉 Partnership Reinstated!\n\nYour Quick Ink partnership is active. You may now sign in.')
+        alert('🎉 Partnership Reinstated!\n\nYour PrintKoro partnership is active. You may now sign in.')
         showScreen('login')
       } else {
-        alert(`⚠️ Station is still suspended by administration.\n\nReason: ${data.reason || 'Pending operational review'}\n\nEmergency Phone: 01733398911\nEmail: help@printkoro.com`)
+        alert(`⚠️ Station is still suspended by administration.\n\nReason: ${data.reason || 'Pending operational review'}\n\nEmergency Phone: 01733398911\nEmail: support@printkoro.com`)
       }
     } catch (e) {
-      alert('Could not verify status with Quick Ink server. Please check your network connection.')
+      alert('Could not verify status with PrintKoro server. Please check your network connection.')
     } finally {
       el.btnLockdownCheckStatus.disabled = false
       el.btnLockdownCheckStatus.textContent = 'Check Status Again ⟳'
@@ -2771,7 +2793,7 @@ function setupForgotPassword() {
       const { ok, data } = await apiPost(
         '/api/desktop/auth',
         { action: 'reset-password-send-otp', phone },
-        () => QuickInkCloud.sendOtp(phone)
+        () => PrintKoroCloud.sendOtp(phone)
       )
       if (!ok || !data?.success) throw new Error(data?.error || 'Failed to send code')
 
@@ -2815,7 +2837,7 @@ function setupForgotPassword() {
       const { ok, data } = await apiPost(
         '/api/desktop/auth',
         { action: 'reset-password-send-otp', phone: fpPhoneVerified },
-        () => QuickInkCloud.sendOtp(fpPhoneVerified)
+        () => PrintKoroCloud.sendOtp(fpPhoneVerified)
       )
       if (!ok || !data?.success) throw new Error(data?.error || 'Failed to resend')
       fpSetStatus(el.fpStep2Status, 'New code sent! Check your SMS.', false)
@@ -2851,7 +2873,7 @@ function setupForgotPassword() {
       const { ok, data } = await apiPost(
         '/api/desktop/auth',
         { action: 'reset-verify-otp', phone: fpPhoneVerified, otp },
-        () => QuickInkCloud.verifyOtp(fpPhoneVerified, otp)
+        () => PrintKoroCloud.verifyOtp(fpPhoneVerified, otp)
       )
       if (!ok || !data?.success) throw new Error(data?.error || 'Invalid or expired code')
 
@@ -2894,7 +2916,7 @@ function setupForgotPassword() {
       const { ok, data } = await apiPost(
         '/api/desktop/auth',
         { action: 'reset-password', phone: fpPhoneVerified, newPassword: newPw },
-        () => QuickInkCloud.resetPasswordSave(fpPhoneVerified, newPw)
+        () => PrintKoroCloud.resetPasswordSave(fpPhoneVerified, newPw)
       )
       if (!ok || !data?.success) throw new Error(data?.error || 'Failed to update password')
 
@@ -2912,8 +2934,8 @@ function setupForgotPassword() {
 function showPendingScreen(acc) {
   if (acc) {
     state.account = acc
-    localStorage.setItem('quickink_shop_account', JSON.stringify(acc))
-    if (el.pendingShopName) el.pendingShopName.textContent = acc.shop_name || 'Quick Ink Station'
+    setStoredAccount(acc)
+    if (el.pendingShopName) el.pendingShopName.textContent = acc.shop_name || 'PrintKoro Station'
     if (el.pendingOwnerName) el.pendingOwnerName.textContent = acc.name || 'Partner Owner'
     if (el.pendingPhone) el.pendingPhone.textContent = acc.phone || '017XXXXXXXX'
     if (el.pendingType) el.pendingType.textContent = acc.type === 'kiosk' ? 'Automated Kiosk' : 'Partner Print Shop'
@@ -2927,8 +2949,8 @@ function showPendingScreen(acc) {
 function showRejectedScreen(acc, reason) {
   const updated = { ...(acc || {}), status: 'rejected', rejection_reason: reason }
   state.account = updated
-  localStorage.setItem('quickink_shop_account', JSON.stringify(updated))
-  if (el.rejectedShopName) el.rejectedShopName.textContent = acc?.shop_name || 'Quick Ink Station'
+  setStoredAccount(updated)
+  if (el.rejectedShopName) el.rejectedShopName.textContent = acc?.shop_name || 'PrintKoro Station'
   if (el.rejectedPhone) el.rejectedPhone.textContent = acc?.phone || '017XXXXXXXX'
   if (el.rejectedReasonText) {
     el.rejectedReasonText.textContent = reason || 'Your application could not be verified by administration. Please re-register with accurate details.'
@@ -2939,7 +2961,7 @@ function showRejectedScreen(acc, reason) {
 // Re-Register Workflow: Clears Draft & Resets Form to Step 1
 function handleReRegister() {
   state.account = null
-  localStorage.removeItem('quickink_shop_account')
+  clearStoredAccount()
   state.regDraft = {
     type: 'shop',
     name: '',
@@ -2986,7 +3008,7 @@ async function checkApprovalStatus(isManual = false) {
   try {
     const { ok, data } = await apiGet(
       `/api/desktop/auth?action=check-status&phone=${phone || ''}&deviceId=${devId || ''}`,
-      () => QuickInkCloud.checkStatus(devId, phone)
+      () => PrintKoroCloud.checkStatus(devId, phone)
     )
 
     if (!ok || !data) throw new Error('Status query failed')
@@ -2995,12 +3017,12 @@ async function checkApprovalStatus(isManual = false) {
       if (state.account) {
         state.account.status = 'approved'
         if (data.deviceId) state.account.deviceId = data.deviceId
-        localStorage.setItem('quickink_shop_account', JSON.stringify(state.account))
+        setStoredAccount(state.account)
         updateHeaderProfile(state.account)
       }
       playSuccessChime()
       showScreen('workspace')
-      alert('🎉 Application Approved!\n\nQuick Ink administration has verified your registration. Welcome to your terminal dashboard!')
+      alert('🎉 Application Approved!\n\nPrintKoro administration has verified your registration. Welcome to your terminal dashboard!')
       return
     }
 
@@ -3010,11 +3032,11 @@ async function checkApprovalStatus(isManual = false) {
     }
 
     if (isManual) {
-      alert('⏳ Application Still Under Review\n\nYour application is being reviewed by Quick Ink administrators.\n\nFor emergency assistance or expedited verification, contact admin directly:\nEmergency Phone: 01733398911\nEmail: help@quickink.net')
+      alert('⏳ Application Still Under Review\n\nYour application is being reviewed by PrintKoro administrators.\n\nFor assistance or expedited verification, contact admin directly:\nEmergency Phone: 01733398911\nEmail: support@printkoro.com')
     }
   } catch (err) {
     if (isManual) {
-      alert('Could not verify status with Quick Ink server. Please check your network connection.')
+      alert('Could not verify status with PrintKoro server. Please check your network connection.')
     }
   } finally {
     if (isManual && el.btnPendingCheckStatus) {
@@ -3027,12 +3049,12 @@ async function checkApprovalStatus(isManual = false) {
 // Trigger Administrative Lockdown
 function triggerSuspensionLockdown(shopName, deviceId, reason, date) {
   state.account = null
-  localStorage.removeItem('quickink_shop_account')
+  clearStoredAccount()
 
-  if (el.lockdownShopName) el.lockdownShopName.textContent = shopName || 'Quick Ink Station'
+  if (el.lockdownShopName) el.lockdownShopName.textContent = shopName || 'PrintKoro Station'
   if (el.lockdownDeviceId) el.lockdownDeviceId.textContent = deviceId || state.config.deviceId
   if (el.lockdownReasonText) {
-    el.lockdownReasonText.textContent = reason || 'Partnership suspended by QuickInk administration due to compliance review or agreement termination.'
+    el.lockdownReasonText.textContent = reason || 'Partnership suspended by PrintKoro administration due to compliance review or agreement termination.'
   }
   if (el.lockdownDateText) {
     el.lockdownDateText.textContent = date ? new Date(date).toLocaleString() : new Date().toLocaleString()
@@ -3049,14 +3071,14 @@ async function checkStationStatus() {
   try {
     const { ok, data } = await apiGet(
       `/api/desktop/auth?action=check-status&deviceId=${devId}`,
-      () => QuickInkCloud.checkStatus(devId)
+      () => PrintKoroCloud.checkStatus(devId)
     )
 
     if (!ok || !data) return
 
     if (data.suspended) {
       triggerSuspensionLockdown(
-        state.account?.shop_name || 'Quick Ink Station',
+        state.account?.shop_name || 'PrintKoro Station',
         devId,
         data.reason,
         data.suspended_at
@@ -3071,9 +3093,8 @@ async function checkStationStatus() {
 
 async function loadSavedAccount() {
   try {
-    const stored = localStorage.getItem('quickink_shop_account')
-    if (stored) {
-      const acc = JSON.parse(stored)
+    const acc = getStoredAccount()
+    if (acc) {
       if (acc && acc.name && acc.phone) {
         state.account = acc
 
@@ -3115,7 +3136,7 @@ async function loadSavedAccount() {
 
 function updateHeaderProfile(account) {
   if (account) {
-    if (el.headerShopName) el.headerShopName.textContent = account.shop_name || 'QuickInk Shop'
+    if (el.headerShopName) el.headerShopName.textContent = account.shop_name || 'PrintKoro Partner Shop'
     if (el.headerOwnerName) el.headerOwnerName.textContent = account.name || 'Certified Owner'
     if (el.btnAccountLabel) el.btnAccountLabel.textContent = 'Station Profile'
 
@@ -3126,7 +3147,7 @@ function updateHeaderProfile(account) {
       }
       if (el.headerAvatarInitials) el.headerAvatarInitials.classList.add('hidden')
     } else {
-      const initials = (account.shop_name || 'QS')
+      const initials = (account.shop_name || 'PK')
         .split(' ')
         .map((w) => w[0])
         .slice(0, 2)
@@ -3139,11 +3160,11 @@ function updateHeaderProfile(account) {
       if (el.headerAvatarImg) el.headerAvatarImg.classList.add('hidden')
     }
   } else {
-    if (el.headerShopName) el.headerShopName.textContent = 'QuickInk Station'
+    if (el.headerShopName) el.headerShopName.textContent = 'PrintKoro Station'
     if (el.headerOwnerName) el.headerOwnerName.textContent = 'Not Signed In'
     if (el.btnAccountLabel) el.btnAccountLabel.textContent = 'Sign In / Register'
     if (el.headerAvatarInitials) {
-      el.headerAvatarInitials.textContent = 'QI'
+      el.headerAvatarInitials.textContent = 'PK'
       el.headerAvatarInitials.classList.remove('hidden')
     }
     if (el.headerAvatarImg) el.headerAvatarImg.classList.add('hidden')
@@ -3207,7 +3228,7 @@ async function handleSendMobileOtp() {
     const { ok, data } = await apiPost(
       '/api/desktop/auth',
       { action: 'send-otp', phone: cleanPhone },
-      () => QuickInkCloud.sendOtp(cleanPhone)
+      () => PrintKoroCloud.sendOtp(cleanPhone)
     )
 
     if (!ok || !data?.success) {
@@ -3222,7 +3243,7 @@ async function handleSendMobileOtp() {
     el.authOtpBoxes.forEach((b) => (b.value = ''))
     setRegStep(2)
   } catch (e) {
-    showRegMsg(el.regStep1StatusMsg, 'Unable to connect to QuickInk server. Please check your internet connection.', true)
+    showRegMsg(el.regStep1StatusMsg, 'Unable to connect to PrintKoro server. Please check your internet connection.', true)
   } finally {
     el.btnToStep2.disabled = false
     el.btnToStep2.textContent = 'Verify Mobile via OTP →'
@@ -3266,7 +3287,7 @@ async function handleVerifyMobileOtp() {
     const { ok, data } = await apiPost(
       '/api/desktop/auth',
       { action: 'verify-otp', phone: state.regDraft.phone, otp: code },
-      () => QuickInkCloud.verifyOtp(state.regDraft.phone, code)
+      () => PrintKoroCloud.verifyOtp(state.regDraft.phone, code)
     )
 
     if (ok && data?.verified) {
@@ -3320,7 +3341,7 @@ async function handleFinishRegistration() {
     const { ok, data } = await apiPost(
       '/api/desktop/auth',
       payload,
-      () => QuickInkCloud.register({ ...state.regDraft, password: pass })
+      () => PrintKoroCloud.register({ ...state.regDraft, password: pass })
     )
 
     if (ok && data?.account) {
@@ -3330,20 +3351,20 @@ async function handleFinishRegistration() {
       if (device?.id) {
         state.config.deviceId = device.id
         if (isElectron) {
-          await window.quickinkDesktop.saveConfig({ deviceId: device.id })
+          await desktopAPI.saveConfig({ deviceId: device.id })
         }
       }
 
       // Save state with status 'pending'
       showPendingScreen(account)
       playSuccessChime()
-      alert(`📋 Registration Submitted!\n\nWelcome "${account.shop_name}". Your account has been submitted for administrator review.\n\nEmergency Contact: 01733398911\nSupport Email: help@quickink.net`)
+      alert(`📋 Registration Submitted!\n\nWelcome "${account.shop_name}". Your account has been submitted for administrator review.\n\nEmergency Contact: 01733398911\nSupport Email: support@printkoro.com`)
       return
     }
 
     showRegMsg(el.regStep3StatusMsg, data?.error || 'Registration failed. Please check your information and try again.', true)
   } catch (err) {
-    showRegMsg(el.regStep3StatusMsg, 'Network error. Could not connect to QuickInk registration service.', true)
+    showRegMsg(el.regStep3StatusMsg, 'Network error. Could not connect to PrintKoro registration service.', true)
   } finally {
     el.btnFinishRegistration.disabled = false
     el.btnFinishRegistration.textContent = 'Complete Registration & Submit for Approval'
@@ -3369,7 +3390,7 @@ async function handleLoginSubmit(e) {
     const { ok, status, data } = await apiPost(
       '/api/desktop/auth',
       { action: 'login', phone, password },
-      () => QuickInkCloud.login(phone, password)
+      () => PrintKoroCloud.login(phone, password)
     )
 
     // 1. Pending Approval Check
@@ -3401,12 +3422,12 @@ async function handleLoginSubmit(e) {
 
     const account = data.account
     state.account = account
-    localStorage.setItem('quickink_shop_account', JSON.stringify(account))
+    setStoredAccount(account)
 
     if (data.deviceId) {
       state.config.deviceId = data.deviceId
       if (isElectron) {
-        await window.quickinkDesktop.saveConfig({ deviceId: data.deviceId })
+        await desktopAPI.saveConfig({ deviceId: data.deviceId })
       }
     }
 
@@ -3508,7 +3529,7 @@ function handleLogout() {
   if (!confirm('Log out from this terminal? You will need to sign in with your mobile number and password.')) return
 
   state.account = null
-  localStorage.removeItem('quickink_shop_account')
+  clearStoredAccount()
   updateHeaderProfile(null)
   el.accountModal?.classList.add('hidden')
   showScreen('login')

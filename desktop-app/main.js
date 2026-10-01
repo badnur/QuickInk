@@ -49,8 +49,17 @@ if (!app.isPackaged) {
   } catch (e) {}
 }
 
-// Config file path in app userData directory
-const getConfigPath = () => path.join(app.getPath('userData'), 'quickink-desktop-config.json')
+// Config file path in app userData directory (supports PrintKoro with legacy migration)
+const getConfigPath = () => {
+  const primaryPath = path.join(app.getPath('userData'), 'printkoro-desktop-config.json')
+  const legacyPath = path.join(app.getPath('userData'), 'quickink-desktop-config.json')
+  if (!fs.existsSync(primaryPath) && fs.existsSync(legacyPath)) {
+    try {
+      fs.copyFileSync(legacyPath, primaryPath)
+    } catch (e) {}
+  }
+  return primaryPath
+}
 
 // Read saved config
 function loadConfig() {
@@ -90,12 +99,18 @@ function saveConfig(newConfig) {
 function createWindow() {
   const savedConfig = loadConfig()
 
+  const iconPath = path.join(__dirname, 'build', 'icon.ico')
+  const fallbackIco = path.join(__dirname, 'src', 'assets', 'icon.ico')
+  const fallbackPng = path.join(__dirname, 'src', 'assets', 'printkoro-master.png')
+  const appIcon = fs.existsSync(iconPath) ? iconPath : (fs.existsSync(fallbackIco) ? fallbackIco : (fs.existsSync(fallbackPng) ? fallbackPng : undefined))
+
   mainWindow = new BrowserWindow({
     width: 1240,
     height: 820,
     minWidth: 1024,
     minHeight: 680,
     title: 'PrintKoro Station',
+    icon: appIcon,
     backgroundColor: '#09090b',
     autoHideMenuBar: true,
     show: true,
@@ -168,7 +183,7 @@ function parsePageRange(rangeStr, maxPages) {
 async function downloadToTemp(fileUrl, preferredExt = '.pdf') {
   try {
     const tempDir = app.getPath('temp')
-    const fileName = `quickink_${Date.now()}_${Math.random().toString(36).substring(7)}${preferredExt}`
+    const fileName = `printkoro_${Date.now()}_${Math.random().toString(36).substring(7)}${preferredExt}`
     const tempFilePath = path.join(tempDir, fileName)
 
     if (!fileUrl) {
@@ -648,7 +663,7 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange, nup = 
       const compiledBytes = await outDoc.save()
       const compiledPdfPath = path.join(
         app.getPath('temp'),
-        `quickink_compiled_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`
+        `printkoro_compiled_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`
       )
       fs.writeFileSync(compiledPdfPath, compiledBytes)
       console.log(`[PDFCompiler] Standard A4 PDF compiled successfully: ${compiledPdfPath} (${outDoc.getPageCount()} sheet(s), ${compiledBytes.length} bytes, nup: ${parsedNup})`)
@@ -663,7 +678,7 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange, nup = 
       const copiedBytes = await copyDoc.save()
       const copiedPdfPath = path.join(
         app.getPath('temp'),
-        `quickink_copied_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`
+        `printkoro_copied_${Date.now()}_${Math.random().toString(36).substring(7)}.pdf`
       )
       fs.writeFileSync(copiedPdfPath, copiedBytes)
       console.log(`[PDFCompiler] copyPages fallback succeeded: ${copiedPdfPath}`)
