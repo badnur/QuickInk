@@ -76,8 +76,8 @@ export default function Footer() {
             <ul className="space-y-2.5 text-xs sm:text-sm">
               {[
                 { label: t('faq.title', 'FAQs & Help'), href: '/#faq' },
-                { label: t('footer.terms', 'Terms of Service'), href: '#' },
-                { label: t('footer.privacy', 'Privacy Policy'), href: '#' },
+                { label: t('footer.terms', 'Terms of Service'), href: '/terms' },
+                { label: t('footer.privacy', 'Privacy Policy'), href: '/privacy' },
                 { label: t('nav.becomePartner', 'Partner Program'), href: '/partner' }
               ].map((link, idx) => (
                 <li key={idx}>
@@ -121,8 +121,8 @@ export default function Footer() {
             © {toBengaliNumber(year)} PrintKoro.com. {t('footer.allRights', 'All rights reserved.')}
           </p>
           <div className="flex gap-6 text-gray-400">
-            <Link href="#" className="hover:text-[#00bf63] transition-colors">{t('footer.terms', 'Terms')}</Link>
-            <Link href="#" className="hover:text-[#00bf63] transition-colors">{t('footer.privacy', 'Privacy')}</Link>
+            <Link href="/terms" className="hover:text-[#00bf63] transition-colors">{t('footer.terms', 'Terms')}</Link>
+            <Link href="/privacy" className="hover:text-[#00bf63] transition-colors">{t('footer.privacy', 'Privacy')}</Link>
             <Link href="#" className="hover:text-[#00bf63] transition-colors">{t('footer.cookies', 'Cookies')}</Link>
           </div>
         </div>

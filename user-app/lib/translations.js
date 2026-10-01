@@ -359,6 +359,21 @@ export const translations = {
       pages: 'পৃষ্ঠা',
       singleSided: 'এক পিঠ',
       doubleSided: 'উভয় পিঠ (Duplex)',
+    },
+
+    // Footer
+    footer: {
+      about: 'প্রিন্টকোরো হলো বাংলাদেশের ১ম সেলফ-সার্ভিস ক্লাউড প্রিন্টিং নেটওয়ার্ক। ফোন থেকে আপলোড করুন, নিরাপদে পেমেন্ট করুন এবং ৬০ সেকেন্ডে প্রিন্ট নিন।',
+      quickLinks: 'প্রয়োজনীয় লিংক',
+      support: 'সহায়তা ও তথ্য',
+      terms: 'শর্তাবলী ও নীতিমালা',
+      privacy: 'গোপনীয়তা নীতি',
+      cookies: 'কুকিজ নীতি',
+      contact: 'যোগাযোগ',
+      helpEmail: 'help@printkoro.com',
+      helpPhone: '+৮৮০ ১৭৩৩-৩৯৮৯১১',
+      address: 'ঢাকা ও রাজশাহী, বাংলাদেশ',
+      allRights: 'সর্বস্বত্ব সংরক্ষিত।',
     }
   },
 
@@ -715,6 +730,21 @@ export const translations = {
       pages: 'pages',
       singleSided: 'Single-Sided',
       doubleSided: 'Double-Sided (Duplex)',
+    },
+
+    // Footer
+    footer: {
+      about: "PrintKoro is Bangladesh's premier smart self-service printing network. Upload from your phone, pay securely, and print in 60 seconds.",
+      quickLinks: 'Quick Links',
+      support: 'Support & Help',
+      terms: 'Terms of Service',
+      privacy: 'Privacy Policy',
+      cookies: 'Cookies Policy',
+      contact: 'Contact',
+      helpEmail: 'help@printkoro.com',
+      helpPhone: '+880 1733-398911',
+      address: 'Dhaka & Rajshahi, Bangladesh',
+      allRights: 'All rights reserved.',
     }
   }
 }
