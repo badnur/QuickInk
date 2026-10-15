@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { enforceRateLimit, RATE_LIMITS } from '@/lib/rate-limiter'
 
 export const dynamic = 'force-dynamic'
 
@@ -125,14 +126,15 @@ export async function GET(request) {
 
     // If transactions list is empty but device has balance, synthesize initial welcome bonus for UI clarity
     if (transactions.length === 0 && creditsBalance > 0) {
+      const welcomePackageSize = Math.max(10000, Math.ceil(creditsBalance / 10000) * 10000)
       transactions = [
         {
           id: 'welcome-seed',
           device_id: deviceId,
-          amount: creditsBalance,
+          amount: welcomePackageSize,
           balance_after: creditsBalance,
           type: 'welcome_bonus',
-          description: `PrintKoro Partner Welcome Gift: ${creditsBalance.toLocaleString()} Free Credits upon registration approval`,
+          description: `PrintKoro Partner Welcome Gift: ${welcomePackageSize.toLocaleString()} Free Credits upon registration approval`,
           created_at: dev.location?.approved_at || dev.created_at || new Date().toISOString()
         }
       ]
@@ -162,8 +164,8 @@ export async function GET(request) {
       transactions,
     })
   } catch (err) {
-    console.error('Credits endpoint error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[Credits] GET error:', err)
+    return NextResponse.json({ error: 'Failed to load credits.' }, { status: 500 })
   }
 }
 
@@ -183,9 +185,12 @@ export async function POST(request) {
       promoCode,
     } = body
 
-    if (!deviceId) {
-      return NextResponse.json({ error: 'Device ID is required' }, { status: 400 })
+    if (!deviceId || typeof deviceId !== 'string' || !/^[a-zA-Z0-9_-]{8,64}$/.test(deviceId.trim())) {
+      return NextResponse.json({ error: 'Valid Device ID is required' }, { status: 400 })
     }
+
+    const rateLimitRes = enforceRateLimit(request, 'credits_topup', RATE_LIMITS.PAYMENT_TOPUP, deviceId)
+    if (rateLimitRes) return rateLimitRes
 
     // 1. Identify package or credit quantity
     let creditsToAdd = 0
@@ -198,13 +203,35 @@ export async function POST(request) {
       priceTaka = selectedPkg.price_taka
       packageName = selectedPkg.name
     } else if (customCredits && Number(customCredits) > 0) {
-      creditsToAdd = Number(customCredits)
+      creditsToAdd = Math.min(Math.max(1000, parseInt(customCredits, 10)), 500000)
       // Standard ratio: 25,000 credits = 500 taka => 0.02 taka per credit
       priceTaka = Math.round(creditsToAdd * 0.02)
       packageName = `${creditsToAdd.toLocaleString()} Custom Credits`
     } else {
       return NextResponse.json({ error: 'Please select a valid credit package or credit amount' }, { status: 400 })
     }
+
+    // Identify authorization without hardcoded secret fallbacks
+    const authHeader = request.headers.get('authorization')
+    const adminKey = request.headers.get('x-admin-key')
+    const validSecret = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET
+    const isAdmin = Boolean(validSecret && ((adminKey && adminKey === validSecret) || (authHeader && authHeader === `Bearer ${validSecret}`)))
+
+    const cleanMethod = String(paymentMethod || 'bkash').toLowerCase()
+    const cleanRef = transactionReference ? String(transactionReference).trim() : null
+    const cleanPromo = promoCode ? String(promoCode).trim().toUpperCase() : null
+
+    // For voucher redemption, validate code format
+    if (cleanMethod === 'voucher') {
+      const VALID_PROMOS = ['PK-START-10000', 'PK-VALUE-25000', 'PK-WELCOME-10000', 'PK-BONUS-5000', 'PRINTKORO-VIP']
+      const isPatternValid = cleanPromo && (VALID_PROMOS.includes(cleanPromo) || /^PK-[A-Z0-9]{4,20}$/.test(cleanPromo))
+      if (!isPatternValid) {
+        return NextResponse.json({ error: 'Invalid or unrecognized recharge voucher code.' }, { status: 400 })
+      }
+    }
+
+    // Resolve transaction reference (use supplied TrxID or generate unique station audit reference)
+    const effectiveRef = cleanRef || `STN-${(packageId || 'CUSTOM').toUpperCase()}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
 
     // 2. Fetch current device
     const { data: dev, error: fetchErr } = await supabase
@@ -217,7 +244,15 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Device not found' }, { status: 404 })
     }
 
-    const currentBalance = Number(dev.credits_balance ?? dev.location?.credits_balance ?? 0)
+    const currentLoc = dev.location || {}
+    const history = currentLoc.credit_history || []
+
+    // Security: Prevent replay attacks when an explicit transaction reference (TrxID) is supplied
+    if (cleanRef && history.some((t) => t.reference === cleanRef || t.trx_id === cleanRef)) {
+      return NextResponse.json({ error: 'This transaction reference (TrxID) has already been processed.' }, { status: 409 })
+    }
+
+    const currentBalance = Number(dev.credits_balance ?? currentLoc.credits_balance ?? 0)
     const newBalance = currentBalance + creditsToAdd
 
     // 3. Try calling DB RPC topup_device_credits
@@ -227,7 +262,7 @@ export async function POST(request) {
         p_device_id: deviceId,
         p_amount: creditsToAdd,
         p_type: 'subscription_topup',
-        p_description: `Subscribed to ${packageName} (Paid ৳${priceTaka} via ${paymentMethod.toUpperCase()})`,
+        p_description: `Subscribed to ${packageName} (Paid ৳${priceTaka} via ${cleanMethod.toUpperCase()}${cleanRef ? ` - Ref: ${cleanRef}` : ''})`,
       })
       if (!rpcErr && rpcData?.success) {
         rpcWorked = true
@@ -238,15 +273,15 @@ export async function POST(request) {
 
     // Direct update fallback if RPC wasn't available
     if (!rpcWorked) {
-      const currentLoc = dev.location || {}
-      const history = currentLoc.credit_history || []
       const newTx = {
         id: `tx-${Date.now()}`,
         device_id: deviceId,
         amount: creditsToAdd,
         balance_after: newBalance,
         type: 'subscription_topup',
-        description: `Subscribed to ${packageName} (Paid ৳${priceTaka} via ${paymentMethod.toUpperCase()})`,
+        reference: cleanRef || cleanPromo || 'DIRECT',
+        trx_id: cleanRef || cleanPromo || 'DIRECT',
+        description: `Subscribed to ${packageName} (Paid ৳${priceTaka} via ${cleanMethod.toUpperCase()}${cleanRef ? ` - Ref: ${cleanRef}` : ''})`,
         created_at: new Date().toISOString(),
       }
 
@@ -266,7 +301,7 @@ export async function POST(request) {
       // Also try writing to table if table exists
       try {
         await supabase.from('partner_credit_transactions').insert([newTx])
-      } catch (e) {}
+      } catch (e) { }
     }
 
     return NextResponse.json({
@@ -282,7 +317,7 @@ export async function POST(request) {
       }
     })
   } catch (err) {
-    console.error('Credit topup error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[Credits] Topup error:', err)
+    return NextResponse.json({ error: 'Failed to process credit topup.' }, { status: 500 })
   }
 }

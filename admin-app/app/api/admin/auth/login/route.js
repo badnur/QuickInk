@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import crypto from 'crypto'
 import { signAdminToken, setAdminSessionCookie } from '@/lib/auth-server'
 import { supabase } from '@/lib/supabase'
 
@@ -54,15 +55,15 @@ export async function POST(request) {
     const body = await request.json()
     const { pin, email, password } = body
 
-    // 1. Master PIN Authentication (Server-Side verification)
-    const rawEnvPin = process.env.ADMIN_MASTER_PIN || '882314'
-    const cleanEnvPin = String(rawEnvPin).replace(/['"\s]/g, '')
+    // 1. Master PIN Authentication (Server-Side verification via ADMIN_MASTER_PIN)
+    const rawEnvPin = process.env.ADMIN_MASTER_PIN
+    const cleanEnvPin = rawEnvPin ? String(rawEnvPin).replace(/['"\s]/g, '') : null
     const cleanInputPin = String(pin || '').replace(/['"\s]/g, '')
 
-    const isPinMatch = cleanInputPin && (
-      cleanInputPin === '882314' ||
-      cleanInputPin === cleanEnvPin
-    )
+    let isPinMatch = false
+    if (cleanEnvPin && cleanInputPin && cleanEnvPin.length === cleanInputPin.length) {
+      isPinMatch = crypto.timingSafeEqual(Buffer.from(cleanInputPin), Buffer.from(cleanEnvPin))
+    }
 
     if (isPinMatch) {
       clearRateLimit(ip)

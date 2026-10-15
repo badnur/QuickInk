@@ -41,12 +41,25 @@ export async function GET() {
       .select('*')
       .order('name', { ascending: true })
 
-    if (!error && dbDevices && dbDevices.length > 0) {
-      return NextResponse.json({ success: true, devices: dbDevices })
-    }
+    const rawList = (!error && dbDevices && dbDevices.length > 0) ? dbDevices : DEFAULT_DEVICES
 
-    // Return default fallback devices if DB not yet seeded
-    return NextResponse.json({ success: true, devices: DEFAULT_DEVICES })
+    // Security: Strip passwords, credit history, and sensitive internal fields before returning
+    const sanitizedDevices = rawList.map((d) => {
+      const loc = { ...(d.location || {}) }
+      delete loc.password
+      delete loc.credit_history
+      delete loc.suspension_reason
+      return {
+        id: d.id,
+        name: d.name,
+        type: d.type,
+        status: d.status,
+        pricing_tier_id: d.pricing_tier_id || null,
+        location: loc,
+      }
+    })
+
+    return NextResponse.json({ success: true, devices: sanitizedDevices })
   } catch (err) {
     console.error('Fetch devices error:', err)
     return NextResponse.json({ success: true, devices: DEFAULT_DEVICES })

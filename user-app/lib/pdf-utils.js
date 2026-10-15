@@ -1,4 +1,4 @@
-import { PDFDocument, ParseSpeeds } from 'pdf-lib'
+import { PDFDocument, ParseSpeeds, degrees } from 'pdf-lib'
 
 let pdfjsLoadingPromise = null
 
@@ -44,32 +44,34 @@ export async function loadPdfJs() {
  */
 export function extractPageCountFromText(str) {
   if (!str) return null
+  // Guard: truncate strings larger than 20 MB to prevent regex from scanning huge buffers
+  const safeStr = str.length > 20 * 1024 * 1024 ? str.slice(0, 20 * 1024 * 1024) : str
   let maxCount = 0
 
   // Pattern 1: /Type /Pages ... /Count 123 (distance <= 25,000 chars)
-  for (const m of str.matchAll(/\/Type\s*\/Pages[\s\S]{0,25000}?\/Count\s+(\d+)/g)) {
+  for (const m of safeStr.matchAll(/\/Type\s*\/Pages[\s\S]{0,25000}?\/Count\s+(\d+)/g)) {
     const c = parseInt(m[1], 10)
     if (!isNaN(c) && c > maxCount && c < 50000) maxCount = c
   }
 
   // Pattern 2: /Count 123 ... /Type /Pages (distance <= 25,000 chars)
-  for (const m of str.matchAll(/\/Count\s+(\d+)[\s\S]{0,25000}?\/Type\s*\/Pages/g)) {
+  for (const m of safeStr.matchAll(/\/Count\s+(\d+)[\s\S]{0,25000}?\/Type\s*\/Pages/g)) {
     const c = parseInt(m[1], 10)
     if (!isNaN(c) && c > maxCount && c < 50000) maxCount = c
   }
 
   // Pattern 3: /Linearized dictionary /N 123 (web-optimized PDFs)
-  for (const m of str.matchAll(/\/Linearized[\s\S]{0,1000}?\/N\s+(\d+)/g)) {
+  for (const m of safeStr.matchAll(/\/Linearized[\s\S]{0,1000}?\/N\s+(\d+)/g)) {
     const c = parseInt(m[1], 10)
     if (!isNaN(c) && c > maxCount && c < 50000) maxCount = c
   }
 
   // Pattern 4: /Count 123 in dictionary near /Kids or /Pages
-  for (const m of str.matchAll(/\/Count\s+(\d+)/g)) {
+  for (const m of safeStr.matchAll(/\/Count\s+(\d+)/g)) {
     const c = parseInt(m[1], 10)
     if (!isNaN(c) && c > maxCount && c < 50000) {
       const idx = m.index
-      const windowStr = str.substring(Math.max(0, idx - 2000), Math.min(str.length, idx + 2000))
+      const windowStr = safeStr.substring(Math.max(0, idx - 2000), Math.min(safeStr.length, idx + 2000))
       if (windowStr.includes('/Pages') || windowStr.includes('/Kids')) {
         maxCount = c
       }
@@ -77,7 +79,7 @@ export function extractPageCountFromText(str) {
   }
 
   // Pattern 5: Distinct /Type /Page objects count
-  const pageObjs = str.match(/\/Type\s*\/Page(?![a-zA-Z])/g)
+  const pageObjs = safeStr.match(/\/Type\s*\/Page(?![a-zA-Z])/g)
   if (pageObjs && pageObjs.length > maxCount) {
     maxCount = pageObjs.length
   }
@@ -209,12 +211,21 @@ export async function loadPdfDocument(file) {
   }
 
   // Authoritative page count: takes the maximum valid count across all strategies
-  const truePageCount = Math.max(
-    pdfDoc?.numPages || 0,
-    fastCount || 0,
-    pdfLibPageCount || 0,
-    1
+  // Security: Cap at 5000 pages to prevent resource exhaustion from malformed/malicious PDFs
+  const MAX_ALLOWED_PAGES = 5000
+  const truePageCount = Math.min(
+    Math.max(
+      pdfDoc?.numPages || 0,
+      fastCount || 0,
+      pdfLibPageCount || 0,
+      1
+    ),
+    MAX_ALLOWED_PAGES
   )
+
+  if ((pdfDoc?.numPages || fastCount || pdfLibPageCount) > MAX_ALLOWED_PAGES) {
+    console.warn(`[loadPdfDocument] PDF exceeds ${MAX_ALLOWED_PAGES} pages; capped for resource safety.`)
+  }
 
   return {
     pdfDoc,
@@ -362,10 +373,30 @@ export async function slicePdfBlob(fileOrBlob, pageRangeStr) {
     return fileOrBlob
   }
 
+  // Security: Reject oversized files from being loaded entirely into memory for slicing
+  const MAX_SLICE_SIZE = 100 * 1024 * 1024 // 100 MB
+  if (fileOrBlob.size > MAX_SLICE_SIZE) {
+    console.warn(`[slicePdfBlob] File size ${(fileOrBlob.size / 1024 / 1024).toFixed(1)} MB exceeds slice limit, returning original.`)
+    return fileOrBlob
+  }
+
   try {
     const arrayBuffer = await fileOrBlob.arrayBuffer()
-    const srcDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true })
+    let srcDoc
+    try {
+      srcDoc = await PDFDocument.load(arrayBuffer, { ignoreEncryption: true })
+    } catch (loadErr) {
+      console.warn('[slicePdfBlob] PDF load failed (corrupted/encrypted):', loadErr.message)
+      return fileOrBlob
+    }
+
     const totalPages = srcDoc.getPageCount()
+    // Security: Cap total pages processed at 5000 to prevent resource exhaustion
+    if (totalPages > 5000) {
+      console.warn(`[slicePdfBlob] PDF has ${totalPages} pages, exceeds limit of 5000. Returning original.`)
+      return fileOrBlob
+    }
+
     const targetIndices = parsePageRange(pageRangeStr, totalPages)
 
     // If all pages selected or invalid range, no slicing needed
@@ -532,4 +563,142 @@ export async function mergeFilesToPdf(files) {
   const mergedName = files.length > 1 ? `${baseName}_+_${files.length - 1}_pages.pdf` : `${baseName}.pdf`
   return new File([mergedBytes], mergedName, { type: 'application/pdf' })
 }
+
+/**
+ * Applies custom Scale (%), Rotation, and Page Range adjustments to a document or image.
+ * Renders the content centered onto standard A4 page(s) (595.28 x 841.89 pt),
+ * allowing users to set ID card size (e.g. 50%), compact print (35%), or custom scale (25%-125%).
+ */
+export async function applyPrintAdjustments(fileOrBlob, { scale = 100, rotation = 0, pageRange = null } = {}) {
+  if (!fileOrBlob) return fileOrBlob
+
+  const safeScale = Math.max(20, Math.min(150, parseInt(scale, 10) || 100))
+  const scaleRatio = safeScale / 100
+  const normRotation = ((parseInt(rotation, 10) || 0) % 360 + 360) % 360
+
+  const isPdf = fileOrBlob.type === 'application/pdf' || fileOrBlob.name?.toLowerCase().endsWith('.pdf')
+  const isImage = fileOrBlob.type?.startsWith('image/') || /\.(jpe?g|png|webp|bmp|gif)$/i.test(fileOrBlob.name || '')
+
+  // Standard A4 dimensions in points
+  const A4_W = 595.28
+  const A4_H = 841.89
+  const margin = 20
+
+  // 1. PDF Documents
+  if (isPdf) {
+    // If no adjustments requested, return original (or pre-slice if range given)
+    if (safeScale === 100 && normRotation === 0 && (!pageRange || !String(pageRange).trim())) {
+      return fileOrBlob
+    }
+
+    try {
+      const buffer = await fileOrBlob.arrayBuffer()
+      const srcDoc = await PDFDocument.load(buffer, { ignoreEncryption: true })
+      const totalPages = srcDoc.getPageCount()
+      const targetIndices = (pageRange && String(pageRange).trim())
+        ? parsePageRange(pageRange, totalPages)
+        : Array.from({ length: totalPages }, (_, i) => i)
+
+      const validIndices = targetIndices.length > 0 ? targetIndices : Array.from({ length: totalPages }, (_, i) => i)
+
+      // If only page range slicing without scale or rotation change, use slicePdfBlob
+      if (safeScale === 100 && normRotation === 0) {
+        if (validIndices.length < totalPages) {
+          return await slicePdfBlob(fileOrBlob, pageRange)
+        }
+        return fileOrBlob
+      }
+
+      const outDoc = await PDFDocument.create()
+      const srcPages = validIndices.map((idx) => srcDoc.getPage(idx))
+      const embeddedPages = await outDoc.embedPages(srcPages)
+
+      embeddedPages.forEach((ep) => {
+        const page = outDoc.addPage([A4_W, A4_H])
+        if (normRotation !== 0) {
+          page.setRotation(degrees(normRotation))
+        }
+
+        const availW = A4_W - margin * 2
+        const availH = A4_H - margin * 2
+
+        const baseFit = Math.min(availW / ep.width, availH / ep.height, 1.0)
+        const renderW = ep.width * baseFit * scaleRatio
+        const renderH = ep.height * baseFit * scaleRatio
+        const x = (A4_W - renderW) / 2
+        const y = (A4_H - renderH) / 2
+
+        page.drawPage(ep, {
+          x,
+          y,
+          width: renderW,
+          height: renderH,
+        })
+      })
+
+      const adjustedBytes = await outDoc.save()
+      const origName = fileOrBlob.name || 'document.pdf'
+      const baseName = origName.replace(/\.[^/.]+$/, '')
+      return new File([adjustedBytes], `${baseName}_scale${safeScale}.pdf`, { type: 'application/pdf' })
+    } catch (pdfErr) {
+      console.warn('[applyPrintAdjustments] PDF adjustments notice, fallback:', pdfErr)
+      return fileOrBlob
+    }
+  }
+
+  // 2. Image Files (ID card scan, camera photo, JPG, PNG, WebP)
+  if (isImage) {
+    try {
+      const outDoc = await PDFDocument.create()
+      let embeddedImage = null
+      const isPng = fileOrBlob.type === 'image/png' || fileOrBlob.name?.toLowerCase().endsWith('.png')
+
+      try {
+        const buf = await fileOrBlob.arrayBuffer()
+        if (isPng) {
+          embeddedImage = await outDoc.embedPng(buf)
+        } else {
+          embeddedImage = await outDoc.embedJpg(buf)
+        }
+      } catch (embErr) {
+        const convertedBuf = await convertImageToJpegBuffer(fileOrBlob)
+        embeddedImage = await outDoc.embedJpg(convertedBuf)
+      }
+
+      if (embeddedImage) {
+        const page = outDoc.addPage([A4_W, A4_H])
+        if (normRotation !== 0) {
+          page.setRotation(degrees(normRotation))
+        }
+
+        const availW = A4_W - margin * 2
+        const availH = A4_H - margin * 2
+
+        const baseFit = Math.min(availW / embeddedImage.width, availH / embeddedImage.height, 1.0)
+        const renderW = embeddedImage.width * baseFit * scaleRatio
+        const renderH = embeddedImage.height * baseFit * scaleRatio
+        const x = (A4_W - renderW) / 2
+        const y = (A4_H - renderH) / 2
+
+        page.drawImage(embeddedImage, {
+          x,
+          y,
+          width: renderW,
+          height: renderH,
+        })
+
+        const adjustedBytes = await outDoc.save()
+        const origName = fileOrBlob.name || 'image.jpg'
+        const baseName = origName.replace(/\.[^/.]+$/, '')
+        return new File([adjustedBytes], `${baseName}_scale${safeScale}.pdf`, { type: 'application/pdf' })
+      }
+    } catch (imgErr) {
+      console.warn('[applyPrintAdjustments] Image adjustments notice, fallback:', imgErr)
+      return fileOrBlob
+    }
+  }
+
+  return fileOrBlob
+}
+
 

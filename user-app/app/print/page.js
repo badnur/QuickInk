@@ -9,7 +9,7 @@ import SmartScannerModal from '@/components/print/SmartScannerModal'
 import PassportPhotoModal from '@/components/print/PassportPhotoModal'
 import IdCardScannerModal from '@/components/print/IdCardScannerModal'
 import { playCompletionChime } from '@/lib/audio-chime'
-import { loadPdfDocument, renderPdfPageToDataUrl, slicePdfBlob, fastScanPdfPages, mergeFilesToPdf } from '@/lib/pdf-utils'
+import { loadPdfDocument, renderPdfPageToDataUrl, slicePdfBlob, fastScanPdfPages, mergeFilesToPdf, applyPrintAdjustments } from '@/lib/pdf-utils'
 import { useLanguage } from '@/context/LanguageContext'
 import PrintFeedbackBox from '@/components/print/PrintFeedbackBox'
 import { Button } from '@/components/ui/button'
@@ -135,6 +135,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
   const [rotation, setRotation] = useState(0) // 0, 90, 180, 270
   const [brightness, setBrightness] = useState(0) // -50 to 50
   const [contrast, setContrast] = useState(0) // -50 to 50
+  const [printScale, setPrintScale] = useState(100) // 25 to 125, default 100%
   const [showAdjustControls, setShowAdjustControls] = useState(false)
 
   // Print settings
@@ -153,6 +154,8 @@ function PrintOrderPageContent({ initialDeviceId }) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [submitError, setSubmitError] = useState(null)
+  const [termsAccepted, setTermsAccepted] = useState(false)
+  const [termsError, setTermsError] = useState(false)
 
   // Generated Ticket state
   const [ticketOrder, setTicketOrder] = useState(null)
@@ -165,7 +168,15 @@ function PrintOrderPageContent({ initialDeviceId }) {
 
   // Direct step navigation helper for preview/testing
   useEffect(() => {
-    if (searchParams.get('step') === '3') {
+    if (searchParams.get('step') === '2') {
+      const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" viewBox="0 0 600 380"><rect width="600" height="380" rx="20" fill="#0f172a"/><rect x="25" y="25" width="550" height="330" rx="15" fill="#1e293b" stroke="#334155" stroke-width="2"/><circle cx="110" cy="150" r="50" fill="#38bdf8"/><text x="110" y="162" fill="#0f172a" font-size="36" font-weight="bold" text-anchor="middle" font-family="sans-serif">ID</text><text x="190" y="115" fill="#38bdf8" font-size="16" font-weight="bold" font-family="sans-serif">PEOPLES REPUBLIC</text><text x="190" y="145" fill="#ffffff" font-size="20" font-weight="bold" font-family="sans-serif">NATIONAL IDENTITY CARD</text><text x="190" y="185" fill="#cbd5e1" font-size="15" font-family="sans-serif">Name: SHAMSUZZAMAN NUR</text><text x="190" y="215" fill="#cbd5e1" font-size="14" font-family="sans-serif">ID: 1994 2819 0021</text><rect x="190" y="240" width="340" height="12" rx="4" fill="#00bf63"/></svg>`
+      const sampleImg = `data:image/svg+xml;utf8,${encodeURIComponent(sampleSvg)}`
+      setSelectedFile(new File([sampleSvg], 'ID_Card_Sample.svg', { type: 'image/svg+xml' }))
+      setFilePreviewUrl(sampleImg)
+      setTotalPages(1)
+      setServiceType('idCard')
+      setStep(2)
+    } else if (searchParams.get('step') === '3') {
       setSelectedFile(new File(['Sample PrintKoro Document Content'], 'PrintKoro_Sample.pdf', { type: 'application/pdf' }))
       setStep(3)
     } else if (searchParams.get('step') === '4') {
@@ -300,6 +311,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
     setRotation(0)
     setBrightness(0)
     setContrast(0)
+    setPrintScale(100)
     setPdfDoc(null)
     setPdfLibDoc(null)
     setPagePreviewUrls({})
@@ -529,6 +541,12 @@ function PrintOrderPageContent({ initialDeviceId }) {
       return
     }
 
+    if (!termsAccepted) {
+      setTermsError(true)
+      setSubmitError(lang === 'bn' ? 'অর্ডার সম্পন্ন করতে অনুগ্রহ করে ব্যবহারের শর্তাবলী, রিফান্ড ও রিটার্ন নীতি এবং গোপনীয়তা নীতিতে টিক দিয়ে সম্মতি জানান।' : 'Please check the box to accept the Terms & Conditions, Return & Refund Policy, and Privacy Policy to proceed.')
+      return
+    }
+
     setIsSubmitting(true)
     setUploadProgress(15)
     setSubmitError(null)
@@ -537,18 +555,28 @@ function PrintOrderPageContent({ initialDeviceId }) {
       let fileToUpload = selectedFile
       const isPdf = selectedFile.type === 'application/pdf' || selectedFile.name.toLowerCase().endsWith('.pdf')
 
-      // Pre-Upload Instant Slicing:
-      // If customer selected a specific page range (e.g. pages 2-3 of a 300-page 50MB PDF),
-      // slice only those pages right here in the browser before uploading.
-      // This reduces upload from 50MB down to ~250KB (0.5s upload vs 45s upload),
-      // making ticket creation and OTP printing instantaneous.
-      if (isPdf && effectivePageRange) {
+      // Pre-Upload Adjustments: Apply custom Scale (%), Rotation & Page Range slicing
+      // For images (e.g. ID card scans) or scaled PDFs, this compiles a clean A4 PDF
+      // with the content scaled to the exact user-specified dimensions (e.g. 50% for real ID card size).
+      if (printScale !== 100 || rotation !== 0 || (isPdf && effectivePageRange) || !isPdf) {
         setUploadProgress(20)
         try {
-          fileToUpload = await slicePdfBlob(selectedFile, effectivePageRange)
-        } catch (sliceErr) {
-          console.warn('Pre-upload slice notice, uploading original:', sliceErr)
-          fileToUpload = selectedFile
+          fileToUpload = await applyPrintAdjustments(selectedFile, {
+            scale: printScale,
+            rotation: rotation,
+            pageRange: effectivePageRange,
+          })
+        } catch (adjErr) {
+          console.warn('Pre-upload adjustments notice, falling back:', adjErr)
+          if (isPdf && effectivePageRange) {
+            try {
+              fileToUpload = await slicePdfBlob(selectedFile, effectivePageRange)
+            } catch (sliceErr) {
+              fileToUpload = selectedFile
+            }
+          } else {
+            fileToUpload = selectedFile
+          }
         }
       }
 
@@ -1118,17 +1146,33 @@ function PrintOrderPageContent({ initialDeviceId }) {
                           </div>
                         </div>
                       ) : (
-                        /* Standard 1-in-1 Preview */
-                        <img
-                          src={pagePreviewUrls[previewPageIndex] || filePreviewUrl}
-                          alt="Document Preview"
-                          style={{
-                            transform: `rotate(${rotation}deg)`,
-                            filter: `brightness(${100 + brightness}%) contrast(${100 + contrast}%)`,
-                            transition: 'transform 0.15s ease, filter 0.15s ease'
-                          }}
-                          className="max-h-56 max-w-full rounded border object-contain bg-white shadow-sm"
-                        />
+                        /* Standard 1-in-1 Preview with Authentic A4 Sheet Simulation & Scaling */
+                        <div className="w-[190px] h-[268px] bg-white border border-gray-300 rounded shadow-md relative p-2 flex items-center justify-center overflow-hidden transition-all duration-200">
+                          {/* Sheet watermark/badge */}
+                          <div className="absolute top-1.5 left-2 z-10 flex items-center gap-1 pointer-events-none">
+                            <span className="bg-slate-800/80 backdrop-blur-xs text-white text-[8px] font-bold px-1.5 py-0.5 rounded shadow-xs">
+                              A4 Sheet · {printScale}%
+                            </span>
+                          </div>
+
+                          {/* Scaled Printable Document / Card Area */}
+                          <div
+                            style={{
+                              width: `${printScale}%`,
+                              height: `${printScale}%`,
+                              transform: `rotate(${rotation}deg)`,
+                              filter: `brightness(${100 + brightness}%) contrast(${100 + contrast}%)`,
+                              transition: 'width 0.15s ease-out, height 0.15s ease-out, transform 0.15s ease, filter 0.15s ease'
+                            }}
+                            className="flex items-center justify-center relative max-w-full max-h-full"
+                          >
+                            <img
+                              src={pagePreviewUrls[previewPageIndex] || filePreviewUrl}
+                              alt="Document Preview"
+                              className="max-h-full max-w-full object-contain shadow-xs border border-gray-200/60 rounded-xs"
+                            />
+                          </div>
+                        </div>
                       )}
                     </div>
                   ) : (
@@ -1292,12 +1336,123 @@ function PrintOrderPageContent({ initialDeviceId }) {
                           setBrightness(0)
                           setContrast(0)
                           setRotation(0)
+                          setPrintScale(100)
                         }}
                         className="text-[10px] font-bold text-gray-500 hover:text-[#00bf63]"
                       >
                         Reset All Adjustments
                       </button>
                     </div>
+                  </div>
+                )}
+
+                {/* Print Scale (%) Slider & Presets */}
+                {pagesPerSheet === 1 && (
+                  <div className="border border-gray-200 rounded-xl p-3 bg-white mb-3 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5">
+                        <label className="text-xs font-bold text-gray-800 flex items-center gap-1">
+                          📐 {lang === 'bn' ? 'প্রিন্ট স্কেল (আকার)' : 'Print Scale (%)'}
+                        </label>
+                        <span className="text-[10px] text-gray-400 font-normal">
+                          {lang === 'bn' ? '(পাতায় সাইজ নির্ধারণ করুন)' : '(Size on page)'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-extrabold text-[#00bf63] bg-[#00bf63]/10 border border-[#00bf63]/20 px-2 py-0.5 rounded-md font-mono">
+                          {printScale}%
+                        </span>
+                        {printScale !== 100 && (
+                          <button
+                            type="button"
+                            onClick={() => setPrintScale(100)}
+                            className="text-[10px] font-bold text-gray-400 hover:text-gray-700 underline cursor-pointer"
+                          >
+                            {lang === 'bn' ? 'রিসেট' : 'Reset'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Slider */}
+                    <div className="space-y-1 mb-2.5">
+                      <div className="relative flex items-center">
+                        <input
+                          type="range"
+                          min="25"
+                          max="125"
+                          step="1"
+                          value={printScale}
+                          onChange={(e) => setPrintScale(parseInt(e.target.value, 10))}
+                          className="w-full accent-[#00bf63] cursor-pointer h-2 bg-gray-200 rounded-lg appearance-none"
+                          aria-label="Print Scale Percentage"
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] text-gray-400 font-semibold px-0.5">
+                        <span>25% (Mini)</span>
+                        <span>50% (ID Card)</span>
+                        <span>75%</span>
+                        <span>100% (Fit)</span>
+                        <span>125%</span>
+                      </div>
+                    </div>
+
+                    {/* Quick Presets */}
+                    <div className="grid grid-cols-4 gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setPrintScale(100)}
+                        className={`py-1 px-1.5 rounded-lg text-[11px] font-bold border transition-all text-center cursor-pointer ${
+                          printScale === 100
+                            ? 'bg-[#00bf63] text-white border-[#00bf63] shadow-xs'
+                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-[#00bf63]/50'
+                        }`}
+                      >
+                        100% {lang === 'bn' ? '(ফুল পেজ)' : '(Fit)'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPrintScale(75)}
+                        className={`py-1 px-1.5 rounded-lg text-[11px] font-bold border transition-all text-center cursor-pointer ${
+                          printScale === 75
+                            ? 'bg-[#00bf63] text-white border-[#00bf63] shadow-xs'
+                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-[#00bf63]/50'
+                        }`}
+                      >
+                        75%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPrintScale(50)}
+                        className={`py-1 px-1.5 rounded-lg text-[11px] font-bold border transition-all text-center flex items-center justify-center gap-0.5 cursor-pointer ${
+                          printScale === 50
+                            ? 'bg-[#00bf63] text-white border-[#00bf63] shadow-xs'
+                            : 'bg-emerald-50/60 text-emerald-800 border-emerald-200 hover:border-[#00bf63]'
+                        }`}
+                      >
+                        <span>🪪</span> 50% {lang === 'bn' ? '(আইডি)' : '(ID Card)'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPrintScale(35)}
+                        className={`py-1 px-1.5 rounded-lg text-[11px] font-bold border transition-all text-center cursor-pointer ${
+                          printScale === 35
+                            ? 'bg-[#00bf63] text-white border-[#00bf63] shadow-xs'
+                            : 'bg-gray-50 text-gray-700 border-gray-200 hover:border-[#00bf63]/50'
+                        }`}
+                      >
+                        35% {lang === 'bn' ? '(মিনি)' : '(Mini)'}
+                      </button>
+                    </div>
+
+                    {printScale === 50 && (
+                      <p className="mt-2 text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100 flex items-center gap-1 font-medium">
+                        <span>💡</span>
+                        {lang === 'bn'
+                          ? '৫০% স্কেলে আইডি কার্ড বা স্মার্ট কার্ড আসল সাইজে পেজের মাঝে প্রিন্ট হবে।'
+                          : '50% scale prints your ID card or smart card at authentic physical size in the center of the sheet.'}
+                      </p>
+                    )}
                   </div>
                 )}
 
@@ -1672,30 +1827,115 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 </div>
               </div>
 
-              {/* Order Summary Breakdown (Dynamic Pricing) */}
-              <div className="bg-gray-50 rounded-xl p-3.5 space-y-1.5 text-xs text-gray-600 border border-gray-200">
-                <div className="flex justify-between">
-                  <span>{lang === 'bn' ? 'প্রিন্ট ধরণ:' : 'Print Type:'}</span>
+              {/* Order Summary Breakdown (Service Price in BDT - Payment Gateway Compliance) */}
+              <div className="bg-gray-50 rounded-xl p-3.5 space-y-2 text-xs text-gray-600 border border-gray-200">
+                <div className="flex justify-between items-center">
+                  <span>{lang === 'bn' ? 'প্রিন্ট ধরণ ও রেট:' : 'Print Type & Rate:'}</span>
                   <strong className="text-gray-900">
                     {colorMode === 'color'
-                      ? (lang === 'bn' ? 'কালার প্রিন্ট (এক পিঠ)' : 'Full Color (Single-Side)')
+                      ? (lang === 'bn' ? `কালার প্রিন্ট • ৳${toBengaliNumber(unitPrice.toFixed(2))} BDT / পাতা` : `Full Color • ৳${unitPrice.toFixed(2)} BDT / sheet`)
                       : duplex
-                      ? (lang === 'bn' ? 'ব্ল্যাক অ্যান্ড হোয়াইট (উভয় পিঠ)' : 'Black & White (Dual-Side)')
-                      : (lang === 'bn' ? 'ব্ল্যাক অ্যান্ড হোয়াইট (এক পিঠ)' : 'Black & White (Single-Side)')}
+                      ? (lang === 'bn' ? `ব্ল্যাক অ্যান্ড হোয়াইট (উভয় পিঠ) • ৳${toBengaliNumber(unitPrice.toFixed(2))} BDT / পাতা` : `B&W (Dual-Side) • ৳${unitPrice.toFixed(2)} BDT / sheet`)
+                      : (lang === 'bn' ? `ব্ল্যাক অ্যান্ড হোয়াইট (এক পিঠ) • ৳${toBengaliNumber(unitPrice.toFixed(2))} BDT / পাতা` : `B&W (Single-Side) • ৳${unitPrice.toFixed(2)} BDT / sheet`)}
                   </strong>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between items-center">
                   <span>{lang === 'bn' ? 'মোট প্রিন্ট হবে:' : 'Sheets to print:'}</span>
                   <strong className="text-gray-900">
                     {toBengaliNumber(calculatedSheets)} {lang === 'bn' ? 'পাতা' : 'sheets'} × {toBengaliNumber(copies)} {lang === 'bn' ? 'কপি' : 'copies'}
                   </strong>
                 </div>
-                <div className="flex justify-between items-center pt-2 border-t border-gray-200 text-xs">
-                  <b className="text-gray-900">{lang === 'bn' ? 'মূল্য:' : 'Price:'}</b>
-                  <span className="font-bold text-[#00bf63] bg-[#00bf63]/10 px-2 py-0.5 rounded text-[11px]">
-                    {lang === 'bn' ? 'দোকানে প্রদেয় (দোকান অনুযায়ী নির্ধারিত)' : 'Settled at Shop (Dynamic Pricing)'}
-                  </span>
+                {printScale !== 100 && (
+                  <div className="flex justify-between items-center">
+                    <span>{lang === 'bn' ? 'স্কেল (আকার):' : 'Scale (Size):'}</span>
+                    <strong className="text-gray-900 text-[#00bf63] font-bold">
+                      {printScale}% {printScale === 50 ? '(ID Card Size)' : ''}
+                    </strong>
+                  </div>
+                )}
+                <div className="flex justify-between items-center pt-2.5 border-t border-gray-200">
+                  <div>
+                    <b className="text-gray-900 text-xs sm:text-sm block">
+                      {lang === 'bn' ? 'মোট আনুমানিক প্রদেয় মূল্য:' : 'Total Estimated Payable:'}
+                    </b>
+                    <span className="text-[10px] text-gray-500 font-medium block">
+                      {lang === 'bn' ? 'মুদ্রা: বাংলাদেশি টাকা (BDT)' : 'Currency: Bangladeshi Taka (BDT)'}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-base sm:text-lg font-black text-[#00bf63]">
+                      ৳{toBengaliNumber(totalPrice)} <span className="text-xs font-bold text-gray-700">BDT</span>
+                    </span>
+                    <span className="block text-[10px] text-gray-500">
+                      {lang === 'bn' ? 'দোকানে বা অনলাইনে প্রদেয়' : 'Payable at Shop / Online'}
+                    </span>
+                  </div>
                 </div>
+              </div>
+
+              {/* Mandatory Policy Acceptance Checkbox (Payment Gateway Merchant Audit Requirement) */}
+              <div
+                className={`p-3.5 rounded-xl border transition-colors ${
+                  termsError && !termsAccepted ? 'border-red-300 bg-red-50/60' : 'border-gray-200 bg-gray-50/70'
+                }`}
+              >
+                <div className="flex items-start gap-2.5">
+                  <input
+                    type="checkbox"
+                    id="terms-acceptance-checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => {
+                      setTermsAccepted(e.target.checked)
+                      if (e.target.checked) {
+                        setTermsError(false)
+                        setSubmitError(null)
+                      }
+                    }}
+                    className="mt-1 h-4 w-4 rounded border-gray-300 text-[#00bf63] focus:ring-[#00bf63] cursor-pointer accent-[#00bf63]"
+                  />
+                  <label htmlFor="terms-acceptance-checkbox" className="text-xs text-gray-700 leading-relaxed cursor-pointer select-none">
+                    {lang === 'bn' ? (
+                      <>
+                        আমি প্রিন্টকোরোর{' '}
+                        <Link href="/terms" target="_blank" className="font-bold text-[#00bf63] underline hover:text-[#00a656]">
+                          শর্তাবলী (Terms & Conditions)
+                        </Link>
+                        ,{' '}
+                        <Link href="/refund" target="_blank" className="font-bold text-[#00bf63] underline hover:text-[#00a656]">
+                          রিফান্ড ও রিটার্ন নীতি (Return & Refund Policy)
+                        </Link>{' '}
+                        এবং{' '}
+                        <Link href="/privacy" target="_blank" className="font-bold text-[#00bf63] underline hover:text-[#00a656]">
+                          গোপনীয়তা নীতি (Privacy Policy)
+                        </Link>{' '}
+                        পড়েছি এবং এতে পূর্ণ সম্মতি জানাচ্ছি।
+                      </>
+                    ) : (
+                      <>
+                        I have read and agree to the{' '}
+                        <Link href="/terms" target="_blank" className="font-bold text-[#00bf63] underline hover:text-[#00a656]">
+                          Terms & Conditions
+                        </Link>
+                        ,{' '}
+                        <Link href="/refund" target="_blank" className="font-bold text-[#00bf63] underline hover:text-[#00a656]">
+                          Return & Refund Policy
+                        </Link>
+                        , and{' '}
+                        <Link href="/privacy" target="_blank" className="font-bold text-[#00bf63] underline hover:text-[#00a656]">
+                          Privacy Policy
+                        </Link>
+                        .
+                      </>
+                    )}
+                  </label>
+                </div>
+                {termsError && !termsAccepted && (
+                  <p className="text-[11px] text-red-600 font-semibold mt-1.5 ml-6">
+                    {lang === 'bn'
+                      ? '⚠️ অর্ডার নিশ্চিত করতে অনুগ্রহ করে শর্তাবলী ও রিফান্ড নীতিতে টিক দিয়ে সম্মতি জানান।'
+                      : '⚠️ Please check the box to accept the Terms & Conditions and Refund Policy to proceed.'}
+                  </p>
+                )}
               </div>
 
               {/* Upload Progress Bar */}
@@ -1732,9 +1972,10 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 ← Back
               </Button>
               <Button
-                disabled={isSubmitting}
+                disabled={isSubmitting || !termsAccepted}
                 onClick={handleCreateOrder}
-                className="flex-1 bg-[#00bf63] hover:bg-[#00a656] text-white py-5 rounded-xl font-bold text-xs shadow-none cursor-pointer"
+                className="flex-1 bg-[#00bf63] hover:bg-[#00a656] text-white py-5 rounded-xl font-bold text-xs shadow-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                title={!termsAccepted ? (lang === 'bn' ? 'শর্তাবলী মেনে টিক দিন' : 'Please agree to terms to proceed') : undefined}
               >
                 {isSubmitting ? (
                   <>

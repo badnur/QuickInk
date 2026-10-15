@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron')
+const { app, BrowserWindow, ipcMain, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const child_process = require('child_process')
@@ -34,18 +34,27 @@ try {
 
 let mainWindow = null
 
-// In development, watch main.js so edits take effect immediately
+// In development, watch main.js and src directory so edits take effect immediately
 if (!app.isPackaged) {
   try {
     let reloadDebounce = null
-    fs.watch(__filename, () => {
+    const triggerRestart = (target) => {
       clearTimeout(reloadDebounce)
       reloadDebounce = setTimeout(() => {
-        console.log('[Dev] main.js modified, restarting Electron app...')
+        console.log(`[Dev] ${target} modified, restarting Electron app...`)
         app.relaunch()
         app.exit(0)
       }, 300)
-    })
+    }
+
+    fs.watch(__filename, () => triggerRestart('main.js'))
+
+    const srcDir = path.join(__dirname, 'src')
+    if (fs.existsSync(srcDir)) {
+      fs.watch(srcDir, { recursive: true }, (eventType, filename) => {
+        triggerRestart(filename || 'src')
+      })
+    }
   } catch (e) {}
 }
 
@@ -132,6 +141,24 @@ function createWindow() {
     mainWindow.focus()
   })
 
+  // Security: Prevent untrusted popups/windows; route external links to OS default browser
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https:') || url.startsWith('http:')) {
+      shell.openExternal(url).catch(() => {})
+    }
+    return { action: 'deny' }
+  })
+
+  // Security: Prevent in-app navigation away from local file origins
+  mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
+    if (!navigationUrl.startsWith('file://')) {
+      event.preventDefault()
+      if (navigationUrl.startsWith('https:') || navigationUrl.startsWith('http:')) {
+        shell.openExternal(navigationUrl).catch(() => {})
+      }
+    }
+  })
+
   mainWindow.on('closed', () => {
     mainWindow = null
   })
@@ -179,6 +206,23 @@ function parsePageRange(rangeStr, maxPages) {
   return Array.from(indices).sort((a, b) => a - b)
 }
 
+function isSafeDownloadUrl(urlStr) {
+  try {
+    const u = new URL(urlStr)
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return false
+    const host = u.hostname.toLowerCase()
+    // Disallow cloud metadata endpoints & private link-local IPs
+    if (host === '169.254.169.254' || host === 'metadata.google.internal' || host === 'fd00::') return false
+    // Disallow internal RFC1918 private subnets for remote fetch
+    if (/^10\./.test(host) || /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host) || /^192\.168\./.test(host)) {
+      return false
+    }
+    return true
+  } catch (e) {
+    return false
+  }
+}
+
 // Helper: Download a remote file to a local temp file
 async function downloadToTemp(fileUrl, preferredExt = '.pdf') {
   try {
@@ -197,14 +241,25 @@ async function downloadToTemp(fileUrl, preferredExt = '.pdf') {
 
     // 1. If it's already a valid local file on disk
     if (fs.existsSync(resolvedUrl)) {
+      const ext = path.extname(resolvedUrl).toLowerCase()
+      if (!['.pdf', '.png', '.jpg', '.jpeg'].includes(ext)) {
+        throw new Error('Unsupported document format for hardware printing')
+      }
       return resolvedUrl
     }
 
-    // 2. If it's a relative path from local dev server uploads
-    if (resolvedUrl.startsWith('/uploads/')) {
+    // 2. If it's a relative path from local dev server uploads or APIs
+    if (resolvedUrl.startsWith('/uploads/') || resolvedUrl.startsWith('/api/')) {
       const cfg = loadConfig()
       const base = cfg.apiBaseUrl || 'http://localhost:3000'
       resolvedUrl = `${base}${resolvedUrl}`
+    }
+    // 2b. If it's a local:// storage reference
+    else if (resolvedUrl.startsWith('local://')) {
+      const cfg = loadConfig()
+      const base = cfg.apiBaseUrl || 'http://localhost:3000'
+      const fileName = resolvedUrl.replace('local://', '')
+      resolvedUrl = `${base}/api/download/file?name=${encodeURIComponent(fileName)}`
     }
     // 3. If it's a path starting with slash
     else if (resolvedUrl.startsWith('/')) {
@@ -218,6 +273,9 @@ async function downloadToTemp(fileUrl, preferredExt = '.pdf') {
     console.log(`[DownloadToTemp] Fetching document from: ${resolvedUrl}`)
 
     if (resolvedUrl.startsWith('http://') || resolvedUrl.startsWith('https://')) {
+      if (!isSafeDownloadUrl(resolvedUrl)) {
+        throw new Error('Blocked untrusted or private network URL for document download')
+      }
       const response = await fetch(resolvedUrl)
       if (!response.ok) {
         throw new Error(`Failed to download document from storage (HTTP ${response.status})`)
@@ -299,25 +357,64 @@ function registerIpcHandlers() {
     }
   })
 
+// Helper: HTML-escape untrusted strings
+function escapeHtml(str) {
+  if (!str) return ''
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 // Helper: Synchronize Windows Printer Driver settings (monochrome vs color & duplex)
 // Returns true if the driver change was applied successfully, false otherwise.
 async function setPrinterHardwareConfig(printerName, isColor, isDuplex = false) {
   if (process.platform !== 'win32' || !printerName) return false
+  
+  // Security: Strict validation of printerName against injection characters
+  const trimmedName = String(printerName).trim()
+  if (!trimmedName || !/^[\w\s\-\.\(\)\\\/]+$/u.test(trimmedName)) {
+    console.warn(`[PrinterConfig] Rejected invalid printer name: ${printerName}`)
+    return false
+  }
+
   return new Promise((resolve) => {
-    const escapedName = printerName.replace(/"/g, '`"')
-    const colorVal = isColor ? '$true' : '$false'
     const duplexVal = isDuplex ? 'TwoSidedLongEdge' : 'OneSided'
-    const psCmd = `try { Set-PrintConfiguration -PrinterName "${escapedName}" -Color ${colorVal} -DuplexingMode ${duplexVal} -ErrorAction Stop } catch { try { Set-PrintConfiguration -PrinterName "${escapedName}" -Color ${colorVal} -ErrorAction SilentlyContinue } catch {} }`
+    // Security: Parameterized script block prevents PowerShell string interpolation injection
+    const scriptBlock = [
+      'param([string]$name, [string]$clr, [string]$dup)',
+      'try {',
+      '  Set-PrintConfiguration -PrinterName $name -Color ($clr -eq "1") -DuplexingMode $dup -ErrorAction Stop',
+      '} catch {',
+      '  try {',
+      '    Set-PrintConfiguration -PrinterName $name -Color ($clr -eq "1") -ErrorAction SilentlyContinue',
+      '  } catch {}',
+      '}'
+    ].join(' ')
+
     child_process.execFile(
       'powershell.exe',
-      ['-NoProfile', '-NonInteractive', '-Command', psCmd],
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `& { ${scriptBlock} }`,
+        '-name',
+        trimmedName,
+        '-clr',
+        isColor ? '1' : '0',
+        '-dup',
+        duplexVal
+      ],
       { timeout: 5000 },
       (err) => {
         if (err) {
           console.warn(`[PrinterConfig] Set-PrintConfiguration notice: ${err.message}`)
           resolve(false)
         } else {
-          console.log(`[PrinterConfig] Driver config synchronized → "${printerName}" Color=${isColor} Duplex=${duplexVal}`)
+          console.log(`[PrinterConfig] Driver config synchronized → "${trimmedName}" Color=${isColor} Duplex=${duplexVal}`)
           resolve(true)
         }
       }
@@ -757,10 +854,9 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange, nup = 
             <div class="badge">TEST RECEIPT</div>
           </div>
           <p style="font-size: 13px; color: #64748b;">If you can read this document, your physical printer is communicating with PrintKoro.</p>
-          <div class="divider"></div>
-          <div class="kv-row"><span>TERMINAL:</span> <b>${printerName}</b></div>
+          <div class="kv-row"><span>TERMINAL:</span> <b>${escapeHtml(printerName)}</b></div>
           <div class="kv-row"><span>MODE:</span> <b>${mode === 'color' ? 'Color Driver' : 'Monochrome (B&W)'}</b></div>
-          <div class="kv-row"><span>TIMESTAMP:</span> <b>${new Date().toLocaleString()}</b></div>
+          <div class="kv-row"><span>TIMESTAMP:</span> <b>${escapeHtml(new Date().toLocaleString())}</b></div>
           <div class="divider"></div>
           <div class="footer">PrintKoro Smart Cloud Print POS</div>
         </body>

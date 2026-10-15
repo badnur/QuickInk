@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Mail, Phone, MapPin, MessageSquare, CheckCircle, AlertCircle, Clock, Send } from 'lucide-react'
+import { Mail, Phone, MapPin, MessageSquare, CheckCircle, AlertCircle, Clock, Send, Building2, ShieldCheck } from 'lucide-react'
 import Link from 'next/link'
 import { useLanguage } from '@/context/LanguageContext'
 
@@ -160,6 +160,25 @@ export default function ContactPage() {
                     <h3 className="text-sm font-bold text-gray-900">{t('contactPage.hqTitle', 'HQ Office')}</h3>
                     <p className="text-xs text-gray-600">{t('contactPage.hqAddress', 'Bagha, Rajshahi, Bangladesh')}</p>
                   </div>
+                </div>
+              </div>
+
+              {/* Trade License & Corporate Card */}
+              <div className="border border-emerald-500/20 bg-emerald-50/40 rounded-xl p-5 shadow-none">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-10 h-10 rounded-lg bg-[#00bf63]/10 text-[#00bf63] flex items-center justify-center">
+                    <Building2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-gray-900">QuickInk Technologies</h3>
+                    <p className="text-[11px] text-gray-500">Brand: PrintKoro</p>
+                  </div>
+                </div>
+                <div className="mt-2 pt-2 border-t border-emerald-100/80 flex items-center justify-between text-xs">
+                  <span className="text-gray-600 font-semibold">{lang === 'bn' ? 'ট্রেড লাইসেন্স নং:' : 'Trade License No:'}</span>
+                  <span className="font-mono font-bold text-emerald-800 bg-white px-2 py-0.5 rounded border border-emerald-200">
+                    TRAD/RAJ/2024/00184
+                  </span>
                 </div>
               </div>
             </div>

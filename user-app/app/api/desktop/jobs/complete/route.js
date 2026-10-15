@@ -23,6 +23,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'jobId and deviceId are required' }, { status: 400 })
     }
 
+    if (!/^[0-9a-fA-F-]{8,64}$/.test(deviceId) || !/^[0-9a-fA-F-]{8,64}$/.test(jobId)) {
+      return NextResponse.json({ error: 'Invalid device or job identifier format' }, { status: 400 })
+    }
+
     // 1. IF PRINT FAILED AT HARDWARE LEVEL (Paper jam, printer offline, spooler timeout, user canceled):
     // Zero credits are cut! We update the job note and return zero deduction confirmation.
     if (!hardwareSuccess) {
@@ -94,8 +98,16 @@ export async function POST(request) {
     if (!dev) {
       return NextResponse.json({ error: 'Device not found' }, { status: 404 })
     }
+    if (dev.status === 'suspended' || dev.status === 'cancelled') {
+      return NextResponse.json({ error: 'Device partnership is suspended' }, { status: 403 })
+    }
     if (!job) {
       return NextResponse.json({ error: 'Print job not found' }, { status: 404 })
+    }
+
+    // Security: Ensure job is in a valid state to be completed
+    if (job.redeemed_by_device_id && job.redeemed_by_device_id !== deviceId) {
+      return NextResponse.json({ error: 'Unauthorized: This job was redeemed by another terminal' }, { status: 403 })
     }
 
     // Check if already completed
@@ -108,6 +120,10 @@ export async function POST(request) {
         newBalance: currentBal,
         message: 'Job was already confirmed completed.'
       })
+    }
+
+    if (job.status !== 'redeemed' && job.status !== 'pending') {
+      return NextResponse.json({ error: `Cannot complete job in status: ${job.status}` }, { status: 400 })
     }
 
     // Calculate dynamic pricing based on shop's assigned tier
@@ -174,7 +190,7 @@ export async function POST(request) {
       message: `Print completed successfully. ${creditCost} credits deducted based on your active rate.`,
     })
   } catch (err) {
-    console.error('Job complete endpoint error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[JobsComplete] Endpoint error:', err)
+    return NextResponse.json({ error: 'Failed to complete job.' }, { status: 500 })
   }
 }

@@ -316,8 +316,11 @@ export default function HomePage() {
               <h3 className="text-xl font-bold text-gray-950 mb-1">{t('pricing.bwTitle')}</h3>
               <p className="text-xs text-gray-500 mb-5">{t('pricing.bwDesc')}</p>
               
-              <div className="mb-6 flex items-baseline gap-1">
+              <div className="mb-6 flex items-baseline gap-1.5">
                 <span className="text-4xl sm:text-5xl font-black text-gray-950">{toBengaliNumber(t('pricing.bwPrice'))}</span>
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                  BDT
+                </span>
                 <span className="text-xs text-gray-500 font-medium">/ {t('pricing.bwUnit')}</span>
               </div>
 
@@ -342,8 +345,11 @@ export default function HomePage() {
               <h3 className="text-xl font-bold text-gray-950 mb-1">{t('pricing.colorTitle')}</h3>
               <p className="text-xs text-gray-500 mb-5">{t('pricing.colorDesc')}</p>
               
-              <div className="mb-6 flex items-baseline gap-1">
+              <div className="mb-6 flex items-baseline gap-1.5">
                 <span className="text-4xl sm:text-5xl font-black text-gray-950">{toBengaliNumber(t('pricing.colorPrice'))}</span>
+                <span className="text-[11px] font-bold text-emerald-800 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                  BDT
+                </span>
                 <span className="text-xs text-gray-500 font-medium">/ {t('pricing.colorUnit')}</span>
               </div>
 
@@ -362,6 +368,21 @@ export default function HomePage() {
                 </Button>
               </Link>
             </Card>
+          </div>
+
+          {/* Currency & Payment Gateway Compliance Footer */}
+          <div className="mt-8 text-center text-xs text-gray-500 flex flex-wrap items-center justify-center gap-2 sm:gap-4">
+            <span className="font-semibold text-gray-700">
+              {lang === 'bn' ? '✓ সকল মূল্য বাংলাদেশি টাকায় (BDT) নির্ধারিত' : '✓ All service pricing officially denominated in BDT'}
+            </span>
+            <span>•</span>
+            <span>
+              {lang === 'bn' ? 'বিকাশ, নগদ, রকেট ও ভিসা/মাস্টারকার্ড সমর্থিত' : 'bKash, Nagad, Rocket & Cards Supported'}
+            </span>
+            <span>•</span>
+            <Link href="/refund" className="text-emerald-700 font-semibold hover:underline">
+              {lang === 'bn' ? '১০০% রিফান্ড গ্যারান্টি' : '100% Refund Guarantee'}
+            </Link>
           </div>
         </div>
       </section>

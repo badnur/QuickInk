@@ -48,6 +48,7 @@ const state = {
   account: null, // Logged in shop owner profile
   regDraft: {
     type: 'shop',
+    zone: 'campus',
     name: '',
     shop_name: '',
     phone: '',
@@ -78,7 +79,7 @@ const state = {
 }
 
 // Check if running inside Electron desktop container (PrintKoro Desktop)
-const desktopAPI = window.printkoroDesktop || desktopAPI
+const desktopAPI = typeof window !== 'undefined' ? (window.printkoroDesktop || window.quickinkDesktop || null) : null
 const isElectron = Boolean(desktopAPI)
 
 // Account persistence with backward compatibility
@@ -160,7 +161,6 @@ function phonesMatch(p1, p2) {
 const PrintKoroCloud = {
   SUPABASE_URL: 'https://xhzfrmpbhasnipirccnt.supabase.co',
   SUPABASE_KEY: 'sb_publishable_5QRgqfQTgNnpH3PN2wfz1g_4wwy5k8I',
-  SMS_API_KEY: '42fc1e917497409da3d3ffc7622e566e',
   ADMIN_CONTACT: { phone: '01733398911', email: 'help@printkoro.com' },
 
   otpCache: new Map(),
@@ -180,12 +180,15 @@ const PrintKoroCloud = {
   async login(phone, password) {
     const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
     const [devRes, partRes] = await Promise.all([
-      this.rest('devices?select=*'),
-      this.rest('partners?select=*')
+      this.rest(`devices?location->>phone=eq.${cleanPhone}`),
+      this.rest(`partners?phone=eq.${cleanPhone}`)
     ])
-    if (!devRes.ok) throw new Error('Could not connect to PrintKoro cloud database')
-    const devices = await devRes.json()
+    let devices = devRes.ok ? await devRes.json() : []
     const partners = partRes.ok ? await partRes.json() : []
+    if (devices.length === 0) {
+      const altRes = await this.rest(`devices?location->>phone=eq.880${cleanPhone.replace(/^0+/, '')}`)
+      if (altRes.ok) devices = await altRes.json()
+    }
 
     const matchingDevs = (devices || []).filter(d => phonesMatch(d.location?.phone, cleanPhone))
     matchingDevs.sort((a, b) => {
@@ -203,7 +206,7 @@ const PrintKoroCloud = {
         this.rest(`devices?id=eq.${candidateDev.id}`, {
           method: 'PATCH',
           body: JSON.stringify({ location: updLoc })
-        }).catch(() => {})
+        }).catch(() => { })
       }
     }
 
@@ -286,7 +289,7 @@ const PrintKoroCloud = {
     this.rest(`devices?id=eq.${candidateDev.id}`, {
       method: 'PATCH',
       body: JSON.stringify({ status: 'online' })
-    }).catch(() => {})
+    }).catch(() => { })
 
     return {
       ok: true,
@@ -452,10 +455,6 @@ const PrintKoroCloud = {
     const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
     const code = Math.floor(100000 + Math.random() * 900000).toString()
     this.otpCache.set(cleanPhone, { code, expiresAt: Date.now() + 10 * 60 * 1000 })
-
-    const msg = encodeURIComponent(`Your PrintKoro verification code is: ${code}. Valid for 10 minutes.`)
-    const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${this.SMS_API_KEY}&number=${cleanPhone}&message=${msg}`
-    fetch(smsUrl).catch(() => {})
     return { ok: true, data: { success: true, message: `Verification code sent to ${cleanPhone}`, phone: cleanPhone } }
   },
 
@@ -520,7 +519,7 @@ const PrintKoroCloud = {
         location: draft.location,
         status: 'pending'
       })
-    }).catch(() => {})
+    }).catch(() => { })
 
     const newAccount = {
       id: devData?.id || `dev-${Date.now()}`,
@@ -594,14 +593,15 @@ const PrintKoroCloud = {
       }
 
       if (transactions.length === 0 && creditsBalance > 0) {
+        const welcomePackageSize = Math.max(10000, Math.ceil(creditsBalance / 10000) * 10000)
         transactions = [
           {
             id: 'welcome-init',
             device_id: deviceId,
-            amount: creditsBalance,
+            amount: welcomePackageSize,
             balance_after: creditsBalance,
             type: 'welcome_bonus',
-            description: `PrintKoro Partner Welcome Gift: ${creditsBalance.toLocaleString()} Free Credits upon registration approval`,
+            description: `PrintKoro Partner Welcome Gift: ${welcomePackageSize.toLocaleString()} Free Credits upon registration approval`,
             created_at: dev.location?.approved_at || dev.created_at || new Date().toISOString()
           }
         ]
@@ -653,7 +653,7 @@ const PrintKoroCloud = {
         const rpcData = await rpcRes.json()
         return { ok: true, data: { success: true, creditsAdded: creditsToAdd, newBalance: rpcData?.balance || creditsToAdd } }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Direct fallback
     const devRes = await this.rest(`devices?id=eq.${deviceId}`)
@@ -711,7 +711,7 @@ const PrintKoroCloud = {
         const rpcData = await rpcRes.json()
         return { ok: true, data: rpcData }
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // Direct fallback
     const [devRes, jobRes] = await Promise.all([
@@ -866,6 +866,7 @@ const el = {
   headerOwnerName: document.getElementById('header-owner-name'),
   btnAccountToggle: document.getElementById('btn-account-toggle'),
   btnAccountLabel: document.getElementById('btn-account-label'),
+  accountProfileBadge: document.getElementById('account-profile-badge'),
 
   // Auto-Updater UI & Home Update Center
   updateBanner: document.getElementById('update-banner'),
@@ -877,7 +878,32 @@ const el = {
   btnUpdateRestart: document.getElementById('btn-update-restart'),
   btnUpdateDismiss: document.getElementById('btn-update-dismiss'),
 
-  // Home Page Live Software Update Center
+  // Sidebar Update Button & Progress in Bottom Left Corner
+  sidebarUpdateWidget: document.getElementById('sidebar-update-widget'),
+  btnSidebarUpdate: document.getElementById('btn-sidebar-update'),
+  sidebarUpdateText: document.getElementById('sidebar-update-text'),
+  sidebarUpdateBadge: document.getElementById('sidebar-update-badge'),
+  sidebarUpdateIcon: document.getElementById('sidebar-update-icon'),
+  sidebarUpdateProgressWrap: document.getElementById('sidebar-update-progress-wrap'),
+  sidebarUpdateProgressFill: document.getElementById('sidebar-update-progress-fill'),
+  sidebarUpdateProgressText: document.getElementById('sidebar-update-progress-text'),
+  sidebarUpdateSpeed: document.getElementById('sidebar-update-speed'),
+  btnSidebarRestart: document.getElementById('btn-sidebar-restart'),
+  sidebarUpdateStatusNote: document.getElementById('sidebar-update-status-note'),
+  sidebarUpdateStatusText: document.getElementById('sidebar-update-status-text'),
+
+  // Sidebar Language & Theme Elements
+  btnLangEn: document.getElementById('btn-lang-en'),
+  btnLangBn: document.getElementById('btn-lang-bn'),
+  langSegIndicator: document.getElementById('lang-seg-indicator'),
+  navTextKeypad: document.getElementById('nav-text-keypad'),
+  navTextPrinters: document.getElementById('nav-text-printers'),
+  navTextQueue: document.getElementById('nav-text-queue'),
+  navTextEarnings: document.getElementById('nav-text-earnings'),
+  lblThemeLight: document.getElementById('lbl-theme-light'),
+  lblThemeDark: document.getElementById('lbl-theme-dark'),
+
+  // Home Page Live Software Update Center (Backward compatibility)
   homeUpdateCard: document.getElementById('home-update-card'),
   homeUpdateStatusPill: document.getElementById('home-update-status-pill'),
   homeUpdatePillText: document.getElementById('home-update-pill-text'),
@@ -1056,6 +1082,7 @@ const el = {
   regPhone: document.getElementById('reg-phone'),
   regOperatingHours: document.getElementById('reg-operating-hours'),
   regLocation: document.getElementById('reg-location'),
+  regZone: document.getElementById('reg-zone'),
   regLogoInput: document.getElementById('reg-logo-input'),
   btnBrowseLogo: document.getElementById('btn-browse-logo'),
   logoPreviewImg: document.getElementById('logo-preview-img'),
@@ -1196,6 +1223,8 @@ const el = {
 // INITIALIZATION
 // =============================================================================
 async function init() {
+  setupThemeSystem()
+  setupLanguageSystem()
   setupClock()
   setupTabNavigation()
   setupOtpKeypad()
@@ -1204,6 +1233,7 @@ async function init() {
   setupAutoUpdaterClient()
   setupServerSettingsModal()
   setupSubscriptionSystem()
+  setupProfilePageListeners()
 
   // Load configuration and native printers
   await loadAppConfig()
@@ -1234,9 +1264,94 @@ async function init() {
   })
 }
 
+// =============================================================================
+// APPLE-STYLE SEGMENTED THEME SYSTEM (LIGHT & DARK MODE + SYSTEM SYNC)
+// =============================================================================
+function setupThemeSystem() {
+  const btnLight = document.getElementById('btn-theme-light')
+  const btnDark = document.getElementById('btn-theme-dark')
+  const segIndicator = document.getElementById('theme-seg-indicator')
+  const brandLogo = document.getElementById('sidebar-brand-logo')
+  const mediaQuery = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)')
+
+  const getSystemTheme = () => (mediaQuery && mediaQuery.matches ? 'dark' : 'light')
+
+  const applyTheme = (theme) => {
+    const isDark = theme === 'dark'
+
+    document.documentElement.setAttribute('data-theme', theme)
+    document.documentElement.classList.remove('theme-light', 'theme-dark')
+    document.documentElement.classList.add(isDark ? 'theme-dark' : 'theme-light')
+
+    if (document.body) {
+      document.body.classList.remove('theme-light', 'theme-dark')
+      document.body.classList.add(isDark ? 'theme-dark' : 'theme-light')
+    }
+
+    // Switch sidebar brand logo for contrast
+    if (brandLogo) {
+      brandLogo.src = isDark ? 'assets/printkoro-logo-dark.png' : 'assets/printkoro-logo.png'
+    }
+
+    // Update Segmented Pill Indicator & Buttons
+    if (isDark) {
+      btnDark?.classList.add('active')
+      btnDark?.setAttribute('aria-checked', 'true')
+      btnLight?.classList.remove('active')
+      btnLight?.setAttribute('aria-checked', 'false')
+      if (segIndicator) segIndicator.style.transform = 'translateX(100%)'
+    } else {
+      btnLight?.classList.add('active')
+      btnLight?.setAttribute('aria-checked', 'true')
+      btnDark?.classList.remove('active')
+      btnDark?.setAttribute('aria-checked', 'false')
+      if (segIndicator) segIndicator.style.transform = 'translateX(0%)'
+    }
+  }
+
+  // Determine initial theme
+  const savedTheme = localStorage.getItem('pk_desktop_theme')
+  if (savedTheme === 'light' || savedTheme === 'dark') {
+    applyTheme(savedTheme)
+  } else {
+    applyTheme(getSystemTheme())
+  }
+
+  // Listen for OS system theme changes
+  const handleSystemChange = (e) => {
+    const currentSaved = localStorage.getItem('pk_desktop_theme')
+    if (!currentSaved) {
+      applyTheme(e.matches ? 'dark' : 'light')
+    }
+  }
+
+  if (mediaQuery) {
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', handleSystemChange)
+    } else if (mediaQuery.addListener) {
+      mediaQuery.addListener(handleSystemChange)
+    }
+  }
+
+  // Event handlers
+  btnLight?.addEventListener('click', (e) => {
+    e.stopPropagation()
+    localStorage.setItem('pk_desktop_theme', 'light')
+    applyTheme('light')
+  })
+
+  btnDark?.addEventListener('click', (e) => {
+    e.stopPropagation()
+    localStorage.setItem('pk_desktop_theme', 'dark')
+    applyTheme('dark')
+  })
+}
+
 // Digital Clock
 function setupClock() {
+  if (!el.clockDisplay) return
   const update = () => {
+    if (!el.clockDisplay) return
     const now = new Date()
     el.clockDisplay.textContent = now.toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -1266,6 +1381,7 @@ function setupTabNavigation() {
       const targetId = tab.getAttribute('data-tab')
       el.navTabs.forEach((t) => t.classList.remove('active'))
       el.tabPanels.forEach((p) => p.classList.remove('active'))
+      el.accountProfileBadge?.classList.remove('active')
 
       tab.classList.add('active')
       document.getElementById(targetId)?.classList.add('active')
@@ -1280,39 +1396,139 @@ function setupTabNavigation() {
 }
 
 // =============================================================================
-// AUTO-UPDATER & HOME UPDATE CENTER CLIENT
+// APPLE-STYLE DUAL-LANGUAGE LOCALIZATION SYSTEM (ENGLISH & BANGLA)
+// =============================================================================
+const DESKTOP_TRANSLATIONS = {
+  en: {
+    navKeypad: 'OTP Keypad & Print',
+    navPrinters: 'Printers Setup',
+    navQueue: 'Queue & History',
+    navEarnings: "Today's Earnings",
+    stationProfile: 'Station Profile',
+    light: 'Light',
+    dark: 'Dark',
+    updateCheck: 'Check for Updates',
+    updateChecking: 'Checking...',
+    updateUpToDate: 'Up to Date',
+    updateAvailable: 'Update Available',
+    updateRestart: 'Restart & Apply Update',
+    keypadHeader: 'Enter 6-Digit Numerical OTP',
+    keypadSub: 'Type or tap the 6-digit code provided to the customer after document upload.',
+    verifyBtn: 'Verify & Fetch Print Job',
+    clearBtn: 'Clear',
+    backspaceBtn: 'Delete',
+  },
+  bn: {
+    navKeypad: 'ওটিপি কিপ্যাড ও প্রিন্ট',
+    navPrinters: 'প্রিন্টার সেটআপ',
+    navQueue: 'কিউ ও ইতিহাস',
+    navEarnings: 'আজকের আয়',
+    stationProfile: 'স্টেশন প্রোফাইল',
+    light: 'লাইট',
+    dark: 'ডার্ক',
+    updateCheck: 'আপডেট চেক করুন',
+    updateChecking: 'চেক হচ্ছে...',
+    updateUpToDate: 'আপডেট সম্পন্ন',
+    updateAvailable: 'নতুন আপডেট প্রাপ্ত',
+    updateRestart: 'রিস্টার্ট ও আপডেট প্রয়োগ',
+    keypadHeader: '৬-ডিজিটের ওটিপি কোড দিন',
+    keypadSub: 'গ্রাহকের আপলোডকৃত ডকুমেন্টের ৬ ডিজিট ওটিপি কোডটি টাইপ বা স্পর্শ করুন।',
+    verifyBtn: 'যাচাই ও প্রিন্ট জব আনুন',
+    clearBtn: 'মুছুন',
+    backspaceBtn: 'ব্যাকস্পেস',
+  }
+}
+
+let currentDesktopLang = 'en'
+
+function applyDesktopLanguage(lang) {
+  if (lang !== 'en' && lang !== 'bn') lang = 'en'
+  currentDesktopLang = lang
+  try {
+    localStorage.setItem('pk_desktop_lang', lang)
+  } catch (e) {}
+
+  document.documentElement.setAttribute('data-lang', lang)
+  document.documentElement.lang = lang
+
+  const t = DESKTOP_TRANSLATIONS[lang] || DESKTOP_TRANSLATIONS.en
+
+  // Update Nav Tab Texts
+  if (el.navTextKeypad) el.navTextKeypad.textContent = t.navKeypad
+  if (el.navTextPrinters) el.navTextPrinters.textContent = t.navPrinters
+  if (el.navTextQueue) el.navTextQueue.textContent = t.navQueue
+  if (el.navTextEarnings) el.navTextEarnings.textContent = t.navEarnings
+  if (el.btnAccountLabel) el.btnAccountLabel.textContent = t.stationProfile
+
+  // Update Appearance labels
+  if (el.lblThemeLight) el.lblThemeLight.textContent = t.light
+  if (el.lblThemeDark) el.lblThemeDark.textContent = t.dark
+
+  // Update Update Button text if in default or up-to-date state
+  if (el.sidebarUpdateText && !el.sidebarUpdateWidget?.classList.contains('downloading')) {
+    if (el.sidebarUpdateWidget?.classList.contains('up-to-date')) {
+      el.sidebarUpdateText.textContent = t.updateUpToDate
+    } else if (el.sidebarUpdateWidget?.classList.contains('has-update')) {
+      el.sidebarUpdateText.textContent = t.updateAvailable
+    } else {
+      el.sidebarUpdateText.textContent = t.updateCheck
+    }
+  }
+
+  // Update Segmented Pill Indicator & Buttons
+  if (lang === 'bn') {
+    el.btnLangBn?.classList.add('active')
+    el.btnLangBn?.setAttribute('aria-checked', 'true')
+    el.btnLangEn?.classList.remove('active')
+    el.btnLangEn?.setAttribute('aria-checked', 'false')
+    if (el.langSegIndicator) el.langSegIndicator.style.transform = 'translateX(100%)'
+  } else {
+    el.btnLangEn?.classList.add('active')
+    el.btnLangEn?.setAttribute('aria-checked', 'true')
+    el.btnLangBn?.classList.remove('active')
+    el.btnLangBn?.setAttribute('aria-checked', 'false')
+    if (el.langSegIndicator) el.langSegIndicator.style.transform = 'translateX(0%)'
+  }
+}
+
+function setupLanguageSystem() {
+  const savedLang = localStorage.getItem('pk_desktop_lang') || 'en'
+  applyDesktopLanguage(savedLang)
+
+  el.btnLangEn?.addEventListener('click', () => applyDesktopLanguage('en'))
+  el.btnLangBn?.addEventListener('click', () => applyDesktopLanguage('bn'))
+}
+
+// =============================================================================
+// AUTO-UPDATER & HOME / SIDEBAR UPDATE CLIENT
 // =============================================================================
 function setupAutoUpdaterClient() {
-  // Helper to format timestamp
   const getNowFormattedTime = () => {
     return 'Today at ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   }
 
-  // 1. Fetch & display app version on home page and headers
+  // 1. Fetch & display installed version
+  const updateVersionBadge = (ver) => {
+    if (el.sidebarUpdateBadge) el.sidebarUpdateBadge.textContent = `v${ver}`
+    if (el.homeCurrentVersion) el.homeCurrentVersion.textContent = `v${ver}`
+    if (el.homeLatestVersion) el.homeLatestVersion.textContent = `v${ver} (Latest)`
+    if (el.homeReleaseTag) el.homeReleaseTag.textContent = `v${ver} Stable`
+  }
+
   if (isElectron && desktopAPI?.getVersion) {
     desktopAPI.getVersion().then((ver) => {
-      if (ver) {
-        if (el.homeCurrentVersion) el.homeCurrentVersion.textContent = `v${ver}`
-        if (el.homeLatestVersion) el.homeLatestVersion.textContent = `v${ver} (Latest)`
-        if (el.homeReleaseTag) el.homeReleaseTag.textContent = `v${ver} Stable`
-      }
-    }).catch(() => { })
+      if (ver) updateVersionBadge(ver)
+    }).catch(() => {})
   } else {
-    if (el.homeCurrentVersion) el.homeCurrentVersion.textContent = 'v1.0.0'
-    if (el.homeLatestVersion) el.homeLatestVersion.textContent = 'v1.0.0 (Web Mode)'
+    updateVersionBadge('1.2.2')
   }
 
-  // Set initial last checked label
-  if (el.homeLastCheckedTime) {
-    el.homeLastCheckedTime.textContent = 'Last checked: Just now'
-  }
-
-  // 2. Dismiss top banner button
+  // 2. Dismiss top banner
   el.btnUpdateDismiss?.addEventListener('click', () => {
     el.updateBanner?.classList.add('hidden')
   })
 
-  // 3. Restart & Update button handlers (Both banner & Home page card)
+  // 3. Restart & Update handlers (both top banner & sidebar button)
   const triggerRestartAndInstall = () => {
     if (isElectron && desktopAPI?.restartForUpdate) {
       desktopAPI.restartForUpdate()
@@ -1321,24 +1537,18 @@ function setupAutoUpdaterClient() {
     }
   }
   el.btnUpdateRestart?.addEventListener('click', triggerRestartAndInstall)
+  el.btnSidebarRestart?.addEventListener('click', triggerRestartAndInstall)
   el.btnHomeRestartUpdate?.addEventListener('click', triggerRestartAndInstall)
 
-  // 4. Interactive "Check for Updates" button on Home Page
-  el.btnHomeCheckUpdate?.addEventListener('click', async () => {
-    if (el.btnHomeCheckUpdate) {
-      el.btnHomeCheckUpdate.disabled = true
-      if (el.homeCheckBtnText) el.homeCheckBtnText.textContent = 'Checking...'
-      if (el.homeCheckSpinner) el.homeCheckSpinner.classList.remove('hidden')
+  // 4. Interactive "Check for Updates" button on Bottom Left Sidebar
+  const handleCheckForUpdates = async () => {
+    if (el.btnSidebarUpdate) {
+      el.btnSidebarUpdate.disabled = true
+      el.btnSidebarUpdate.classList.add('is-checking')
     }
-
-    if (el.homeUpdateStatusPill) {
-      el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🔄</span><span>Checking...</span>'
-      el.homeUpdateStatusPill.style.borderColor = 'rgba(56, 189, 248, 0.4)'
-      el.homeUpdateStatusPill.style.color = '#38bdf8'
-    }
-
-    if (el.homeUpdateMsgText) {
-      el.homeUpdateMsgText.textContent = 'Querying PrintKoro GitHub releases for updates...'
+    if (el.sidebarUpdateIcon) el.sidebarUpdateIcon.classList.add('spin')
+    if (el.sidebarUpdateText) {
+      el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? 'চেক হচ্ছে...' : 'Checking...'
     }
 
     try {
@@ -1346,155 +1556,110 @@ function setupAutoUpdaterClient() {
         const res = await desktopAPI.checkForUpdates()
         if (res?.success) {
           if (res.isLatest) {
-            if (el.homeUpdateStatusPill) {
-              el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🟢</span><span>Up to Date</span>'
-              el.homeUpdateStatusPill.style.borderColor = 'rgba(16, 185, 129, 0.3)'
-              el.homeUpdateStatusPill.style.color = '#34d399'
+            if (el.sidebarUpdateText) {
+              el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? 'আপডেট সম্পন্ন' : 'Up to Date'
             }
-            if (el.homeUpdateMsgText) {
-              el.homeUpdateMsgText.textContent = `PrintKoro Station is up to date (v${res.version || '1.0.0'}). All systems, print spoolers, and credit modules are current.`
-            }
-            if (el.homeLatestVersion) el.homeLatestVersion.textContent = `v${res.version || '1.0.0'} (Latest)`
+            if (el.sidebarUpdateWidget) el.sidebarUpdateWidget.classList.add('up-to-date')
+            setTimeout(() => {
+              if (el.sidebarUpdateWidget) el.sidebarUpdateWidget.classList.remove('up-to-date')
+              if (el.sidebarUpdateText) {
+                el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? 'আপডেট চেক করুন' : 'Check for Updates'
+              }
+            }, 4000)
           } else {
-            if (el.homeUpdateStatusPill) {
-              el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">✨</span><span>Update Available</span>'
-              el.homeUpdateStatusPill.style.borderColor = 'rgba(245, 158, 11, 0.5)'
-              el.homeUpdateStatusPill.style.color = '#f59e0b'
+            // New release found
+            if (el.sidebarUpdateText) {
+              el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? `নতুন v${res.version || ''} প্রাপ্ত` : `Update v${res.version || ''} Available`
             }
-            if (el.homeLatestVersion) el.homeLatestVersion.textContent = `v${res.version || ''} (New Release)`
-            if (el.homeUpdateMsgText) {
-              el.homeUpdateMsgText.textContent = `New version v${res.version} found! Background download initiated.`
-            }
-            if (el.homeUpdateProgressWrap) el.homeUpdateProgressWrap.classList.remove('hidden')
+            if (el.btnSidebarUpdate) el.btnSidebarUpdate.classList.add('has-update')
+            if (el.sidebarUpdateProgressWrap) el.sidebarUpdateProgressWrap.classList.remove('hidden')
           }
         } else {
-          if (el.homeUpdateMsgText) {
-            el.homeUpdateMsgText.textContent = res?.error || 'Unable to contact update server. Station is running offline normally.'
+          if (el.sidebarUpdateStatusNote) {
+            el.sidebarUpdateStatusNote.classList.remove('hidden')
+            if (el.sidebarUpdateStatusText) el.sidebarUpdateStatusText.textContent = res?.error || 'Offline / Server unreachable'
+            setTimeout(() => el.sidebarUpdateStatusNote?.classList.add('hidden'), 5000)
           }
         }
       } else {
         // Web preview simulation
-        await new Promise(r => setTimeout(r, 700))
-        if (el.homeUpdateStatusPill) {
-          el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🟢</span><span>Up to Date</span>'
-          el.homeUpdateStatusPill.style.borderColor = 'rgba(16, 185, 129, 0.3)'
-          el.homeUpdateStatusPill.style.color = '#34d399'
+        await new Promise((r) => setTimeout(r, 600))
+        if (el.sidebarUpdateText) {
+          el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? 'আপডেট সম্পন্ন' : 'Up to Date'
         }
-        if (el.homeUpdateMsgText) {
-          el.homeUpdateMsgText.textContent = 'PrintKoro Station v1.0.0 is current. (Running in Web Preview mode; in production, updates download automatically from GitHub Releases).'
-        }
+        setTimeout(() => {
+          if (el.sidebarUpdateText) {
+            el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? 'আপডেট চেক করুন' : 'Check for Updates'
+          }
+        }, 3000)
       }
-
-      if (el.homeLastCheckedTime) {
-        el.homeLastCheckedTime.textContent = `Last checked: ${getNowFormattedTime()}`
-      }
-    } catch (e) {
-      console.warn('Update check error:', e)
-      if (el.homeUpdateMsgText) {
-        el.homeUpdateMsgText.textContent = 'Check failed. Please ensure your internet connection is active.'
-      }
+    } catch (err) {
+      console.warn('Update check exception:', err)
     } finally {
       setTimeout(() => {
-        if (el.btnHomeCheckUpdate) {
-          el.btnHomeCheckUpdate.disabled = false
-          if (el.homeCheckBtnText) el.homeCheckBtnText.textContent = 'Check for Updates'
-          if (el.homeCheckSpinner) el.homeCheckSpinner.classList.add('hidden')
+        if (el.btnSidebarUpdate) {
+          el.btnSidebarUpdate.disabled = false
+          el.btnSidebarUpdate.classList.remove('is-checking')
         }
-      }, 1000)
+        if (el.sidebarUpdateIcon) el.sidebarUpdateIcon.classList.remove('spin')
+      }, 800)
     }
-  })
+  }
 
-  // 5. Listen for updates from Electron main process
+  el.btnSidebarUpdate?.addEventListener('click', handleCheckForUpdates)
+  el.btnHomeCheckUpdate?.addEventListener('click', handleCheckForUpdates)
+
+  // 5. Electron Background Update Status Stream
   if (isElectron && desktopAPI?.onUpdateStatus) {
     desktopAPI.onUpdateStatus((data) => {
       console.log('[Updater Client] Status received:', data)
       const { status } = data
 
       if (status === 'checking') {
-        if (el.homeUpdateStatusPill) {
-          el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🔄</span><span>Checking...</span>'
-          el.homeUpdateStatusPill.style.borderColor = 'rgba(56, 189, 248, 0.4)'
-          el.homeUpdateStatusPill.style.color = '#38bdf8'
-        }
-        if (el.homeUpdateMsgText) {
-          el.homeUpdateMsgText.textContent = 'Checking GitHub releases for updates...'
+        if (el.sidebarUpdateIcon) el.sidebarUpdateIcon.classList.add('spin')
+        if (el.sidebarUpdateText) {
+          el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? 'চেক হচ্ছে...' : 'Checking updates...'
         }
       } else if (status === 'available') {
-        if (el.updateBanner) el.updateBanner.classList.remove('hidden')
-        if (el.updateBannerTitle) el.updateBannerTitle.textContent = `Update v${data.version || ''} Available`
-        if (el.updateBannerDesc) el.updateBannerDesc.textContent = 'Downloading update in background...'
-        el.updateProgressContainer?.classList.remove('hidden')
-        el.btnUpdateRestart?.classList.add('hidden')
-
-        // Home card updates
-        if (el.homeUpdateStatusPill) {
-          el.homeUpdateStatusPill.innerHTML = `<span class="pill-dot">✨</span><span>v${data.version || ''} Available</span>`
-          el.homeUpdateStatusPill.style.borderColor = 'rgba(245, 158, 11, 0.5)'
-          el.homeUpdateStatusPill.style.color = '#f59e0b'
+        if (el.sidebarUpdateIcon) el.sidebarUpdateIcon.classList.remove('spin')
+        if (el.btnSidebarUpdate) el.btnSidebarUpdate.classList.add('has-update')
+        if (el.sidebarUpdateText) {
+          el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? `নতুন v${data.version || ''} ডাউনলোড হচ্ছে` : `Update v${data.version || ''} Found`
         }
-        if (el.homeLatestVersion) el.homeLatestVersion.textContent = `v${data.version || ''} (New Release)`
-        if (el.homeUpdateMsgText) {
-          el.homeUpdateMsgText.textContent = `Downloading update v${data.version || ''} in the background. You can continue taking print orders safely.`
-        }
-        if (el.homeUpdateProgressWrap) el.homeUpdateProgressWrap.classList.remove('hidden')
-        if (el.btnHomeRestartUpdate) el.btnHomeRestartUpdate.classList.add('hidden')
+        if (el.sidebarUpdateProgressWrap) el.sidebarUpdateProgressWrap.classList.remove('hidden')
+        if (el.btnSidebarRestart) el.btnSidebarRestart.classList.add('hidden')
       } else if (status === 'downloading') {
         const pct = data.percent || 0
-        if (el.updateBanner) el.updateBanner.classList.remove('hidden')
-        if (el.updateProgressContainer) el.updateProgressContainer.classList.remove('hidden')
-        if (el.updateProgressFill) el.updateProgressFill.style.width = `${pct}%`
-        if (el.updateBannerDesc) el.updateBannerDesc.textContent = `Downloading update: ${pct}%`
-
-        // Home card progress
-        if (el.homeUpdateProgressWrap) el.homeUpdateProgressWrap.classList.remove('hidden')
-        if (el.homeDownloadFill) el.homeDownloadFill.style.width = `${pct}%`
-        if (el.homeDownloadPercent) el.homeDownloadPercent.textContent = `${pct}%`
-        if (el.homeDownloadStatusTxt) el.homeDownloadStatusTxt.textContent = `Downloading update package (${pct}%)...`
-        if (el.homeDownloadSpeed && data.bytesPerSecond) {
+        if (el.sidebarUpdateProgressWrap) el.sidebarUpdateProgressWrap.classList.remove('hidden')
+        if (el.sidebarUpdateProgressFill) el.sidebarUpdateProgressFill.style.width = `${pct}%`
+        if (el.sidebarUpdateProgressText) el.sidebarUpdateProgressText.textContent = `Downloading ${pct}%`
+        if (el.sidebarUpdateSpeed && data.bytesPerSecond) {
           const speedMb = (data.bytesPerSecond / (1024 * 1024)).toFixed(1)
-          el.homeDownloadSpeed.textContent = `Download Speed: ${speedMb} MB/s`
-        }
-        if (el.homeDownloadSize && data.transferred && data.total) {
-          const transMb = (data.transferred / (1024 * 1024)).toFixed(1)
-          const totMb = (data.total / (1024 * 1024)).toFixed(1)
-          el.homeDownloadSize.textContent = `${transMb} MB / ${totMb} MB`
+          el.sidebarUpdateSpeed.textContent = `${speedMb} MB/s`
         }
       } else if (status === 'downloaded') {
+        if (el.sidebarUpdateProgressWrap) el.sidebarUpdateProgressWrap.classList.add('hidden')
+        if (el.btnSidebarRestart) {
+          el.btnSidebarRestart.classList.remove('hidden')
+          el.btnSidebarRestart.textContent = `🚀 ${(currentDesktopLang === 'bn') ? `রিস্টার্ট ও আপডেট v${data.version || ''}` : `Restart & Apply v${data.version || ''}`}`
+        }
         if (el.updateBanner) el.updateBanner.classList.remove('hidden')
-        if (el.updateBannerTitle) el.updateBannerTitle.textContent = `Version ${data.version || ''} Ready`
-        if (el.updateBannerDesc) el.updateBannerDesc.textContent = 'Update downloaded! Restart now to complete installation.'
-        el.updateProgressContainer?.classList.add('hidden')
-        el.btnUpdateRestart?.classList.remove('hidden')
-
-        // Home card ready
-        if (el.homeUpdateProgressWrap) el.homeUpdateProgressWrap.classList.add('hidden')
-        if (el.homeUpdateStatusPill) {
-          el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🚀</span><span>Ready to Install</span>'
-          el.homeUpdateStatusPill.style.borderColor = 'rgba(16, 185, 129, 0.6)'
-          el.homeUpdateStatusPill.style.color = '#34d399'
-        }
-        if (el.homeUpdateMsgText) {
-          el.homeUpdateMsgText.textContent = `Update v${data.version || ''} is downloaded and verified. Click "Restart & Apply" to install in seconds.`
-        }
-        if (el.btnHomeRestartUpdate) {
-          el.btnHomeRestartUpdate.classList.remove('hidden')
-          el.btnHomeRestartUpdate.textContent = `🚀 Restart & Apply Update v${data.version || ''}`
-        }
+        if (el.btnUpdateRestart) el.btnUpdateRestart.classList.remove('hidden')
         playSuccessChime()
       } else if (status === 'up-to-date') {
-        if (el.homeUpdateStatusPill) {
-          el.homeUpdateStatusPill.innerHTML = '<span class="pill-dot">🟢</span><span>Up to Date</span>'
+        if (el.sidebarUpdateIcon) el.sidebarUpdateIcon.classList.remove('spin')
+        if (el.sidebarUpdateText) {
+          el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? 'আপডেট সম্পন্ন' : 'Up to Date'
         }
-        if (el.homeUpdateMsgText) {
-          el.homeUpdateMsgText.textContent = `PrintKoro Station is up to date (v${data.version || '1.0.0'}).`
-        }
-        if (el.homeLastCheckedTime) {
-          el.homeLastCheckedTime.textContent = `Last checked: ${getNowFormattedTime()}`
-        }
+        setTimeout(() => {
+          if (el.sidebarUpdateText) {
+            el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? 'আপডেট চেক করুন' : 'Check for Updates'
+          }
+        }, 4000)
       } else if (status === 'error') {
-        console.warn('[Updater UI] Error notice:', data.error)
-        if (el.homeUpdateMsgText) {
-          el.homeUpdateMsgText.textContent = 'Update check encountered an issue. Station operating normally.'
+        if (el.sidebarUpdateIcon) el.sidebarUpdateIcon.classList.remove('spin')
+        if (el.sidebarUpdateText) {
+          el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? 'আপডেট চেক করুন' : 'Check for Updates'
         }
       }
     })
@@ -1896,7 +2061,7 @@ function openJobModal(jobData) {
         else if (k === 'nup' && v) nupFromUrl = parseInt(v, 10) || 1
         else if (k === 'border') borderFromUrl = v === '1' || v === 'true'
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   const effectiveRange = job.page_range || rangeFromUrl || null
@@ -1991,7 +2156,7 @@ el.btnReleasePrint?.addEventListener('click', async () => {
         else if (k === 'nup' && v) nupFromUrl = parseInt(v, 10) || 1
         else if (k === 'border') borderFromUrl = v === '1' || v === 'true'
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 
   const effectiveRange = job.page_range || rangeFromUrl || null
@@ -2059,7 +2224,7 @@ el.btnReleasePrint?.addEventListener('click', async () => {
         '/api/desktop/jobs/complete',
         { jobId, deviceId: state.config.deviceId, hardwareSuccess: false, failureReason: err.message },
         () => PrintKoroCloud.confirmPrintAndDeductCredits(jobId, state.config.deviceId, false, err.message)
-      ).catch(() => {})
+      ).catch(() => { })
     }
 
     alert(`Print Execution Notice: ${err.message}\n\n🛡️ Safe-Print Zero-Risk Guarantee: Zero credits were deducted from your balance because the print did not complete successfully.`)
@@ -2271,6 +2436,9 @@ function updateHeaderCreditBadge() {
   if (el.headerCreditAmount) el.headerCreditAmount.textContent = bal.toLocaleString()
   if (el.modalAccountCredits) el.modalAccountCredits.textContent = bal.toLocaleString()
   if (el.metricCreditsBalance) el.metricCreditsBalance.textContent = bal.toLocaleString()
+  if (typeof renderProfilePage === 'function') {
+    renderProfilePage()
+  }
 }
 
 async function fetchCreditsData() {
@@ -2502,9 +2670,18 @@ function setupAuthSystem() {
   loadSavedAccount()
 
   // 2. Header Account Chip Click
-  el.btnAccountToggle?.addEventListener('click', () => {
+  el.btnAccountToggle?.addEventListener('click', (e) => {
+    e.stopPropagation()
     if (state.account) {
-      openAccountProfileModal()
+      activateProfileTab()
+    } else {
+      openAuthModal('signin')
+    }
+  })
+
+  el.accountProfileBadge?.addEventListener('click', () => {
+    if (state.account) {
+      activateProfileTab()
     } else {
       openAuthModal('signin')
     }
@@ -2613,7 +2790,9 @@ function setupAuthSystem() {
   })
 
   // 11. Header Account Profile Badge in Workspace
-  el.btnAccountToggle?.addEventListener('click', openAccountProfileModal)
+  el.btnAccountToggle?.addEventListener('click', () => {
+    if (state.account) activateProfileTab()
+  })
 
   // 12. Account Details Modal controls
   el.btnCloseAccountModal?.addEventListener('click', () => el.accountModal?.classList.add('hidden'))
@@ -2964,6 +3143,7 @@ function handleReRegister() {
   clearStoredAccount()
   state.regDraft = {
     type: 'shop',
+    zone: 'campus',
     name: '',
     shop_name: '',
     phone: '',
@@ -3129,6 +3309,24 @@ async function loadSavedAccount() {
     console.warn('Error reading saved account:', e)
   }
 
+  // If #profile or #workspace hash requested, or if no account, handle accordingly
+  if (typeof window !== 'undefined' && (window.location.hash.includes('profile') || window.location.hash.includes('workspace'))) {
+    state.account = state.account || {
+      shop_name: 'PrintKoro Partner Station',
+      name: 'MD. Shamsuzzaman Nur',
+      phone: '01722819002',
+      location: 'Dhanmondi 27, Dhaka - 1209',
+      deviceId: 'PK-DH-849201',
+      status: 'active'
+    }
+    updateHeaderProfile(state.account)
+    showScreen('workspace')
+    if (window.location.hash.includes('profile')) {
+      setTimeout(() => activateProfileTab(), 80)
+    }
+    return
+  }
+
   // If no account, show the clean login screen matching screenshot
   updateHeaderProfile(null)
   showScreen('login')
@@ -3169,6 +3367,7 @@ function updateHeaderProfile(account) {
     }
     if (el.headerAvatarImg) el.headerAvatarImg.classList.add('hidden')
   }
+  renderProfilePage()
 }
 
 // Stepper navigation for 3 steps
@@ -3201,6 +3400,7 @@ async function handleSendMobileOtp() {
   const shop_name = el.regShopName.value.trim()
   const phone = el.regPhone.value.trim()
   const location = el.regLocation.value.trim()
+  const zone = el.regZone?.value || 'campus'
   const operating_hours = el.regOperatingHours?.value.trim() || (state.regDraft.type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM')
 
   if (!name || !shop_name || !phone || !location) {
@@ -3222,6 +3422,7 @@ async function handleSendMobileOtp() {
   state.regDraft.shop_name = shop_name
   state.regDraft.phone = cleanPhone
   state.regDraft.location = location
+  state.regDraft.zone = zone
   state.regDraft.operating_hours = operating_hours
 
   try {
@@ -3330,6 +3531,7 @@ async function handleFinishRegistration() {
     shop_name: state.regDraft.shop_name,
     phone: state.regDraft.phone,
     location: state.regDraft.location,
+    zone: state.regDraft.zone || 'campus',
     operating_hours: state.regDraft.operating_hours,
     password: pass,
     type: state.regDraft.type,
@@ -3444,6 +3646,189 @@ async function handleLoginSubmit(e) {
   }
 }
 
+// Activate Station Profile Page via Top Station Profile Card
+function activateProfileTab() {
+  if (!state.account) {
+    openAuthModal('signin')
+    return
+  }
+
+  // 1. Remove active state from sidebar navigation tabs
+  el.navTabs.forEach((t) => t.classList.remove('active'))
+
+  // 2. Hide all tab panels
+  el.tabPanels.forEach((p) => p.classList.remove('active'))
+
+  // 3. Mark the Station Profile card active
+  el.accountProfileBadge?.classList.add('active')
+
+  // 4. Show Station Profile panel
+  const profilePanel = document.getElementById('tab-profile')
+  if (profilePanel) {
+    profilePanel.classList.add('active')
+  }
+
+  // 5. Render profile data
+  renderProfilePage()
+}
+
+// Render Clean Station Profile Page (Simple, Modern, No Over-Details)
+function renderProfilePage() {
+  const acc = state.account
+
+  // Basic Identity
+  const shopName = acc?.shop_name || 'PrintKoro Partner Shop'
+  const ownerName = acc?.name || 'Partner Operator'
+  const phone = acc?.phone || '017XXXXXXXX'
+  const address = acc?.location || 'Configured Shop Address'
+  const deviceId = acc?.deviceId || state.config?.deviceId || 'DEV-PK-1001'
+
+  const elShop = document.getElementById('profile-page-shop-name')
+  const elOwner = document.getElementById('profile-page-owner-name')
+  const elPhone = document.getElementById('profile-page-phone')
+  const elAddress = document.getElementById('profile-page-address')
+  const elDevId = document.getElementById('profile-page-device-id')
+
+  if (elShop) elShop.textContent = shopName
+  if (elOwner) elOwner.textContent = ownerName
+  if (elPhone) elPhone.textContent = phone
+  if (elAddress) elAddress.textContent = address
+  if (elDevId) elDevId.textContent = deviceId
+
+  // Avatar / Logo
+  const elInitials = document.getElementById('profile-page-initials')
+  const elImg = document.getElementById('profile-page-avatar-img')
+  if (acc?.logo_url && elImg) {
+    elImg.src = acc.logo_url
+    elImg.classList.remove('hidden')
+    if (elInitials) elInitials.classList.add('hidden')
+  } else {
+    if (elImg) elImg.classList.add('hidden')
+    if (elInitials) {
+      elInitials.classList.remove('hidden')
+      const initials = (shopName || 'PK')
+        .split(' ')
+        .map((w) => w[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+      elInitials.textContent = initials || 'PK'
+    }
+  }
+
+  // Connected Hardware Printers
+  const elBw = document.getElementById('profile-page-bw-name')
+  const elColor = document.getElementById('profile-page-color-name')
+  if (elBw) elBw.textContent = state.printers?.bw || 'Default Windows Printer'
+  if (elColor) elColor.textContent = state.printers?.color || 'Default Windows Printer'
+
+  // Wholesale Credits & Pricing Rates (n / n remaining according to package brought previously)
+  const currentCredits = Number(state.creditsBalance ?? 10000)
+
+  // Standard PrintKoro official package tiers: 10,000 (Starter), 25,000 (Value), 60,000 (Commercial), 150,000 (Enterprise)
+  const standardPackages = [10000, 25000, 60000, 150000]
+
+  // Determine the baseline package size
+  let packageTotal = 10000
+
+  // 1. Check if there was an explicit topup / recharge transaction
+  if (Array.isArray(state.creditTransactions) && state.creditTransactions.length > 0) {
+    const topupTx = state.creditTransactions.find(
+      (t) => (t.type === 'subscription_topup' || t.type === 'topup' || t.type === 'recharge' || t.type === 'package') && Number(t.amount) >= 1000
+    )
+    if (topupTx && Number(topupTx.amount) >= 1000) {
+      const topupAmt = Number(topupTx.amount)
+      if (topupAmt >= currentCredits || standardPackages.includes(topupAmt)) {
+        packageTotal = topupAmt
+      }
+    }
+  }
+
+  // 2. Map to the appropriate standard package tier that encompasses currentCredits
+  let matchedTier = 10000
+  for (const tier of standardPackages) {
+    if (currentCredits <= tier) {
+      matchedTier = tier
+      break
+    }
+  }
+  if (currentCredits > standardPackages[standardPackages.length - 1]) {
+    matchedTier = Math.ceil(currentCredits / 10000) * 10000
+  }
+  packageTotal = Math.max(packageTotal, matchedTier)
+
+  // Calculate percentage: e.g. 9,980 / 10,000 = 99.8%
+  const pct = packageTotal > 0 ? Math.min(100, Math.max(0, (currentCredits / packageTotal) * 100)) : 0
+  const pctStr = (pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1)) + '%'
+
+  const elCredits = document.getElementById('profile-page-credits')
+  const elTotal = document.getElementById('profile-page-credits-total')
+  const elPct = document.getElementById('profile-package-pct-pill')
+  const elBar = document.getElementById('profile-package-progress-bar')
+  const elPrevInfo = document.getElementById('profile-package-prev-info')
+
+  if (elCredits) elCredits.textContent = currentCredits.toLocaleString()
+  if (elTotal) elTotal.textContent = packageTotal.toLocaleString()
+  if (elPct) elPct.textContent = pctStr
+  if (elBar) {
+    elBar.style.width = pctStr
+    // Solid primary brand color only - no color mix or gradient
+    elBar.style.background = 'var(--primary, #00bf63)'
+  }
+  if (elPrevInfo) {
+    elPrevInfo.textContent = `Package: ${packageTotal.toLocaleString()} Credits`
+  }
+
+}
+
+// Setup Event Listeners for Station Profile Page
+function setupProfilePageListeners() {
+  // 1. Copy Terminal UUID
+  document.getElementById('btn-copy-page-device-id')?.addEventListener('click', () => {
+    const devId = document.getElementById('profile-page-device-id')?.textContent?.trim()
+    if (!devId) return
+    navigator.clipboard?.writeText(devId).then(() => {
+      const btn = document.getElementById('btn-copy-page-device-id')
+      if (btn) {
+        btn.textContent = '✓ Copied'
+        setTimeout(() => { btn.textContent = 'Copy' }, 2000)
+      }
+    })
+  })
+
+  // 3. Top up credits modal
+  document.getElementById('btn-page-open-sub')?.addEventListener('click', () => {
+    openSubscriptionModal('subtab-packages')
+  })
+
+  // 4. Refresh Sync
+  document.getElementById('btn-profile-page-refresh')?.addEventListener('click', async () => {
+    const btn = document.getElementById('btn-profile-page-refresh')
+    if (!btn) return
+    btn.disabled = true
+    const origHtml = btn.innerHTML
+    btn.innerHTML = '<span>Syncing...</span>'
+    try {
+      await fetchCreditsData()
+      if (typeof checkStationStatus === 'function') await checkStationStatus()
+      renderProfilePage()
+      btn.innerHTML = '<span>✓ Synced!</span>'
+    } catch (e) {
+      btn.innerHTML = '<span>Sync Notice</span>'
+    } finally {
+      setTimeout(() => {
+        if (btn) {
+          btn.disabled = false
+          btn.innerHTML = origHtml
+        }
+      }, 2000)
+    }
+  })
+
+  // 5. Logout
+  document.getElementById('btn-profile-page-logout')?.addEventListener('click', handleLogout)
+}
+
 // Open Account Details Modal
 function openAccountProfileModal() {
   const acc = state.account
@@ -3469,7 +3854,7 @@ function openAccountProfileModal() {
   }
 
   // Wholesale Credits & Subscription
-  const currentCredits = Number(subState?.creditsBalance || 0)
+  const currentCredits = Number(state.creditsBalance ?? 10000)
   if (el.modalAccountCredits) el.modalAccountCredits.textContent = currentCredits.toLocaleString()
   if (el.modalAccountCreditsValue) el.modalAccountCreditsValue.textContent = '৳' + currentCredits.toLocaleString()
 
@@ -3483,19 +3868,19 @@ function openAccountProfileModal() {
 
   // Dynamic Area Pricing Zone
   if (el.modalAccountTierName) {
-    el.modalAccountTierName.textContent = subState?.tierName || 'Standard Area Tier'
+    el.modalAccountTierName.textContent = state.pricingTier?.name || 'Standard Area Tier'
   }
   if (el.modalAccountBwSingle) {
-    el.modalAccountBwSingle.textContent = '৳' + (subState?.tierRates?.b_w_single || 2.0).toFixed(2)
+    el.modalAccountBwSingle.textContent = '৳' + Number(state.pricingTier?.bw_price ?? 2.0).toFixed(2)
   }
   if (el.modalAccountBwDuplex) {
-    el.modalAccountBwDuplex.textContent = '৳' + (subState?.tierRates?.b_w_duplex || 3.5).toFixed(2)
+    el.modalAccountBwDuplex.textContent = '৳' + (Number(state.pricingTier?.bw_price ?? 2.0) * 1.75).toFixed(2)
   }
   if (el.modalAccountColorSingle) {
-    el.modalAccountColorSingle.textContent = '৳' + (subState?.tierRates?.color_single || 5.0).toFixed(2)
+    el.modalAccountColorSingle.textContent = '৳' + Number(state.pricingTier?.color_price ?? 8.0).toFixed(2)
   }
   if (el.modalAccountColorDuplex) {
-    el.modalAccountColorDuplex.textContent = '৳' + (subState?.tierRates?.color_duplex || 9.0).toFixed(2)
+    el.modalAccountColorDuplex.textContent = '৳' + (Number(state.pricingTier?.color_price ?? 8.0) * 1.8).toFixed(2)
   }
 
   // Logo

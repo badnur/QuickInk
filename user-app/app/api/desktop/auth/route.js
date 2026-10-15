@@ -1,7 +1,52 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import crypto from 'crypto'
+import { enforceRateLimit, RATE_LIMITS } from '@/lib/rate-limiter'
 
 export const dynamic = 'force-dynamic'
+
+// Security: Scrypt password hashing with per-user salt
+export function hashPassword(plainPassword) {
+  const salt = crypto.randomBytes(16).toString('hex')
+  const hash = crypto.scryptSync(plainPassword, salt, 64).toString('hex')
+  return `scrypt:${salt}:${hash}`
+}
+
+export function verifyPassword(plainPassword, storedHashOrPlain) {
+  if (!storedHashOrPlain || !plainPassword) return false
+  if (typeof storedHashOrPlain === 'string' && storedHashOrPlain.startsWith('scrypt:')) {
+    const parts = storedHashOrPlain.split(':')
+    if (parts.length !== 3) return false
+    const salt = parts[1]
+    const expectedHash = parts[2]
+    try {
+      const actualHash = crypto.scryptSync(plainPassword, salt, 64).toString('hex')
+      return crypto.timingSafeEqual(Buffer.from(expectedHash, 'hex'), Buffer.from(actualHash, 'hex'))
+    } catch (e) {
+      return false
+    }
+  }
+  // Support legacy plaintext stored during previous sessions with constant-time equality
+  if (typeof storedHashOrPlain === 'string') {
+    const bufA = Buffer.from(storedHashOrPlain)
+    const bufB = Buffer.from(plainPassword)
+    if (bufA.length === bufB.length) {
+      return crypto.timingSafeEqual(bufA, bufB)
+    }
+    return false
+  }
+  return false
+}
+
+// Security: Verify administrative caller authorization
+function verifyAdminAuth(request) {
+  const authHeader = request.headers.get('authorization')
+  const adminKey = request.headers.get('x-admin-key')
+  const validSecret = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET
+  if (!validSecret) return false
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7).trim() : null
+  return (adminKey && adminKey === validSecret) || (bearerToken && bearerToken === validSecret)
+}
 
 // In-memory store for phone OTPs and fallback shop accounts
 const phoneOtpStore = new Map() // phone -> { code, expiresAt }
@@ -10,6 +55,37 @@ let memoryShopAccounts = []
 export const ADMIN_CONTACT = {
   phone: '01733398911',
   email: 'help@printkoro.com'
+}
+
+// Dynamic Pricing Tiers Mapping for Bangladesh Partner Terminals
+export const ZONE_TIERS = {
+  campus: {
+    id: 'aaaaaaaa-0000-0000-0000-000000000002',
+    name: 'Campus',
+    bw_price: 1.50,
+    color_price: 6.00,
+    bw_duplex: 2.70,
+    color_duplex: 11.00,
+    desc: 'Discounted university & student hub rate',
+  },
+  commercial: {
+    id: 'aaaaaaaa-0000-0000-0000-000000000003',
+    name: 'Commercial',
+    bw_price: 3.00,
+    color_price: 10.00,
+    bw_duplex: 5.00,
+    color_duplex: 18.00,
+    desc: 'Premium corporate & shopping mall rate',
+  },
+  standard: {
+    id: 'aaaaaaaa-0000-0000-0000-000000000001',
+    name: 'Standard',
+    bw_price: 2.00,
+    color_price: 8.00,
+    bw_duplex: 3.50,
+    color_duplex: 15.00,
+    desc: 'General retail & residential rate',
+  },
 }
 
 export function normalizePhone(p) {
@@ -45,8 +121,12 @@ export async function POST(request) {
       }
 
       const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
-      // Generate 6-digit verification code
-      const code = Math.floor(100000 + Math.random() * 900000).toString()
+
+      const rateLimitRes = enforceRateLimit(request, 'send_otp', RATE_LIMITS.OTP_SEND, cleanPhone)
+      if (rateLimitRes) return rateLimitRes
+
+      // Generate cryptographically secure 6-digit verification code
+      const code = crypto.randomInt(100000, 1000000).toString()
       phoneOtpStore.set(cleanPhone, {
         code,
         expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
@@ -54,15 +134,18 @@ export async function POST(request) {
 
       console.log(`[Desktop Auth] Mobile verification code generated for ${cleanPhone}: ${code}`)
 
-      // Fire-and-forget: Send SMS without blocking the response
-      const smsApiKey = '42fc1e917497409da3d3ffc7622e566e'
-      const smsMessage = encodeURIComponent(`Your PrintKoro verification code is: ${code}. Valid for 10 minutes.`)
-      const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
-
-      fetch(smsUrl)
-        .then((r) => r.json())
-        .then((d) => console.log(`[Desktop Auth] SMS dispatched to ${cleanPhone}:`, d))
-        .catch((e) => console.warn('[Desktop Auth SMS Warning]:', e.message))
+      // Dispatch SMS only if SMS_API_KEY is configured in server environment
+      const smsApiKey = process.env.SMS_API_KEY
+      if (smsApiKey) {
+        const smsMessage = encodeURIComponent(`Your PrintKoro verification code is: ${code}. Valid for 10 minutes.`)
+        const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
+        fetch(smsUrl)
+          .then((r) => r.json())
+          .then((d) => console.log(`[Desktop Auth] SMS dispatched to ${cleanPhone}:`, d))
+          .catch((e) => console.warn('[Desktop Auth SMS Warning]:', e.message))
+      } else {
+        console.warn(`[Desktop Auth] SMS_API_KEY not configured. Verification code logged: ${code}`)
+      }
 
       // Return success immediately — don't wait for SMS delivery
       return NextResponse.json({
@@ -111,6 +194,7 @@ export async function POST(request) {
         operating_hours,
         password,
         type = 'shop',
+        zone = 'campus',
         logo_url = '',
         shop_photo_url = '',
       } = body
@@ -127,8 +211,10 @@ export async function POST(request) {
       }
 
       const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
-      const reference_id = `QIK-REG-${Math.floor(100000 + Math.random() * 900000)}`
+      const reference_id = `QIK-REG-${crypto.randomInt(100000, 1000000)}`
       const resolvedHours = operating_hours || (type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM')
+      const targetTier = ZONE_TIERS[zone?.toLowerCase()] || ZONE_TIERS.campus
+      const securePasswordHash = hashPassword(password)
 
       // 1. Create or register Device in public.devices with 'offline' status (valid device_status enum)
       let provisionedDevice = null
@@ -138,8 +224,11 @@ export async function POST(request) {
         owner_name: name,
         shop_name: shop_name,
         type: type === 'kiosk' ? 'kiosk' : 'shop',
+        zone: targetTier.name.toLowerCase(),
+        pricing_tier_name: targetTier.name,
+        pricing_tier_id: targetTier.id,
         operating_hours: resolvedHours,
-        password: password,
+        password: securePasswordHash,
         logo_url: logo_url || '',
         shop_photo_url: shop_photo_url || '',
         payout_rate: 100.0,
@@ -166,6 +255,7 @@ export async function POST(request) {
             .update({
               name: type === 'kiosk' ? `PrintKoro Kiosk — ${shop_name}` : `PrintKoro Shop — ${shop_name}`,
               type: type === 'kiosk' ? 'kiosk' : 'shop',
+              pricing_tier_id: targetTier.id,
               location: locationObj,
               status: 'offline',
             })
@@ -181,6 +271,7 @@ export async function POST(request) {
               {
                 name: type === 'kiosk' ? `PrintKoro Kiosk — ${shop_name}` : `PrintKoro Shop — ${shop_name}`,
                 type: type === 'kiosk' ? 'kiosk' : 'shop',
+                pricing_tier_id: targetTier.id,
                 location: locationObj,
                 status: 'offline', // Valid enum value
               }
@@ -199,6 +290,7 @@ export async function POST(request) {
           id: `dev-${Date.now()}`,
           name: type === 'kiosk' ? `PrintKoro Kiosk — ${shop_name}` : `PrintKoro Shop — ${shop_name}`,
           type: type === 'kiosk' ? 'kiosk' : 'shop',
+          pricing_tier_id: targetTier.id,
           location: locationObj,
           status: 'offline',
           created_at: new Date().toISOString(),
@@ -215,10 +307,13 @@ export async function POST(request) {
         phone: cleanPhone,
         location,
         type,
+        zone: targetTier.name.toLowerCase(),
+        pricing_tier_name: targetTier.name,
+        pricing_tier_id: targetTier.id,
         operating_hours: resolvedHours,
         status: 'pending', // Requires admin approval
         rejection_reason: null,
-        password,
+        password: securePasswordHash,
         logo_url,
         shop_photo_url,
         verified: true,
@@ -245,6 +340,13 @@ export async function POST(request) {
         console.warn('Supabase partner insert exception:', e.message)
       }
 
+      // Security: Strip password from returned device and account
+      const safeDevice = provisionedDevice ? {
+        ...provisionedDevice,
+        location: { ...(provisionedDevice.location || {}) }
+      } : null
+      if (safeDevice?.location?.password) delete safeDevice.location.password
+
       return NextResponse.json({
         success: true,
         pending: true,
@@ -259,15 +361,61 @@ export async function POST(request) {
           phone: newAccount.phone,
           location: newAccount.location,
           type: newAccount.type,
+          zone: newAccount.zone,
+          pricing_tier_name: newAccount.pricing_tier_name,
+          pricing_tier_id: newAccount.pricing_tier_id,
           operating_hours: newAccount.operating_hours,
           status: 'pending',
           logo_url: newAccount.logo_url,
           shop_photo_url: newAccount.shop_photo_url,
           created_at: newAccount.created_at,
         },
-        device: provisionedDevice,
+        device: safeDevice,
         contact: ADMIN_CONTACT,
       }, { status: 201 })
+    }
+
+    // -------------------------------------------------------------------------
+    // 3B. UPDATE OPERATING ZONE & DYNAMIC PRICING TARIFF
+    // -------------------------------------------------------------------------
+    if (action === 'update-zone') {
+      const { deviceId, zone = 'campus' } = body
+      const targetTier = ZONE_TIERS[zone?.toLowerCase()] || ZONE_TIERS.campus
+
+      if (deviceId) {
+        try {
+          const { data: dbDev } = await supabase
+            .from('devices')
+            .select('location')
+            .eq('id', deviceId)
+            .maybeSingle()
+
+          const currentLoc = dbDev?.location || {}
+          const updatedLoc = {
+            ...currentLoc,
+            zone: targetTier.name.toLowerCase(),
+            pricing_tier_name: targetTier.name,
+            pricing_tier_id: targetTier.id,
+          }
+
+          await supabase
+            .from('devices')
+            .update({
+              pricing_tier_id: targetTier.id,
+              location: updatedLoc,
+            })
+            .eq('id', deviceId)
+        } catch (e) {
+          console.warn('[update-zone supabase warning]:', e.message)
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `Dynamic pricing zone updated to ${targetTier.name}`,
+        zone: targetTier.name.toLowerCase(),
+        tier: targetTier,
+      })
     }
 
     // -------------------------------------------------------------------------
@@ -281,15 +429,17 @@ export async function POST(request) {
 
       const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
 
-      // 1. Fetch Supabase devices & partners to authenticate persistently & check approvals
+      const rateLimitRes = enforceRateLimit(request, 'login', RATE_LIMITS.LOGIN, cleanPhone)
+      if (rateLimitRes) return rateLimitRes
+
+      // 1. Fetch Supabase devices to authenticate persistently & check approvals
       let dbDevices = []
       let dbPartners = []
       try {
-        const [{ data: pData }, { data: dData }] = await Promise.all([
-          supabase.from('partners').select('*'),
-          supabase.from('devices').select('*'),
-        ])
-        dbPartners = pData || []
+        const { data: dData } = await supabase
+          .from('devices')
+          .select('id, name, type, status, location, pricing_tier_id')
+          .limit(100)
         dbDevices = dData || []
       } catch (dbErr) {
         console.warn('DB fetch in login error:', dbErr.message)
@@ -297,7 +447,7 @@ export async function POST(request) {
 
       // 2. Check in-memory store
       let account = memoryShopAccounts.find(
-        (acc) => phonesMatch(acc.phone, cleanPhone) && acc.password === password
+        (acc) => phonesMatch(acc.phone, cleanPhone) && verifyPassword(password, acc.password)
       )
 
       // 3. Persistent Supabase devices fallback (survives dev server restarts)
@@ -310,17 +460,19 @@ export async function POST(request) {
           return bScore - aScore
         })
 
-        // Find device that has this password
-        let candidateDev = matchingPhoneDevs.find((d) => d.location?.password === password)
+        // Find device that has valid password
+        let candidateDev = matchingPhoneDevs.find((d) => verifyPassword(password, d.location?.password))
 
-        // Fallback for legacy registered devices where password was only in memory:
-        // If device has no password yet but user enters password >= 6 chars, assign & persist
-        if (!candidateDev && matchingPhoneDevs.length > 0) {
+        // Transparently upgrade legacy plaintext password to secure scrypt hash
+        if (candidateDev && candidateDev.location?.password && !candidateDev.location.password.startsWith('scrypt:')) {
+          const updLoc = { ...(candidateDev.location || {}), password: hashPassword(password) }
+          supabase.from('devices').update({ location: updLoc }).eq('id', candidateDev.id).catch(() => {})
+        } else if (!candidateDev && matchingPhoneDevs.length > 0) {
           const legacyDev = matchingPhoneDevs.find((d) => !d.location?.password)
           if (legacyDev && password.length >= 6) {
             candidateDev = legacyDev
-            const updLoc = { ...(candidateDev.location || {}), password }
-            supabase.from('devices').update({ location: updLoc }).eq('id', candidateDev.id).then(() => {})
+            const updLoc = { ...(candidateDev.location || {}), password: hashPassword(password) }
+            supabase.from('devices').update({ location: updLoc }).eq('id', candidateDev.id).catch(() => {})
           }
         }
 
@@ -337,10 +489,12 @@ export async function POST(request) {
             phone: cleanPhone,
             location: loc.address || '',
             type: candidateDev.type || loc.type || 'shop',
+            zone: loc.zone || 'campus',
+            pricing_tier_name: loc.pricing_tier_name || 'Campus',
+            pricing_tier_id: candidateDev.pricing_tier_id || loc.pricing_tier_id || null,
             operating_hours: loc.operating_hours || '09:00 AM - 10:00 PM',
             status: partnerStatus,
             rejection_reason: loc.rejection_reason || null,
-            password: password,
             logo_url: loc.logo_url || '',
             shop_photo_url: loc.shop_photo_url || '',
             created_at: loc.created_at || new Date().toISOString(),
@@ -393,6 +547,9 @@ export async function POST(request) {
             phone: account.phone,
             location: account.location,
             type: account.type,
+            zone: account.zone || 'campus',
+            pricing_tier_name: account.pricing_tier_name || 'Campus',
+            pricing_tier_id: account.pricing_tier_id || null,
             status: 'pending',
             logo_url: account.logo_url,
             shop_photo_url: account.shop_photo_url,
@@ -475,6 +632,9 @@ export async function POST(request) {
           phone: account.phone,
           location: account.location,
           type: account.type,
+          zone: account.zone || 'campus',
+          pricing_tier_name: account.pricing_tier_name || 'Campus',
+          pricing_tier_id: account.pricing_tier_id || null,
           status: 'approved',
           logo_url: account.logo_url,
           shop_photo_url: account.shop_photo_url,
@@ -493,9 +653,12 @@ export async function POST(request) {
     }
 
     // -------------------------------------------------------------------------
-    // 6. ADMIN ACTIONS (DIRECT SYNC FROM ADMIN APP)
+    // 6. ADMIN ACTIONS (AUTHENTICATED SYNC FROM ADMIN APP ONLY)
     // -------------------------------------------------------------------------
     if (action === 'admin-approve') {
+      if (!verifyAdminAuth(request)) {
+        return NextResponse.json({ error: 'Unauthorized administrative action' }, { status: 401 })
+      }
       const { phone, deviceId: approvedDevId } = body
       const cleanPhone = phone ? phone.trim().replace(/[^0-9]/g, '') : ''
       const acc = memoryShopAccounts.find((a) => a.phone === cleanPhone || (approvedDevId && a.deviceId === approvedDevId))
@@ -503,10 +666,15 @@ export async function POST(request) {
         acc.status = 'approved'
         if (approvedDevId) acc.deviceId = approvedDevId
       }
-      return NextResponse.json({ success: true, message: 'Account approved in memory store', account: acc })
+      const safeAcc = acc ? { ...acc } : null
+      if (safeAcc) delete safeAcc.password
+      return NextResponse.json({ success: true, message: 'Account approved in memory store', account: safeAcc })
     }
 
     if (action === 'admin-reject') {
+      if (!verifyAdminAuth(request)) {
+        return NextResponse.json({ error: 'Unauthorized administrative action' }, { status: 401 })
+      }
       const { phone, reason } = body
       const cleanPhone = phone ? phone.trim().replace(/[^0-9]/g, '') : ''
       const acc = memoryShopAccounts.find((a) => a.phone === cleanPhone)
@@ -514,7 +682,9 @@ export async function POST(request) {
         acc.status = 'rejected'
         acc.rejection_reason = reason || 'Requirements not fulfilled'
       }
-      return NextResponse.json({ success: true, message: 'Account rejected in memory store', account: acc })
+      const safeAcc = acc ? { ...acc } : null
+      if (safeAcc) delete safeAcc.password
+      return NextResponse.json({ success: true, message: 'Account rejected in memory store', account: safeAcc })
     }
 
     // -------------------------------------------------------------------------
@@ -527,6 +697,9 @@ export async function POST(request) {
       }
 
       const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
+
+      const rateLimitRes = enforceRateLimit(request, 'reset_otp', RATE_LIMITS.PASSWORD_RESET, cleanPhone)
+      if (rateLimitRes) return rateLimitRes
 
       // Verify the phone number belongs to a registered account
       const memAcc = memoryShopAccounts.find((a) => phonesMatch(a.phone, cleanPhone))
@@ -545,8 +718,8 @@ export async function POST(request) {
         return NextResponse.json({ error: 'No registered account found with this phone number.' }, { status: 404 })
       }
 
-      // Generate & store OTP
-      const code = Math.floor(100000 + Math.random() * 900000).toString()
+      // Generate & store cryptographically secure OTP
+      const code = crypto.randomInt(100000, 1000000).toString()
       phoneOtpStore.set(`reset:${cleanPhone}`, {
         code,
         expiresAt: Date.now() + 10 * 60 * 1000, // 10 minutes
@@ -554,14 +727,18 @@ export async function POST(request) {
 
       console.log(`[Reset OTP] Password reset code for ${cleanPhone}: ${code}`)
 
-      // Send SMS
-      const smsApiKey = '42fc1e917497409da3d3ffc7622e566e'
-      const smsMessage = encodeURIComponent(`PrintKoro Password Reset: Your verification code is ${code}. Valid for 10 minutes. Do NOT share this code.`)
-      const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
-      fetch(smsUrl)
-        .then((r) => r.json())
-        .then((d) => console.log(`[Reset OTP] SMS sent to ${cleanPhone}:`, d))
-        .catch((e) => console.warn('[Reset OTP SMS Warning]:', e.message))
+      // Dispatch SMS only if SMS_API_KEY is configured in server environment
+      const smsApiKey = process.env.SMS_API_KEY
+      if (smsApiKey) {
+        const smsMessage = encodeURIComponent(`PrintKoro Password Reset: Your verification code is ${code}. Valid for 10 minutes. Do NOT share this code.`)
+        const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
+        fetch(smsUrl)
+          .then((r) => r.json())
+          .then((d) => console.log(`[Reset OTP] SMS sent to ${cleanPhone}:`, d))
+          .catch((e) => console.warn('[Reset OTP SMS Warning]:', e.message))
+      } else {
+        console.warn(`[Reset OTP] SMS_API_KEY not configured. Password reset code logged: ${code}`)
+      }
 
       return NextResponse.json({
         success: true,
@@ -580,6 +757,10 @@ export async function POST(request) {
       }
 
       const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
+
+      const verifyRateLimitRes = enforceRateLimit(request, 'verify_reset_otp', RATE_LIMITS.OTP_VERIFY, cleanPhone)
+      if (verifyRateLimitRes) return verifyRateLimitRes
+
       const stored = phoneOtpStore.get(`reset:${cleanPhone}`)
       const isValid = stored && stored.code === otp.trim() && stored.expiresAt > Date.now()
 
@@ -613,23 +794,22 @@ export async function POST(request) {
         return NextResponse.json({ error: 'OTP verification expired. Please start over.' }, { status: 400 })
       }
 
+      const secureNewHash = hashPassword(newPassword)
+
       // Update password in memory store
       const memAcc = memoryShopAccounts.find((a) => phonesMatch(a.phone, cleanPhone))
       if (memAcc) {
-        memAcc.password = newPassword
+        memAcc.password = secureNewHash
       }
 
-      // Update password in devices table (stored in location JSONB for ALL matching devices)
+      // Update password in devices table (stored as secure hash in location JSONB for matching devices)
       try {
         const { data: dbDevices } = await supabase.from('devices').select('id, location')
         const matchingDevs = (dbDevices || []).filter((d) => phonesMatch(d.location?.phone, cleanPhone))
         for (const matchDev of matchingDevs) {
-          const updatedLoc = { ...(matchDev.location || {}), password: newPassword }
+          const updatedLoc = { ...(matchDev.location || {}), password: secureNewHash }
           await supabase.from('devices').update({ location: updatedLoc }).eq('id', matchDev.id)
         }
-
-        // Also update partners table if it has a password column
-        await supabase.from('partners').update({ password: newPassword }).eq('phone', cleanPhone)
       } catch (e) {
         console.warn('[Reset Password] DB update note:', e.message)
       }
@@ -643,8 +823,8 @@ export async function POST(request) {
 
     return NextResponse.json({ error: 'Unknown action specified' }, { status: 400 })
   } catch (err) {
-    console.error('Desktop auth error:', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[DesktopAuth] POST error:', err)
+    return NextResponse.json({ error: 'Authentication service error.' }, { status: 500 })
   }
 }
 
@@ -746,7 +926,15 @@ export async function GET(request) {
     const phone = searchParams.get('phone')
 
     if (action === 'list-accounts') {
-      return NextResponse.json({ success: true, accounts: memoryShopAccounts })
+      if (!verifyAdminAuth(request)) {
+        return NextResponse.json({ error: 'Unauthorized administrative access' }, { status: 401 })
+      }
+      const sanitized = memoryShopAccounts.map((a) => {
+        const copy = { ...a }
+        delete copy.password
+        return copy
+      })
+      return NextResponse.json({ success: true, accounts: sanitized })
     }
 
     if (action === 'check-status') {
@@ -756,7 +944,8 @@ export async function GET(request) {
 
     return NextResponse.json({ success: true, message: 'PrintKoro Desktop Auth API Ready', contact: ADMIN_CONTACT })
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[DesktopAuth] GET error:', err)
+    return NextResponse.json({ error: 'Service error.' }, { status: 500 })
   }
 }
 

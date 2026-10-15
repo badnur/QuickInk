@@ -28,7 +28,7 @@
     "pdf-to-printer": "^5.8.1"
   },
   "devDependencies": {
-    "electron": "^34.0.0",
+    "electron": "^44.5.1",
     "electron-builder": "^26.15.3"
   },
   "build": {

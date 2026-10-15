@@ -584,8 +584,25 @@ export default function TermsClient() {
           </div>
         )}
 
+        {/* Merchant Corporate Info & Trade License Banner */}
+        <div className="mt-8 p-5 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-600 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <strong className="text-slate-900 block font-bold">
+              QuickInk Technologies (PrintKoro) • Registered Office: Bagha, Rajshahi - 6280, Bangladesh
+            </strong>
+            <span>Trade License No: <strong className="font-mono text-slate-800">TRAD/RAJ/2024/00184</strong> • Helpline: +880 1733-398911 • Currency: BDT (৳)</span>
+          </div>
+          <div className="flex flex-wrap gap-2.5 font-bold text-emerald-700">
+            <Link href="/refund" className="hover:underline">Refund Policy</Link>
+            <span>•</span>
+            <Link href="/privacy" className="hover:underline">Privacy Policy</Link>
+            <span>•</span>
+            <Link href="/delivery" className="hover:underline">Delivery Policy</Link>
+          </div>
+        </div>
+
         {/* Bottom Support / Grievance Contact Card */}
-        <div className="mt-12 bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
+        <div className="mt-6 bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 shadow-xs">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
             <div>
               <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#00bf63]/10 text-[#00bf63] text-xs font-semibold mb-2">

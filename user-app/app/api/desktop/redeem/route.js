@@ -1,10 +1,61 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 
+export const dynamic = 'force-dynamic'
+
+// Security: In-memory rate limiting tracker to prevent OTP brute-force guessing
+// Key: deviceId_clientIp -> { attempts: number, lockUntil: number, windowStart: number }
+const redeemAttemptTracker = new Map()
+const MAX_FAILED_ATTEMPTS = 5
+const LOCKOUT_DURATION_MS = 5 * 60 * 1000 // 5 minutes lockout after 5 consecutive failures
+const ATTEMPT_WINDOW_MS = 60 * 1000 // 1 minute sliding window
+
+function recordFailedAttempt(clientKey) {
+  const now = Date.now()
+  const tracker = redeemAttemptTracker.get(clientKey) || { attempts: 0, lockUntil: 0, windowStart: now }
+
+  // Reset if window expired and not currently locked out
+  if (now - tracker.windowStart > ATTEMPT_WINDOW_MS && tracker.lockUntil <= now) {
+    tracker.attempts = 1
+    tracker.windowStart = now
+  } else {
+    tracker.attempts += 1
+  }
+
+  if (tracker.attempts >= MAX_FAILED_ATTEMPTS) {
+    tracker.lockUntil = now + LOCKOUT_DURATION_MS
+  }
+
+  redeemAttemptTracker.set(clientKey, tracker)
+}
+
+function clearTracker(clientKey) {
+  redeemAttemptTracker.delete(clientKey)
+}
+
 export async function POST(request) {
   try {
     const body = await request.json()
     const { code, device_id = '11111111-1111-1111-1111-111111111111' } = body
+
+    if (device_id && !/^[0-9a-fA-F-]{8,64}$/.test(device_id)) {
+      return NextResponse.json({ error: 'Invalid device identifier format' }, { status: 400 })
+    }
+
+    // Client tracking key for rate limiting
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'local'
+    const clientKey = `${device_id}_${ip}`
+
+    // Security: Check active lockout
+    const tracker = redeemAttemptTracker.get(clientKey)
+    const now = Date.now()
+    if (tracker && tracker.lockUntil && tracker.lockUntil > now) {
+      const remainingSec = Math.ceil((tracker.lockUntil - now) / 1000)
+      return NextResponse.json(
+        { error: `Too many failed attempts. Terminal redemption locked for ${remainingSec} seconds to prevent brute-force attacks.` },
+        { status: 429 }
+      )
+    }
 
     if (!code) {
       return NextResponse.json({ error: '6-digit OTP code is required' }, { status: 400 })
@@ -12,8 +63,9 @@ export async function POST(request) {
 
     const cleanCode = code.toString().trim().toUpperCase()
 
-    if (cleanCode.length !== 6) {
-      return NextResponse.json({ error: 'Please enter a valid 6-digit OTP code' }, { status: 400 })
+    if (cleanCode.length !== 6 || !/^[A-Za-z0-9]{6}$/.test(cleanCode)) {
+      recordFailedAttempt(clientKey)
+      return NextResponse.json({ error: 'Please enter a valid 6-character OTP code' }, { status: 400 })
     }
 
     // Check if device is suspended by admin; also fetch its pricing tier and credit balance
@@ -83,13 +135,16 @@ export async function POST(request) {
         .maybeSingle()
 
       if (!otpRec) {
+        recordFailedAttempt(clientKey)
         return NextResponse.json({ error: 'Invalid or non-existent 6-digit OTP code' }, { status: 400 })
       }
 
       if (otpRec.used) {
+        recordFailedAttempt(clientKey)
         return NextResponse.json({ error: 'This OTP has already been redeemed' }, { status: 400 })
       }
       if (new Date(otpRec.expires_at) < new Date()) {
+        recordFailedAttempt(clientKey)
         return NextResponse.json({ error: 'This OTP has expired' }, { status: 400 })
       }
 
@@ -108,9 +163,13 @@ export async function POST(request) {
     }
 
     if (error) {
+      recordFailedAttempt(clientKey)
       console.warn('Redemption error:', error)
       return NextResponse.json({ error: error.message || 'Invalid or expired OTP code' }, { status: 400 })
     }
+
+    // Successful OTP redemption clears the failed attempt tracker
+    clearTracker(clientKey)
 
     // Determine target printer based on color_mode
     const colorMode = data?.print_job?.color_mode || 'bw'
@@ -171,6 +230,9 @@ export async function POST(request) {
         fileUrl = cleanPath
       } else if (cleanPath.startsWith('/uploads/')) {
         fileUrl = `http://localhost:3000${cleanPath}`
+      } else if (cleanPath.startsWith('local://')) {
+        const localFileName = cleanPath.replace('local://', '')
+        fileUrl = `/api/download/file?name=${encodeURIComponent(localFileName)}`
       } else {
         try {
           const { data: signedData } = await supabase.storage
@@ -229,7 +291,7 @@ export async function POST(request) {
       },
     })
   } catch (err) {
-    console.error('Desktop redeem endpoint error:', err)
-    return NextResponse.json({ error: err.message || 'Internal server error while verifying OTP' }, { status: 500 })
+    console.error('[Redeem] Endpoint error:', err)
+    return NextResponse.json({ error: 'OTP verification failed. Please try again.' }, { status: 500 })
   }
 }

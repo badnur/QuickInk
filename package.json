@@ -5,7 +5,9 @@
   "scripts": {
     "dev": "pnpm --parallel --filter user-app --filter admin-app dev",
     "dev:user": "pnpm --filter user-app dev",
+    "dev:app": "pnpm --filter user-app dev",
     "dev:admin": "pnpm --filter admin-app dev",
+    "dev:desktop": "pnpm --filter printkoro-station start",
     "api:start": "npx kill-port 3000 & pnpm --filter user-app dev",
     "api:stop": "pm2 delete quickink-api",
     "api:logs": "pm2 logs quickink-api",
@@ -15,7 +17,8 @@
     "desktop:install": "pnpm --filter printkoro-station install",
     "build": "pnpm --filter user-app --filter admin-app build",
     "build:user": "pnpm --filter user-app build",
-    "build:admin": "pnpm --filter admin-app build"
+    "build:admin": "pnpm --filter admin-app build",
+    "scan:secrets": "node scripts/scan-secrets.js"
   },
   "dependencies": {
     "concurrently": "^10.0.5",

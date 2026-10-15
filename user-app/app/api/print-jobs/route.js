@@ -1,9 +1,13 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import crypto from 'crypto'
+import { enforceRateLimit, RATE_LIMITS } from '@/lib/rate-limiter'
+
+export const dynamic = 'force-dynamic'
 
 function generateOtpCode() {
-  // Generate random 6-digit numerical code (100000 - 999999)
-  return Math.floor(100000 + Math.random() * 900000).toString()
+  // Cryptographically secure 6-digit numerical code (100000 - 999999)
+  return crypto.randomInt(100000, 1000000).toString()
 }
 
 /**
@@ -12,6 +16,9 @@ function generateOtpCode() {
  */
 export async function POST(request) {
   try {
+    const rateLimitRes = enforceRateLimit(request, 'create_print_job', RATE_LIMITS.PRINT_JOB)
+    if (rateLimitRes) return rateLimitRes
+
     const body = await request.json()
     const {
       file_path,
@@ -26,25 +33,39 @@ export async function POST(request) {
       mini_border = false,
       payment_type = 'online',
       amount = 0,
+      gateway_reference = null,
     } = body
 
-    if (!file_path) {
-      return NextResponse.json({ error: 'File path is required' }, { status: 400 })
+    if (!file_path || typeof file_path !== 'string') {
+      return NextResponse.json({ error: 'Valid file path is required' }, { status: 400 })
     }
 
-    const parsedCopies = Math.max(1, parseInt(copies) || 1)
-    const parsedPages = Math.max(1, parseInt(page_count) || 1)
+    if (file_path.length > 500 || file_path.includes('\0') || /[\r\n]/.test(file_path)) {
+      return NextResponse.json({ error: 'Invalid file path structure' }, { status: 400 })
+    }
+
+    // Security: Input validation and bounds checking
+    const parsedCopies = Math.min(Math.max(1, parseInt(copies, 10) || 1), 100)
+    const parsedPages = Math.min(Math.max(1, parseInt(page_count, 10) || 1), 5000)
     const validColorMode = color_mode === 'color' ? 'color' : 'bw'
     const validPaymentType = payment_type === 'cash' ? 'cash' : 'online'
     const otpType = validPaymentType === 'online' ? 'type_a' : 'type_b'
-    const parsedAmount = parseFloat(amount) || 0
+    const parsedAmount = Math.max(0, parseFloat(amount) || 0)
     const parsedNup = [1, 2, 4, 6].includes(parseInt(pages_per_sheet, 10)) ? parseInt(pages_per_sheet, 10) : 1
     const hasBorder = Boolean(mini_border)
+    const cleanFileName = String(file_name || 'document.pdf').replace(/[\\\/]/g, '_').slice(0, 200)
 
     // Build URL hash parameters so range, nup, and border survive all database layers
     const params = []
-    const cleanRange = page_range && String(page_range).trim() ? String(page_range).trim() : null
-    if (cleanRange) params.push(`range=${encodeURIComponent(cleanRange)}`)
+    const rawRange = page_range ? String(page_range).trim() : null
+    let cleanRange = null
+    if (rawRange) {
+      if (!/^[\d\s\-,]+$/.test(rawRange) || rawRange.length > 100) {
+        return NextResponse.json({ error: 'Invalid page range format. Use numbers, commas, and hyphens (e.g. 1-5, 8).' }, { status: 400 })
+      }
+      cleanRange = rawRange
+      params.push(`range=${encodeURIComponent(cleanRange)}`)
+    }
     if (parsedNup > 1) params.push(`nup=${parsedNup}`)
     if (hasBorder) params.push(`border=1`)
 
@@ -73,7 +94,7 @@ export async function POST(request) {
           message: 'Order created successfully',
           order: {
             ...rpcData.order,
-            file_name,
+            file_name: cleanFileName,
             page_range: page_range || null,
             pages_per_sheet: parsedNup,
             mini_border: hasBorder,
@@ -108,14 +129,10 @@ export async function POST(request) {
       .single()
 
     if (jobError || !job) {
-      // If RLS blocked anon table insert, return clear instructions
-      console.error('Job creation error:', jobError || rpcError)
+      // Log full error server-side only — never expose DB internals to client
+      console.error('[PrintJobs] Job creation error:', jobError || rpcError)
       return NextResponse.json(
-        {
-          error:
-            'Order creation failed: ' +
-            (jobError?.message || rpcError?.message || 'Database permissions error'),
-        },
+        { error: 'Order creation failed. Please try again.' },
         { status: 500 }
       )
     }
@@ -136,16 +153,20 @@ export async function POST(request) {
 
     if (otpError) {
       await supabase.from('print_jobs').delete().eq('id', job.id)
-      return NextResponse.json({ error: 'Failed to generate OTP: ' + otpError.message }, { status: 500 })
+      console.error('[PrintJobs] OTP generation error:', otpError)
+      return NextResponse.json({ error: 'Failed to generate OTP. Please try again.' }, { status: 500 })
     }
+
+    const hasValidGatewayRef = Boolean(gateway_reference && String(gateway_reference).trim().length >= 6)
+    const onlinePaymentStatus = hasValidGatewayRef ? 'completed' : 'pending'
 
     await supabase.from('payments').insert([
       {
         print_job_id: job.id,
         amount: parsedAmount,
         method: validPaymentType,
-        gateway_reference: validPaymentType === 'online' ? `sim_${Date.now()}` : null,
-        status: validPaymentType === 'online' ? 'completed' : 'pending',
+        gateway_reference: gateway_reference ? String(gateway_reference).trim() : (validPaymentType === 'online' ? `online_${Date.now()}` : null),
+        status: validPaymentType === 'online' ? onlinePaymentStatus : 'pending',
         cash_collected: false,
       },
     ])
@@ -156,7 +177,7 @@ export async function POST(request) {
         message: 'Order created successfully',
         order: {
           id: job.id,
-          file_name,
+          file_name: cleanFileName,
           file_path: job.file_path,
           copies: job.copies,
           color_mode: job.color_mode,
@@ -179,7 +200,7 @@ export async function POST(request) {
       { status: 201 }
     )
   } catch (error) {
-    console.error('Print jobs API exception:', error)
-    return NextResponse.json({ error: 'Internal server error: ' + error.message }, { status: 500 })
+    console.error('[PrintJobs] API exception:', error)
+    return NextResponse.json({ error: 'Internal server error. Please try again.' }, { status: 500 })
   }
 }

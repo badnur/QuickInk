@@ -10,11 +10,15 @@ const STANDARD_PRICING = { bw_price: 2.0, color_price: 8.0, tier_name: 'Standard
  */
 export async function GET(request) {
   try {
-    // Fetch devices joined with their pricing tier
+    // Fetch active devices joined with their pricing tier (exclude suspended/cancelled partner shops)
     const { data: devices, error: devicesError } = await supabase
       .from('devices')
       .select(`
-        *,
+        id,
+        name,
+        type,
+        status,
+        location,
         pricing_tiers (
           id,
           name,
@@ -23,6 +27,7 @@ export async function GET(request) {
           description
         )
       `)
+      .not('status', 'in', '("suspended","cancelled")')
       .order('created_at', { ascending: false })
 
     if (!devicesError && devices && devices.length > 0) {

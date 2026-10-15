@@ -1,9 +1,8 @@
 import { SignJWT, jwtVerify } from 'jose'
 
 const COOKIE_NAME = 'printkoro_admin_session'
-const JWT_SECRET = new TextEncoder().encode(
-  (process.env.ADMIN_JWT_SECRET || 'printkoro_superadmin_sec_default_change_in_prod').trim()
-)
+const secretKey = (process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'dev_local_secret_only' : '')).trim()
+const JWT_SECRET = new TextEncoder().encode(secretKey)
 
 /**
  * Sign an administrative JWT session token

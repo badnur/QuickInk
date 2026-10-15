@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { enforceRateLimit, RATE_LIMITS } from '@/lib/rate-limiter'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,6 +18,9 @@ function generateReferenceId() {
  */
 export async function POST(request) {
   try {
+    const rateLimitRes = enforceRateLimit(request, 'partner_apply', RATE_LIMITS.PARTNER_APPLY)
+    if (rateLimitRes) return rateLimitRes
+
     const body = await request.json()
     const {
       type = 'shop',
@@ -40,21 +44,44 @@ export async function POST(request) {
       )
     }
 
+    const cleanName = String(name).trim().slice(0, 100)
+    const cleanShopName = String(shop_name).trim().slice(0, 100)
+    const cleanPhone = String(phone).trim().replace(/[^0-9+]/g, '').slice(0, 20)
+    const cleanEmail = email ? String(email).trim().slice(0, 100) : ''
+    const cleanLocation = String(location).trim().slice(0, 250)
+    const cleanCity = String(city || 'Dhaka').trim().slice(0, 50)
+    const cleanHours = String(operating_hours || '09:00 AM - 10:00 PM').trim().slice(0, 100)
+    const cleanModel = String(printer_model || '').trim().slice(0, 100)
+    const cleanSpace = String(space_type || (type === 'kiosk' ? 'Commercial / Campus' : 'Print Shop')).trim().slice(0, 100)
+    const cleanFootfall = String(daily_footfall || '').trim().slice(0, 50)
+
+    if (cleanName.length < 2 || cleanShopName.length < 2 || cleanLocation.length < 2) {
+      return NextResponse.json({ error: 'Applicant name, shop name, and address must be at least 2 characters.' }, { status: 400 })
+    }
+
+    if (!/^(\+?88)?01[3-9]\d{8}$/.test(cleanPhone.replace(/[\s-]/g, ''))) {
+      return NextResponse.json({ error: 'Please enter a valid Bangladesh mobile number (e.g. 017xxxxxxxx).' }, { status: 400 })
+    }
+
+    if (cleanEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+      return NextResponse.json({ error: 'Please enter a valid email address.' }, { status: 400 })
+    }
+
     const reference_id = generateReferenceId()
 
     const newRecord = {
       reference_id,
       type: type === 'kiosk' ? 'kiosk' : 'shop',
-      name,
-      shop_name,
-      phone,
-      email,
-      location,
-      city,
-      operating_hours,
-      printer_model,
-      space_type: space_type || (type === 'kiosk' ? 'Commercial / Campus' : 'Print Shop'),
-      daily_footfall,
+      name: cleanName,
+      shop_name: cleanShopName,
+      phone: cleanPhone,
+      email: cleanEmail,
+      location: cleanLocation,
+      city: cleanCity,
+      operating_hours: cleanHours,
+      printer_model: cleanModel,
+      space_type: cleanSpace,
+      daily_footfall: cleanFootfall,
       power_backup: Boolean(power_backup),
       status: 'pending',
       commission_rate: 40.0,
@@ -118,31 +145,45 @@ export async function POST(request) {
  */
 export async function GET(request) {
   try {
+    const rateLimitRes = enforceRateLimit(request, 'partner_search', RATE_LIMITS.SEARCH)
+    if (rateLimitRes) return rateLimitRes
+
     const { searchParams } = new URL(request.url)
     const ref = searchParams.get('ref')
     const phone = searchParams.get('phone')
 
     // 1. Single Application Status Lookup
     if (ref || phone) {
-      let query = supabase.from('partners').select('*')
+      let query = supabase.from('partners').select('id, reference_id, shop_name, status, created_at, phone')
       if (ref) query = query.eq('reference_id', ref.trim().toUpperCase())
       else if (phone) query = query.eq('phone', phone.trim())
 
       const { data, error } = await query
 
-      if (!error && data && data.length > 0) {
-        return NextResponse.json({ success: true, partner: data[0] })
+      let match = (!error && data && data.length > 0) ? data[0] : null
+
+      if (!match) {
+        match = fallbackPartners.find((p) => {
+          if (ref && p.reference_id && p.reference_id.toUpperCase() === ref.trim().toUpperCase()) return true
+          if (phone && p.phone === phone.trim()) return true
+          return false
+        })
       }
 
-      // Check fallback store
-      const match = fallbackPartners.find((p) => {
-        if (ref && p.reference_id && p.reference_id.toUpperCase() === ref.trim().toUpperCase()) return true
-        if (phone && p.phone === phone.trim()) return true
-        return false
-      })
-
       if (match) {
-        return NextResponse.json({ success: true, partner: match })
+        // Security: Mask phone number and expose only non-sensitive applicant tracking status
+        const maskedPhone = match.phone ? String(match.phone).replace(/(\d{3})\d+(\d{3})/, '$1****$2') : ''
+        return NextResponse.json({
+          success: true,
+          partner: {
+            id: match.id,
+            reference_id: match.reference_id,
+            shop_name: match.shop_name,
+            phone: maskedPhone,
+            status: match.status,
+            created_at: match.created_at,
+          }
+        })
       }
 
       return NextResponse.json(
@@ -151,7 +192,20 @@ export async function GET(request) {
       )
     }
 
-    // 2. Fetch all partners
+    // 2. Fetch all partners — Requires Admin Authentication
+    const authHeader = request.headers.get('authorization')
+    const adminKey = request.headers.get('x-admin-key')
+    const validSecret = process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET
+    const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7).trim() : null
+    const isAdmin = Boolean(validSecret && ((adminKey && adminKey === validSecret) || (bearerToken && bearerToken === validSecret)))
+
+    if (!isAdmin) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Partner search requires reference code (?ref=) or phone number (?phone=).' },
+        { status: 401 }
+      )
+    }
+
     const { data, error } = await supabase
       .from('partners')
       .select('*')

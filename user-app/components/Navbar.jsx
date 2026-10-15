@@ -24,6 +24,7 @@ export default function Navbar() {
 
   const navLinks = [
     { href: '/', label: t('nav.home', 'Home') },
+    { href: '/about', label: t('nav.about', 'About Us') },
     { href: '/find-printer', label: t('nav.findPrinter', 'Find Printer') },
     { href: '/partner', label: t('nav.becomePartner', 'Become Partner') },
     { href: '/contact', label: t('nav.contact', 'Contact') }

@@ -44,12 +44,6 @@ export default function AdminLoginPage() {
     }
   }
 
-  const handleQuickDemoFill = () => {
-    setAuthMode('pin')
-    setPin('882314')
-    setError(null)
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-black flex items-center justify-center p-4 relative transition-colors">
       {/* Top Bar with Theme Toggle */}
@@ -126,24 +120,8 @@ export default function AdminLoginPage() {
                     />
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
-                    Direct access for authorized hardware maintenance & operations.
+                    Enter the authorized administrative hardware maintenance & operations PIN configured in server environment.
                   </p>
-
-                  <div className="mt-4 p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between">
-                    <div>
-                      <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Quick Fill Credentials</div>
-                      <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Master PIN: 882314</div>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleQuickDemoFill}
-                      variant="outline"
-                      className="bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-950 dark:hover:text-white text-[10px] h-7 px-2.5 rounded shadow-none"
-                    >
-                      Fill 882314
-                    </Button>
-                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">

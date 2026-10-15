@@ -10,6 +10,7 @@ export const translations = {
     // Navigation
     nav: {
       home: 'হোম',
+      about: 'আমাদের সম্পর্কে',
       findPrinter: 'প্রিন্টার খুঁজুন',
       becomePartner: 'পার্টনার হোন',
       contact: 'যোগাযোগ',
@@ -366,15 +367,19 @@ export const translations = {
     // Footer
     footer: {
       about: 'প্রিন্টকোরো হলো বাংলাদেশের ১ম সেলফ-সার্ভিস ক্লাউড প্রিন্টিং নেটওয়ার্ক। ফোন থেকে আপলোড করুন, নিরাপদে পেমেন্ট করুন এবং ৬০ সেকেন্ডে প্রিন্ট নিন।',
+      aboutUs: 'আমাদের সম্পর্কে',
       quickLinks: 'প্রয়োজনীয় লিংক',
-      support: 'সহায়তা ও তথ্য',
+      support: 'সহায়তা ও নীতিমালা',
       terms: 'শর্তাবলী ও নীতিমালা',
+      refund: 'রিফান্ড ও রিটার্ন নীতি',
       privacy: 'গোপনীয়তা নীতি',
+      delivery: 'ডেলিভারি নীতিমালা',
       cookies: 'কুকিজ নীতি',
-      contact: 'যোগাযোগ',
+      contact: 'যোগাযোগ ও সাপোর্ট',
+      tradeLicense: 'ট্রেড লাইসেন্স নং',
       helpEmail: 'help@printkoro.com',
       helpPhone: '+৮৮০ ১৭৩৩-৩৯৮৯১১',
-      address: 'ঢাকা ও রাজশাহী, বাংলাদেশ',
+      address: 'বাঘা, রাজশাহী - ৬২৮০, বাংলাদেশ',
       allRights: 'সর্বস্বত্ব সংরক্ষিত।',
     }
   },
@@ -383,6 +388,7 @@ export const translations = {
     // Navigation
     nav: {
       home: 'Home',
+      about: 'About Us',
       findPrinter: 'Find Printer',
       becomePartner: 'Become Partner',
       contact: 'Contact',
@@ -739,15 +745,19 @@ export const translations = {
     // Footer
     footer: {
       about: "PrintKoro is Bangladesh's premier smart self-service printing network. Upload from your phone, pay securely, and print in 60 seconds.",
+      aboutUs: 'About Us',
       quickLinks: 'Quick Links',
-      support: 'Support & Help',
+      support: 'Support & Policies',
       terms: 'Terms of Service',
+      refund: 'Return & Refund Policy',
       privacy: 'Privacy Policy',
+      delivery: 'Delivery Policy',
       cookies: 'Cookies Policy',
-      contact: 'Contact',
+      contact: 'Contact & Support',
+      tradeLicense: 'Trade License No',
       helpEmail: 'help@printkoro.com',
       helpPhone: '+880 1733-398911',
-      address: 'Dhaka & Rajshahi, Bangladesh',
+      address: 'Bagha, Rajshahi - 6280, Bangladesh',
       allRights: 'All rights reserved.',
     }
   }

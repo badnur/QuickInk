@@ -47,7 +47,8 @@ export async function GET(request) {
       headers: FAST_EDGE_HEADERS,
     })
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[AdminDevices] GET error:', err)
+    return NextResponse.json({ error: 'Failed to fetch devices.' }, { status: 500 })
   }
 }
 
@@ -92,7 +93,8 @@ export async function POST(request) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('[AdminDevices] Insert error:', error)
+      return NextResponse.json({ error: 'Failed to create device.' }, { status: 500 })
     }
 
     await logAdminAction({
@@ -109,7 +111,8 @@ export async function POST(request) {
 
     return NextResponse.json({ success: true, device: data, pairingKey }, { status: 201 })
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[AdminDevices] POST error:', err)
+    return NextResponse.json({ error: 'Failed to create device.' }, { status: 500 })
   }
 }
 
@@ -155,7 +158,10 @@ export async function PATCH(request) {
         .select()
         .single()
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+      if (error) {
+        console.error('[AdminDevices] Regen pairing key error:', error)
+        return NextResponse.json({ error: 'Failed to regenerate pairing key.' }, { status: 500 })
+      }
 
       await logAdminAction({
         actorEmail: adminEmail,
@@ -185,7 +191,8 @@ export async function PATCH(request) {
       .single()
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('[AdminDevices] Update error:', error)
+      return NextResponse.json({ error: 'Failed to update device.' }, { status: 500 })
     }
 
     await logAdminAction({
@@ -202,7 +209,8 @@ export async function PATCH(request) {
 
     return NextResponse.json({ success: true, device: data })
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[AdminDevices] PATCH error:', err)
+    return NextResponse.json({ error: 'Failed to update device.' }, { status: 500 })
   }
 }
 
@@ -227,7 +235,8 @@ export async function DELETE(request) {
       .eq('id', id)
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      console.error('[AdminDevices] Delete error:', error)
+      return NextResponse.json({ error: 'Failed to remove device.' }, { status: 500 })
     }
 
     await logAdminAction({
@@ -243,6 +252,7 @@ export async function DELETE(request) {
 
     return NextResponse.json({ success: true, message: 'Device removed successfully' })
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    console.error('[AdminDevices] DELETE error:', err)
+    return NextResponse.json({ error: 'Failed to remove device.' }, { status: 500 })
   }
 }
