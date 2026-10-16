@@ -900,6 +900,7 @@ const el = {
   navTextPrinters: document.getElementById('nav-text-printers'),
   navTextQueue: document.getElementById('nav-text-queue'),
   navTextEarnings: document.getElementById('nav-text-earnings'),
+  navTextProfile: document.getElementById('nav-text-profile'),
   lblThemeLight: document.getElementById('lbl-theme-light'),
   lblThemeDark: document.getElementById('lbl-theme-dark'),
 
@@ -1376,6 +1377,7 @@ function setupWindowControls() {
 
 // Tab Navigation
 function setupTabNavigation() {
+  el.navTabs = document.querySelectorAll('.nav-tab')
   el.navTabs.forEach((tab) => {
     tab.addEventListener('click', () => {
       const targetId = tab.getAttribute('data-tab')
@@ -1390,6 +1392,9 @@ function setupTabNavigation() {
         el.otpBoxes[0]?.focus()
       } else if (targetId === 'tab-queue') {
         fetchRecentJobs()
+      } else if (targetId === 'tab-profile') {
+        el.accountProfileBadge?.classList.add('active')
+        renderProfilePage()
       }
     })
   })
@@ -1458,6 +1463,7 @@ function applyDesktopLanguage(lang) {
   if (el.navTextPrinters) el.navTextPrinters.textContent = t.navPrinters
   if (el.navTextQueue) el.navTextQueue.textContent = t.navQueue
   if (el.navTextEarnings) el.navTextEarnings.textContent = t.navEarnings
+  if (el.navTextProfile) el.navTextProfile.textContent = t.stationProfile
   if (el.btnAccountLabel) el.btnAccountLabel.textContent = t.stationProfile
 
   // Update Appearance labels
@@ -2672,19 +2678,11 @@ function setupAuthSystem() {
   // 2. Header Account Chip Click
   el.btnAccountToggle?.addEventListener('click', (e) => {
     e.stopPropagation()
-    if (state.account) {
-      activateProfileTab()
-    } else {
-      openAuthModal('signin')
-    }
+    activateProfileTab()
   })
 
   el.accountProfileBadge?.addEventListener('click', () => {
-    if (state.account) {
-      activateProfileTab()
-    } else {
-      openAuthModal('signin')
-    }
+    activateProfileTab()
   })
 
   // 3. Close Auth Modal
@@ -3646,21 +3644,19 @@ async function handleLoginSubmit(e) {
   }
 }
 
-// Activate Station Profile Page via Top Station Profile Card
+// Activate Station Profile Page via Top Station Profile Card or Sidebar Tab
 function activateProfileTab() {
-  if (!state.account) {
-    openAuthModal('signin')
-    return
-  }
-
   // 1. Remove active state from sidebar navigation tabs
+  el.navTabs = document.querySelectorAll('.nav-tab')
   el.navTabs.forEach((t) => t.classList.remove('active'))
 
   // 2. Hide all tab panels
   el.tabPanels.forEach((p) => p.classList.remove('active'))
 
-  // 3. Mark the Station Profile card active
+  // 3. Mark the Station Profile card and sidebar tab active
   el.accountProfileBadge?.classList.add('active')
+  const profileTabBtn = document.querySelector('.nav-tab[data-tab="tab-profile"]')
+  if (profileTabBtn) profileTabBtn.classList.add('active')
 
   // 4. Show Station Profile panel
   const profilePanel = document.getElementById('tab-profile')
@@ -3779,6 +3775,32 @@ function renderProfilePage() {
     elPrevInfo.textContent = `Package: ${packageTotal.toLocaleString()} Credits`
   }
 
+  // App Version in Profile Grid
+  const elAppVer = document.getElementById('profile-page-app-version')
+  if (elAppVer) {
+    if (isElectron && desktopAPI?.getVersion) {
+      desktopAPI.getVersion().then((v) => {
+        if (elAppVer) elAppVer.textContent = `v${v}`
+      }).catch(() => {})
+    } else {
+      elAppVer.textContent = 'v1.2.3'
+    }
+  }
+
+  // Dynamic Auth State on Logout / Sign In button
+  const btnLogout = document.getElementById('btn-profile-page-logout')
+  if (btnLogout) {
+    if (state.account) {
+      btnLogout.innerHTML = '<span>Log Out</span>'
+      btnLogout.className = 'btn-secondary btn-danger-text'
+      btnLogout.title = 'Log Out of this POS Terminal'
+    } else {
+      btnLogout.innerHTML = '<span>Sign In / Connect</span>'
+      btnLogout.className = 'btn-primary'
+      btnLogout.title = 'Sign in to link your partner shop account'
+    }
+  }
+
 }
 
 // Setup Event Listeners for Station Profile Page
@@ -3825,8 +3847,14 @@ function setupProfilePageListeners() {
     }
   })
 
-  // 5. Logout
-  document.getElementById('btn-profile-page-logout')?.addEventListener('click', handleLogout)
+  // 5. Logout or Sign In
+  document.getElementById('btn-profile-page-logout')?.addEventListener('click', () => {
+    if (state.account) {
+      handleLogout()
+    } else {
+      openAuthModal('signin')
+    }
+  })
 }
 
 // Open Account Details Modal
