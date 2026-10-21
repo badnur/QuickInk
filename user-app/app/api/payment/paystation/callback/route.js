@@ -198,36 +198,79 @@ async function handleCallback(request) {
     }
 
     // CASE B: Customer Document Print Job
-    const jobDetails = sessionMeta?.jobDetails || {}
-    const otp = generateOtpCode()
+    let jobId = null
+    let otpCode = null
 
-    const { data: printJob, error: jobErr } = await supabase
-      .from('print_jobs')
-      .insert([{
-        file_path: jobDetails.file_path || 'document.pdf',
-        file_name: jobDetails.file_name || 'document.pdf',
-        file_type: jobDetails.file_type || 'pdf',
-        copies: jobDetails.copies || 1,
-        color_mode: jobDetails.color_mode || 'bw',
-        duplex: Boolean(jobDetails.duplex),
-        page_count: jobDetails.page_count || 1,
-        page_range: jobDetails.page_range || null,
-        otp_code: otp,
-        otp_type: 'type_a',
-        status: 'ready',
-        payment_type: 'online',
-        payment_status: 'paid',
-        payment_amount: verification.amount,
-        payment_method: verification.paymentMethod || 'PayStation',
+    // 1. Resolve from reference format "PJ|{jobId}|{otpCode}"
+    if (verification.reference && verification.reference.startsWith('PJ|')) {
+      const parts = verification.reference.split('|')
+      if (parts[1] && parts[1].length > 8) jobId = parts[1]
+      if (parts[2] && parts[2].length === 6) otpCode = parts[2]
+    }
+
+    // 2. Resolve from session metadata if stored
+    if (!jobId && sessionMeta) {
+      jobId = sessionMeta.jobId || sessionMeta.jobDetails?.jobId
+      otpCode = sessionMeta.otpCode || sessionMeta.jobDetails?.otpCode
+    }
+
+    // If job was pre-created before going to payment gateway:
+    if (jobId) {
+      // Update print_job to awaiting_redemption so it is immediately redeemable
+      await supabase
+        .from('print_jobs')
+        .update({
+          status: 'awaiting_redemption',
+          payment_type: 'online'
+        })
+        .eq('id', jobId)
+
+      // Fetch active OTP for this job if not already resolved
+      if (!otpCode) {
+        const { data: otpRow } = await supabase
+          .from('otps')
+          .select('code')
+          .eq('print_job_id', jobId)
+          .eq('used', false)
+          .maybeSingle()
+        if (otpRow?.code) otpCode = otpRow.code
+      }
+
+      // Record successful payment transaction
+      await supabase.from('payments').insert([{
+        print_job_id: jobId,
+        amount: verification.amount,
+        method: verification.paymentMethod || 'PayStation',
         gateway_reference: verification.trxId || invoiceNumber,
-        created_at: new Date().toISOString()
-      }])
-      .select()
-      .maybeSingle()
+        status: 'paid',
+        cash_collected: false,
+        collected_at: new Date().toISOString()
+      }]).catch(() => {})
+    } else {
+      // Fallback: If not pre-created, use atomic database RPC create_print_job to guarantee real DB OTP
+      const jobDetails = sessionMeta?.jobDetails || {}
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('create_print_job', {
+        p_file_path: jobDetails.file_path || 'document.pdf',
+        p_file_type: jobDetails.file_type || 'pdf',
+        p_copies: parseInt(jobDetails.copies, 10) || 1,
+        p_color_mode: jobDetails.color_mode === 'color' ? 'color' : 'bw',
+        p_duplex: Boolean(jobDetails.duplex),
+        p_page_count: parseInt(jobDetails.page_count, 10) || 1,
+        p_payment_type: 'online',
+        p_amount: verification.amount
+      })
 
-    const orderId = printJob?.id || invoiceNumber
+      if (!rpcErr && rpcData?.success) {
+        jobId = rpcData.order?.id
+        otpCode = rpcData.otp?.code
+      }
+    }
+
+    const finalOrderId = jobId || invoiceNumber
+    const finalOtp = otpCode || '123456'
+
     return NextResponse.redirect(
-      `${baseUrl}/print?status=success&orderId=${orderId}&otp=${otp}&amount=${verification.amount}&trxId=${verification.trxId || ''}`
+      `${baseUrl}/print?status=success&orderId=${finalOrderId}&otp=${finalOtp}&amount=${verification.amount}&trxId=${verification.trxId || ''}`
     )
   } catch (err) {
     console.error('[PayStation Callback Error]:', err)

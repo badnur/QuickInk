@@ -46,10 +46,11 @@ export async function POST(request) {
       invoiceNumber = `PK-CR-${uniqueSuffix}`
       reference = `CR|${deviceId}|${packageId || 'custom'}|${creditsToAdd || 0}`
     } else {
-      // Print Job
+      // Print Job: Encode jobId and otpCode into reference for seamless reconciliation
+      const jId = body.jobId || jobDetails?.jobId || ''
+      const oCode = body.otpCode || jobDetails?.otpCode || ''
       invoiceNumber = `PK-PJ-${uniqueSuffix}`
-      const fileSnippet = jobDetails?.file_name ? jobDetails.file_name.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 30) : 'DOC'
-      reference = `PJ|${fileSnippet}|${jobDetails?.copies || 1}c`
+      reference = jId ? `PJ|${jId}|${oCode}` : `PJ|${uniqueSuffix}`
     }
 
     // Determine callback URL
@@ -76,6 +77,8 @@ export async function POST(request) {
         amount: numericAmount,
         status: 'initiated',
         metadata: {
+          jobId: body.jobId || jobDetails?.jobId || null,
+          otpCode: body.otpCode || jobDetails?.otpCode || null,
           jobDetails,
           deviceId,
           packageId,

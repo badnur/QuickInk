@@ -625,6 +625,32 @@ function PrintOrderPageContent({ initialDeviceId }) {
 
       setUploadProgress(75)
 
+      // Always create the print job and get the verified database 6-digit OTP first
+      const response = await fetch('/api/print-jobs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          file_path: storagePath,
+          file_type: fileExt,
+          file_name: fileToUpload.name || selectedFile.name,
+          copies,
+          color_mode: colorMode,
+          duplex: colorMode === 'color' ? false : duplex,
+          page_count: calculatedSheets,
+          page_range: effectivePageRange,   // null = all pages; "1-3,5" = specific range
+          pages_per_sheet: pagesPerSheet || 1,
+          mini_border: Boolean(miniBorder),
+          payment_type: paymentMethod === 'online' ? 'online' : 'cash',
+          amount: parseFloat(totalPrice) || 0,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data?.order?.id) {
+        throw new Error(data?.error || 'Failed to initialize print order')
+      }
+
       // Online Payment via PayStation Gateway (bKash, Nagad, Rocket, Cards)
       if (paymentMethod === 'online') {
         setUploadProgress(85)
@@ -634,8 +660,12 @@ function PrintOrderPageContent({ initialDeviceId }) {
           body: JSON.stringify({
             purpose: 'print_job',
             amount: parseFloat(totalPrice) || 0,
+            jobId: data.order.id,
+            otpCode: data.otp?.code,
             customerName: 'QuickInk Customer',
             jobDetails: {
+              jobId: data.order.id,
+              otpCode: data.otp?.code,
               file_path: storagePath,
               file_type: fileExt,
               file_name: fileToUpload.name || selectedFile.name,
@@ -659,31 +689,6 @@ function PrintOrderPageContent({ initialDeviceId }) {
       }
 
       // Cash flow (Pay at partner shop upon collection)
-      const response = await fetch('/api/print-jobs', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          file_path: storagePath,
-          file_type: fileExt,
-          file_name: fileToUpload.name || selectedFile.name,
-          copies,
-          color_mode: colorMode,
-          duplex: colorMode === 'color' ? false : duplex,
-          page_count: calculatedSheets,
-          page_range: effectivePageRange,   // null = all pages; "1-3,5" = specific range
-          pages_per_sheet: pagesPerSheet || 1,
-          mini_border: Boolean(miniBorder),
-          payment_type: 'cash',
-          amount: parseFloat(totalPrice) || 0,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to submit print job')
-      }
-
       setUploadProgress(100)
 
       // Play completion chime
@@ -2108,22 +2113,32 @@ function PrintOrderPageContent({ initialDeviceId }) {
                   </button>
                 </div>
 
-                <span className="inline-block text-[10px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">
-                  {lang === 'bn' ? 'পার্টনার দোকানে প্রযোজ্য • দোকানে পেমেন্ট' : 'Valid at Partner Shops • Pay at Shop'}
-                </span>
+                {ticketOrder?.payment_type === 'online' || ticketOtp?.otp_type === 'type_a' ? (
+                  <span className="inline-block text-[10px] font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-800">
+                    {lang === 'bn' ? 'যেকোনো কিয়স্ক বা পার্টনার দোকানে প্রযোজ্য • অনলাইন পরিশোধিত' : 'Valid at Kiosks & Partner Shops • Paid Online'}
+                  </span>
+                ) : (
+                  <span className="inline-block text-[10px] font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-800">
+                    {lang === 'bn' ? 'পার্টনার দোকানে প্রযোজ্য • দোকানে পেমেন্ট' : 'Valid at Partner Shops • Pay at Shop'}
+                  </span>
+                )}
 
                 <div className="mt-4 pt-3 border-t border-gray-100 text-left space-y-2.5">
                   <div className="flex items-start gap-2 text-[11px] text-gray-600">
                     <span className="w-4 h-4 rounded-full bg-[#00bf63] text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">1</span>
-                    <span>{lang === 'bn' ? 'কাছের যেকোনো প্রিন্টকোরো পার্টনার দোকানে যান' : 'Go to any nearby PrintKoro partner shop'}</span>
+                    <span>{lang === 'bn' ? 'কাছের যেকোনো প্রিন্টকোরো পার্টনার দোকান বা কিয়স্কে যান' : 'Go to any nearby PrintKoro partner shop or kiosk'}</span>
                   </div>
                   <div className="flex items-start gap-2 text-[11px] text-gray-600">
                     <span className="w-4 h-4 rounded-full bg-[#00bf63] text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">2</span>
-                    <span>{lang === 'bn' ? 'দোকানদারকে এই ৬-সংখ্যার ওটিপি কোডটি বলুন' : 'Tell this 6-digit OTP code to the shop owner'}</span>
+                    <span>{lang === 'bn' ? 'মেশিনে বা দোকানদারকে এই ৬-সংখ্যার ওটিপি কোডটি দিন' : 'Enter or tell this 6-digit OTP code to release your print'}</span>
                   </div>
                   <div className="flex items-start gap-2 text-[11px] text-gray-600">
                     <span className="w-4 h-4 rounded-full bg-[#00bf63] text-white font-bold flex items-center justify-center text-[10px] flex-shrink-0 mt-0.5">3</span>
-                    <span>{lang === 'bn' ? 'দোকানদারের সাথে নির্ধারিত মূল্য পরিশোধ করে প্রিন্ট বুঝে নিন' : 'Settle the price directly with the shop owner and collect your prints'}</span>
+                    <span>{
+                      (ticketOrder?.payment_type === 'online' || ticketOtp?.otp_type === 'type_a')
+                        ? (lang === 'bn' ? 'অনলাইনে পরিশোধিত — বাড়তি কোনো পেমেন্ট ছাড়া প্রিন্ট বুঝে নিন' : 'Paid Online — Collect your prints with zero additional payment')
+                        : (lang === 'bn' ? 'দোকানদারের সাথে নির্ধারিত মূল্য পরিশোধ করে প্রিন্ট বুঝে নিন' : 'Settle the price directly with the shop owner and collect your prints')
+                    }</span>
                   </div>
                 </div>
               </div>
