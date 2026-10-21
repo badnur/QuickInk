@@ -139,46 +139,67 @@ export async function verifyPayStationPayment({ invoiceNumber, trxId }) {
   if (invoiceNumber) payload.invoice_number = invoiceNumber
   if (trxId) payload.trx_id = trxId
 
-  const res = await fetch(`${baseUrl}/transaction-status`, {
-    method: 'POST',
-    headers: {
-      'merchantId': storeId,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(payload)
-  })
+  try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 6000)
 
-  if (!res.ok) {
-    throw new Error(`PayStation verification query failed: HTTP ${res.status}`)
-  }
+    const res = await fetch(`${baseUrl}/transaction-status`, {
+      method: 'POST',
+      headers: {
+        'merchantId': storeId,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    })
+    clearTimeout(timeout)
 
-  const data = await res.json()
+    if (!res.ok) {
+      console.warn(`[PayStation] S2S check returned HTTP ${res.status}`)
+      return {
+        success: false,
+        isPaid: false,
+        status: `HTTP ${res.status}`,
+        message: 'Could not contact PayStation verification API'
+      }
+    }
 
-  if (String(data?.status_code) === '200' && data?.data) {
-    const tx = data.data
-    const statusLower = String(tx.trx_status || '').toLowerCase()
-    const isPaid = statusLower === 'success' || statusLower === 'successful'
+    const data = await res.json().catch(() => null)
+
+    if (String(data?.status_code) === '200' && data?.data) {
+      const tx = data.data
+      const statusLower = String(tx.trx_status || '').toLowerCase()
+      const isPaid = statusLower === 'success' || statusLower === 'successful'
+
+      return {
+        success: true,
+        isPaid,
+        status: tx.trx_status || 'Unknown',
+        invoiceNumber: tx.invoice_number,
+        trxId: tx.trx_id,
+        amount: parseFloat(tx.payment_amount || tx.request_amount || 0),
+        paymentMethod: tx.payment_method || 'PayStation',
+        payerMobile: tx.payer_mobile_no,
+        orderDateTime: tx.order_date_time,
+        reference: tx.reference,
+        raw: tx
+      }
+    }
 
     return {
-      success: true,
-      isPaid,
-      status: tx.trx_status || 'Unknown',
-      invoiceNumber: tx.invoice_number,
-      trxId: tx.trx_id,
-      amount: parseFloat(tx.payment_amount || tx.request_amount || 0),
-      paymentMethod: tx.payment_method || 'PayStation',
-      payerMobile: tx.payer_mobile_no,
-      orderDateTime: tx.order_date_time,
-      reference: tx.reference,
-      raw: tx
+      success: false,
+      isPaid: false,
+      status: data?.message || 'Failed',
+      statusCode: data?.status_code,
+      message: data?.message || 'Transaction not found or not completed'
     }
-  }
-
-  return {
-    success: false,
-    isPaid: false,
-    status: data?.message || 'Failed',
-    statusCode: data?.status_code,
-    message: data?.message || 'Transaction not found or not completed'
+  } catch (err) {
+    console.warn('[PayStation] verifyPayStationPayment fetch error:', err.message)
+    return {
+      success: false,
+      isPaid: false,
+      status: 'NetworkError',
+      message: err.message
+    }
   }
 }
