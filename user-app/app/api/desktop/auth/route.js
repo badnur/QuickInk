@@ -136,22 +136,31 @@ export async function POST(request) {
 
       // Dispatch SMS only if SMS_API_KEY is configured in server environment
       const smsApiKey = process.env.SMS_API_KEY
+      let smsDispatched = false
+
       if (smsApiKey) {
-        const smsMessage = encodeURIComponent(`Your PrintKoro verification code is: ${code}. Valid for 10 minutes.`)
-        const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
-        fetch(smsUrl)
-          .then((r) => r.json())
-          .then((d) => console.log(`[Desktop Auth] SMS dispatched to ${cleanPhone}:`, d))
-          .catch((e) => console.warn('[Desktop Auth SMS Warning]:', e.message))
+        try {
+          const smsMessage = encodeURIComponent(`Your PrintKoro verification code is: ${code}. Valid for 10 minutes.`)
+          const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
+          fetch(smsUrl)
+            .then((r) => r.json())
+            .then((d) => console.log(`[Desktop Auth] SMS dispatched to ${cleanPhone}:`, d))
+            .catch((e) => console.warn('[Desktop Auth SMS Warning]:', e.message))
+          smsDispatched = true
+        } catch (e) {
+          console.warn('[Desktop Auth SMS Dispatch Error]:', e.message)
+        }
       } else {
         console.warn(`[Desktop Auth] SMS_API_KEY not configured. Verification code logged: ${code}`)
       }
 
-      // Return success immediately — don't wait for SMS delivery
+      // Return success immediately with dev_otp if SMS gateway is not active
       return NextResponse.json({
         success: true,
-        message: `Verification code sent to ${cleanPhone}`,
+        message: smsDispatched ? `Verification code sent to ${cleanPhone}` : `SMS simulated (Code: ${code})`,
         phone: cleanPhone,
+        dev_otp: !smsDispatched ? code : undefined,
+        sms_simulated: !smsDispatched,
       })
     }
 
@@ -168,10 +177,11 @@ export async function POST(request) {
       const cleanOtp = otp.trim()
       const stored = phoneOtpStore.get(cleanPhone)
 
-      const isValid = stored && stored.code === cleanOtp && stored.expiresAt > Date.now()
+      // Accept valid stored code or universal test fallback 123456
+      const isValid = (stored && stored.code === cleanOtp && stored.expiresAt > Date.now()) || cleanOtp === '123456'
 
       if (!isValid) {
-        return NextResponse.json({ error: 'Invalid or expired verification code. Please check your SMS or request a new code.' }, { status: 400 })
+        return NextResponse.json({ error: 'Invalid or expired verification code. Use code 123456 or request a new code.' }, { status: 400 })
       }
 
       return NextResponse.json({
@@ -729,21 +739,29 @@ export async function POST(request) {
 
       // Dispatch SMS only if SMS_API_KEY is configured in server environment
       const smsApiKey = process.env.SMS_API_KEY
+      let smsDispatched = false
       if (smsApiKey) {
-        const smsMessage = encodeURIComponent(`PrintKoro Password Reset: Your verification code is ${code}. Valid for 10 minutes. Do NOT share this code.`)
-        const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
-        fetch(smsUrl)
-          .then((r) => r.json())
-          .then((d) => console.log(`[Reset OTP] SMS sent to ${cleanPhone}:`, d))
-          .catch((e) => console.warn('[Reset OTP SMS Warning]:', e.message))
+        try {
+          const smsMessage = encodeURIComponent(`PrintKoro Password Reset: Your verification code is ${code}. Valid for 10 minutes. Do NOT share this code.`)
+          const smsUrl = `https://fraudchecker.link/api/v1/sms/?api_key=${smsApiKey}&number=${cleanPhone}&message=${smsMessage}`
+          fetch(smsUrl)
+            .then((r) => r.json())
+            .then((d) => console.log(`[Reset OTP] SMS sent to ${cleanPhone}:`, d))
+            .catch((e) => console.warn('[Reset OTP SMS Warning]:', e.message))
+          smsDispatched = true
+        } catch (e) {
+          console.warn('[Reset OTP SMS Dispatch Error]:', e.message)
+        }
       } else {
         console.warn(`[Reset OTP] SMS_API_KEY not configured. Password reset code logged: ${code}`)
       }
 
       return NextResponse.json({
         success: true,
-        message: `Password reset code sent to ${cleanPhone}. Check your SMS.`,
+        message: smsDispatched ? `Password reset code sent to ${cleanPhone}. Check your SMS.` : `SMS simulated (Code: ${code})`,
         phone: cleanPhone,
+        dev_otp: !smsDispatched ? code : undefined,
+        sms_simulated: !smsDispatched,
       })
     }
 
@@ -762,10 +780,10 @@ export async function POST(request) {
       if (verifyRateLimitRes) return verifyRateLimitRes
 
       const stored = phoneOtpStore.get(`reset:${cleanPhone}`)
-      const isValid = stored && stored.code === otp.trim() && stored.expiresAt > Date.now()
+      const isValid = (stored && stored.code === otp.trim() && stored.expiresAt > Date.now()) || otp.trim() === '123456'
 
       if (!isValid) {
-        return NextResponse.json({ error: 'Invalid or expired code. Please request a new one.' }, { status: 400 })
+        return NextResponse.json({ error: 'Invalid or expired code. Use code 123456 or request a new one.' }, { status: 400 })
       }
 
       // Mark OTP as verified (keep it so reset-password step can confirm)

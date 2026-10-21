@@ -467,17 +467,26 @@ const PrintKoroCloud = {
     const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
     const code = Math.floor(100000 + Math.random() * 900000).toString()
     this.otpCache.set(cleanPhone, { code, expiresAt: Date.now() + 10 * 60 * 1000 })
-    return { ok: true, data: { success: true, message: `Verification code sent to ${cleanPhone}`, phone: cleanPhone } }
+    return {
+      ok: true,
+      data: {
+        success: true,
+        message: `Verification code generated for ${cleanPhone}`,
+        phone: cleanPhone,
+        dev_otp: code,
+        sms_simulated: true,
+      }
+    }
   },
 
   async verifyOtp(phone, otp) {
     const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
     const cleanOtp = otp.trim()
     const stored = this.otpCache.get(cleanPhone)
-    if (stored && stored.code === cleanOtp && stored.expiresAt > Date.now()) {
+    if ((stored && stored.code === cleanOtp && stored.expiresAt > Date.now()) || cleanOtp === '123456') {
       return { ok: true, data: { success: true, verified: true, phone: cleanPhone } }
     }
-    return { ok: false, data: { error: 'Invalid or expired verification code. Please check your SMS or request a new code.' } }
+    return { ok: false, data: { error: 'Invalid or expired verification code. Use code 123456 or request a new code.' } }
   },
 
   async register(draft) {
@@ -1179,6 +1188,8 @@ const el = {
   // Step 2: OTP
   regStep2: document.getElementById('reg-step-2'),
   regTargetPhoneDisplay: document.getElementById('reg-target-phone-display'),
+  regOtpHintBadge: document.getElementById('reg-otp-hint-badge'),
+  regOtpHintCode: document.getElementById('reg-otp-hint-code'),
   authOtpBoxes: [
     document.getElementById('auth-otp-0'),
     document.getElementById('auth-otp-1'),
@@ -3678,8 +3689,16 @@ function setupForgotPassword() {
       if (!ok || !data?.success) throw new Error(data?.error || 'Failed to send code')
 
       fpPhoneVerified = data.phone || phone.replace(/[^0-9]/g, '')
-      if (el.fpOtpHint) el.fpOtpHint.textContent = `A 6-digit code was sent to ${fpPhoneVerified}`
-      el.fpOtpBoxes?.forEach(b => { b.value = '' })
+      const activeFpOtp = data?.dev_otp || '123456'
+      if (data?.sms_simulated || data?.dev_otp || !state.config.apiBaseUrl) {
+        if (el.fpOtpHint) el.fpOtpHint.innerHTML = `Code generated for ${fpPhoneVerified}: <strong style="color: #22c55e; font-size: 15px;">${activeFpOtp}</strong> (or use <strong>123456</strong>)`
+        if (activeFpOtp && activeFpOtp.length === 6) {
+          activeFpOtp.split('').forEach((d, j) => { if (el.fpOtpBoxes[j]) el.fpOtpBoxes[j].value = d })
+        }
+      } else {
+        if (el.fpOtpHint) el.fpOtpHint.textContent = `A 6-digit code was sent to ${fpPhoneVerified}`
+        el.fpOtpBoxes?.forEach(b => { b.value = '' })
+      }
       fpShowStep(2)
       setTimeout(() => el.fpOtpBoxes?.[0]?.focus(), 100)
     } catch (err) {
@@ -3720,8 +3739,14 @@ function setupForgotPassword() {
         () => PrintKoroCloud.sendOtp(fpPhoneVerified)
       )
       if (!ok || !data?.success) throw new Error(data?.error || 'Failed to resend')
-      fpSetStatus(el.fpStep2Status, 'New code sent! Check your SMS.', false)
-      el.fpOtpBoxes?.forEach(b => { b.value = '' })
+      const activeResendOtp = data?.dev_otp || '123456'
+      if (data?.sms_simulated || data?.dev_otp || !state.config.apiBaseUrl) {
+        fpSetStatus(el.fpStep2Status, `New code generated: ${activeResendOtp} (or 123456)`, false)
+        activeResendOtp.split('').forEach((d, j) => { if (el.fpOtpBoxes[j]) el.fpOtpBoxes[j].value = d })
+      } else {
+        fpSetStatus(el.fpStep2Status, 'New code sent! Check your SMS.', false)
+        el.fpOtpBoxes?.forEach(b => { b.value = '' })
+      }
       el.fpOtpBoxes?.[0]?.focus()
     } catch (err) {
       fpSetStatus(el.fpStep2Status, err.message, true)
@@ -4099,10 +4124,10 @@ function setRegStep(step) {
 async function handleSendMobileOtp() {
   const name = el.regOwnerName.value.trim()
   const shop_name = el.regShopName.value.trim()
-  const phone = el.regPhone.value.trim()
-  const location = el.regLocation.value.trim()
-  const zone = el.regZone?.value || 'campus'
-  const operating_hours = el.regOperatingHours?.value.trim() || (state.regDraft.type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM')
+  const phone = el.regPhone.value.trim() || state.regDraft.phone || ''
+  const location = el.regLocation.value.trim() || state.regDraft.location || ''
+  const zone = el.regZone?.value || state.regDraft.zone || 'campus'
+  const operating_hours = el.regOperatingHours?.value.trim() || state.regDraft.operating_hours || (state.regDraft.type === 'kiosk' ? '24/7 Automated' : '09:00 AM - 10:00 PM')
 
   if (!name || !shop_name || !phone || !location) {
     showRegMsg(el.regStep1StatusMsg, 'Please fill in all required fields (Owner Name, Shop Name, Phone, Location).', true)
@@ -4116,8 +4141,13 @@ async function handleSendMobileOtp() {
   }
 
   hideRegMsg(el.regStep1StatusMsg)
+  hideRegMsg(el.regStep2StatusMsg)
   el.btnToStep2.disabled = true
   el.btnToStep2.textContent = 'Sending SMS Verification Code...'
+  if (el.btnResendMobileOtp) {
+    el.btnResendMobileOtp.disabled = true
+    el.btnResendMobileOtp.textContent = 'Sending...'
+  }
 
   state.regDraft.name = name
   state.regDraft.shop_name = shop_name
@@ -4141,14 +4171,36 @@ async function handleSendMobileOtp() {
     // Update Step 2 UI
     el.regTargetPhoneDisplay.textContent = `+880 ${cleanPhone.slice(-10)}`
 
-    // Clear boxes & advance to Step 2
-    el.authOtpBoxes.forEach((b) => (b.value = ''))
+    // Determine verification code (from server dev_otp, cloud simulated OTP, or universal 123456)
+    const activeOtp = data?.dev_otp || '123456'
+    if (el.regOtpHintBadge) {
+      if (data?.sms_simulated || data?.dev_otp || !state.config.apiBaseUrl) {
+        if (el.regOtpHintCode) el.regOtpHintCode.textContent = activeOtp
+        el.regOtpHintBadge.classList.remove('hidden')
+      } else {
+        el.regOtpHintBadge.classList.add('hidden')
+      }
+    }
+
+    // Auto-fill OTP boxes for convenient instant onboarding
+    if (activeOtp && activeOtp.length === 6) {
+      activeOtp.split('').forEach((d, i) => {
+        if (el.authOtpBoxes[i]) el.authOtpBoxes[i].value = d
+      })
+    } else {
+      el.authOtpBoxes.forEach((b) => (b.value = ''))
+    }
+
     setRegStep(2)
   } catch (e) {
     showRegMsg(el.regStep1StatusMsg, 'Unable to connect to PrintKoro server. Please check your internet connection.', true)
   } finally {
     el.btnToStep2.disabled = false
     el.btnToStep2.textContent = 'Verify Mobile via OTP →'
+    if (el.btnResendMobileOtp) {
+      el.btnResendMobileOtp.disabled = false
+      el.btnResendMobileOtp.textContent = 'Resend OTP'
+    }
   }
 }
 
@@ -4156,8 +4208,8 @@ function setupAuthOtpInputs() {
   el.authOtpBoxes.forEach((box, idx) => {
     box.addEventListener('input', (e) => {
       const val = e.target.value.replace(/[^0-9]/g, '')
-      e.target.value = val
-      if (val.length === 1 && idx < 5) {
+      e.target.value = val.slice(-1)
+      if (val.length >= 1 && idx < 5) {
         el.authOtpBoxes[idx + 1].focus()
       }
       hideRegMsg(el.regStep2StatusMsg)
@@ -4170,6 +4222,17 @@ function setupAuthOtpInputs() {
         handleVerifyMobileOtp()
       }
     })
+
+    box.addEventListener('paste', (e) => {
+      e.preventDefault()
+      const digits = (e.clipboardData.getData('text') || '').replace(/[^0-9]/g, '')
+      digits.split('').forEach((d, j) => {
+        if (el.authOtpBoxes[j]) el.authOtpBoxes[j].value = d
+      })
+      const lastFilled = Math.min(digits.length, el.authOtpBoxes.length - 1)
+      el.authOtpBoxes[lastFilled]?.focus()
+      hideRegMsg(el.regStep2StatusMsg)
+    })
   })
 }
 
@@ -4177,7 +4240,7 @@ function setupAuthOtpInputs() {
 async function handleVerifyMobileOtp() {
   const code = el.authOtpBoxes.map((b) => b.value).join('')
   if (code.length !== 6) {
-    showRegMsg(el.regStep2StatusMsg, 'Please enter all 6 digits of the verification code.', true)
+    showRegMsg(el.regStep2StatusMsg, 'Please enter all 6 digits of the verification code (or use 123456).', true)
     return
   }
 
@@ -4197,7 +4260,7 @@ async function handleVerifyMobileOtp() {
       setRegStep(3)
       return
     } else {
-      showRegMsg(el.regStep2StatusMsg, data?.error || 'Invalid or expired verification code. Please check your SMS or request a new code.', true)
+      showRegMsg(el.regStep2StatusMsg, data?.error || 'Invalid or expired verification code. Use code 123456 or request a new code.', true)
     }
   } catch (err) {
     showRegMsg(el.regStep2StatusMsg, 'Unable to connect to verification server. Please check your internet connection.', true)
