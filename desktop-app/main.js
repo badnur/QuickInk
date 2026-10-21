@@ -2,6 +2,42 @@ const { app, BrowserWindow, ipcMain, shell } = require('electron')
 const path = require('path')
 const fs = require('fs')
 const child_process = require('child_process')
+const http = require('http')
+
+// Load environment variables from .env.local if present
+function loadLocalEnv() {
+  const envCandidates = [
+    path.resolve(__dirname, '..', '.env.local'),
+    path.resolve(__dirname, '..', 'user-app', '.env.local'),
+    path.resolve(__dirname, '.env.local'),
+    path.resolve(process.cwd(), '.env.local'),
+    path.resolve(process.cwd(), '..', '.env.local'),
+    path.resolve(process.cwd(), 'user-app', '.env.local'),
+    path.resolve(__dirname, '..', '.env'),
+    path.resolve(__dirname, '..', 'user-app', '.env')
+  ]
+  for (const envPath of envCandidates) {
+    if (fs.existsSync(envPath)) {
+      try {
+        const content = fs.readFileSync(envPath, 'utf8')
+        content.split(/\r?\n/).forEach(line => {
+          const match = line.match(/^\s*([A-Za-z0-9_]+)\s*=\s*(.*)?\s*$/)
+          if (match) {
+            const key = match[1]
+            let val = (match[2] || '').trim()
+            if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+              val = val.slice(1, -1)
+            }
+            if (!process.env[key]) {
+              process.env[key] = val
+            }
+          }
+        })
+      } catch (e) {}
+    }
+  }
+}
+loadLocalEnv()
 
 let pdfToPrinter = null
 try {
@@ -19,7 +55,8 @@ try {
 
 let Jimp = null
 try {
-  Jimp = require('jimp')
+  const jimpMod = require('jimp')
+  Jimp = jimpMod.Jimp || jimpMod
 } catch (e) {
   console.warn('jimp load notice:', e.message)
 }
@@ -52,7 +89,15 @@ if (!app.isPackaged) {
     const srcDir = path.join(__dirname, 'src')
     if (fs.existsSync(srcDir)) {
       fs.watch(srcDir, { recursive: true }, (eventType, filename) => {
-        triggerRestart(filename || 'src')
+        if (!filename) return
+        const normalized = filename.replace(/\\/g, '/')
+        if (normalized.includes('assets/') || normalized.endsWith('.ico') || normalized.endsWith('.png') || normalized === 'assets') {
+          return
+        }
+        const ext = path.extname(filename).toLowerCase()
+        if (['.js', '.html', '.css'].includes(ext)) {
+          triggerRestart(filename)
+        }
       })
     }
   } catch (e) {}
@@ -442,9 +487,18 @@ async function convertImageToA4Pdf(imagePath, isColor = true) {
   if (!isColor && Jimp) {
     try {
       const jimpImage = await Jimp.read(imagePath)
-      jimpImage.grayscale()
-      imageBytes = await jimpImage.getBufferAsync(Jimp.MIME_JPEG)
-      isPng = false
+      if (typeof jimpImage.greyscale === 'function') {
+        jimpImage.greyscale()
+      } else if (typeof jimpImage.grayscale === 'function') {
+        jimpImage.grayscale()
+      }
+      if (typeof jimpImage.getBuffer === 'function') {
+        imageBytes = await jimpImage.getBuffer('image/jpeg')
+        isPng = false
+      } else if (typeof jimpImage.getBufferAsync === 'function') {
+        imageBytes = await jimpImage.getBufferAsync('image/jpeg')
+        isPng = false
+      }
     } catch (jimpErr) {
       console.warn('[convertImageToA4Pdf] Jimp grayscale notice:', jimpErr.message)
     }
@@ -1204,6 +1258,313 @@ async function prepareDocumentForPrinting(srcPdfPath, effectivePageRange, nup = 
     if (autoUpdater) {
       autoUpdater.quitAndInstall(false, true)
     }
+  })
+
+  // 7. PayStation Gateway IPC Handlers (Hosted Checkout directly from Desktop)
+  let activePaymentPoll = null
+  let localCallbackServer = null
+  const localCallbackPort = 49152
+
+  function startLocalPaymentCallbackServer() {
+    if (localCallbackServer) return
+    try {
+      localCallbackServer = http.createServer(async (req, res) => {
+        try {
+          const reqUrl = new URL(req.url, `http://127.0.0.1:${localCallbackPort}`)
+          if (reqUrl.pathname === '/payment-callback') {
+            const invoiceNumber = reqUrl.searchParams.get('invoice_number') || reqUrl.searchParams.get('invoice')
+            const trxId = reqUrl.searchParams.get('trx_id') || reqUrl.searchParams.get('transaction_id')
+            const status = (reqUrl.searchParams.get('status') || '').toLowerCase()
+
+            let isPaid = status === 'successful' || status === 'success' || status === 'completed'
+            let finalTrx = trxId || 'VERIFIED'
+            let finalMethod = 'PayStation'
+
+            if (invoiceNumber) {
+              try {
+                const check = await checkPayStationStatus(invoiceNumber)
+                if (check.success) {
+                  isPaid = true
+                  finalTrx = check.trx_id || finalTrx
+                  finalMethod = check.payment_method || finalMethod
+                }
+              } catch (e) {
+                console.warn('[PayStation Callback Server] Status check error:', e)
+              }
+            }
+
+            if (isPaid && invoiceNumber) {
+              mainWindow?.webContents?.send('paystation:payment-completed', {
+                invoiceNumber,
+                trx_id: finalTrx,
+                payment_method: finalMethod
+              })
+            }
+
+            res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
+            res.end(`
+              <!DOCTYPE html>
+              <html lang="bn">
+              <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <title>পেমেন্ট সফল — PrintKoro Station</title>
+                <style>
+                  * { box-sizing: border-box; margin: 0; padding: 0; }
+                  body {
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    background: #09090b;
+                    color: #ffffff;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-height: 100vh;
+                    padding: 20px;
+                  }
+                  .card {
+                    background: #121215;
+                    border: 1px solid #27272a;
+                    border-radius: 20px;
+                    max-width: 440px;
+                    width: 100%;
+                    padding: 36px 28px;
+                    text-align: center;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+                  }
+                  .icon {
+                    width: 68px;
+                    height: 68px;
+                    border-radius: 50%;
+                    background: rgba(16, 185, 129, 0.15);
+                    color: #10b981;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 34px;
+                    margin: 0 auto 18px;
+                    border: 2px solid rgba(16, 185, 129, 0.35);
+                  }
+                  h1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; color: #10b981; }
+                  p.sub { font-size: 14px; color: #a1a1aa; margin-bottom: 22px; line-height: 1.5; }
+                  .details {
+                    background: #18181b;
+                    border: 1px solid #27272a;
+                    border-radius: 12px;
+                    padding: 16px;
+                    margin-bottom: 22px;
+                    text-align: left;
+                    font-size: 13px;
+                  }
+                  .row { display: flex; justify-content: space-between; margin-bottom: 8px; }
+                  .row:last-child { margin-bottom: 0; }
+                  .row .label { color: #71717a; }
+                  .row .val { font-weight: 600; color: #f4f4f5; font-family: monospace; }
+                  .btn {
+                    display: inline-block;
+                    width: 100%;
+                    background: #10b981;
+                    color: #000;
+                    font-weight: 700;
+                    font-size: 14.5px;
+                    padding: 12px;
+                    border-radius: 8px;
+                    border: none;
+                    cursor: pointer;
+                  }
+                </style>
+              </head>
+              <body>
+                <div class="card">
+                  <div class="icon">✓</div>
+                  <h1>পেমেন্ট সফল হয়েছে!</h1>
+                  <p class="sub">টার্মিনাল স্টেশনে ক্রেডিট স্বয়ংক্রিয়ভাবে যুক্ত হয়েছে। এই উইন্ডোটি এখন বন্ধ করতে পারেন।</p>
+                  <div class="details">
+                    <div class="row"><span class="label">ইনভয়েস:</span><span class="val">\${invoiceNumber || '—'}</span></div>
+                    <div class="row"><span class="label">TrxID:</span><span class="val">\${finalTrx}</span></div>
+                    <div class="row"><span class="label">মেথড:</span><span class="val">\${finalMethod}</span></div>
+                    <div class="row"><span class="label">স্ট্যাটাস:</span><span class="val" style="color:#10b981;">SUCCESS</span></div>
+                  </div>
+                  <button class="btn" onclick="window.close()">উইন্ডো বন্ধ করুন</button>
+                </div>
+                <script>
+                  setTimeout(() => { try { window.close(); } catch(e){} }, 4000);
+                </script>
+              </body>
+              </html>
+            `)
+            return
+          }
+        } catch (e) {
+          console.warn('[PayStation Callback Server] Request error:', e)
+        }
+        res.writeHead(404, { 'Content-Type': 'text/plain' })
+        res.end('Not Found')
+      })
+
+      localCallbackServer.listen(localCallbackPort, '127.0.0.1', () => {
+        console.log(`[PayStation] Local callback server running on http://127.0.0.1:\${localCallbackPort}`)
+      })
+      localCallbackServer.on('error', (err) => {
+        console.warn('[PayStation] Callback server error:', err.message)
+      })
+    } catch (e) {
+      console.warn('[PayStation] Failed to init callback server:', e)
+    }
+  }
+
+  startLocalPaymentCallbackServer()
+
+  async function checkPayStationStatus(invoiceNumber) {
+    const storeId = process.env.PAYSTATION_STORE_ID || '6817-1790658194'
+    const baseUrl = process.env.PAYSTATION_BASE_URL || 'https://api.paystation.com.bd'
+
+    if (!storeId || !invoiceNumber) {
+      return { success: false, error: 'Missing storeId or invoiceNumber' }
+    }
+
+    try {
+      const statusRes = await fetch(`${baseUrl}/transaction-status`, {
+        method: 'POST',
+        headers: {
+          'merchantId': storeId,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          invoice_number: invoiceNumber
+        })
+      })
+
+      const statusData = await statusRes.json().catch(() => null)
+      const dataObj = statusData?.data || statusData
+      const statusText = (dataObj?.trx_status || statusData?.trx_status || '').toLowerCase()
+      const isSuccess = statusText === 'success' || statusText === 'successful' || statusText === 'completed'
+
+      return {
+        success: isSuccess,
+        trx_status: dataObj?.trx_status || statusData?.trx_status || 'Pending',
+        trx_id: dataObj?.trx_id || null,
+        amount: dataObj?.payment_amount || null,
+        payment_method: dataObj?.payment_method || 'PayStation'
+      }
+    } catch (err) {
+      return { success: false, error: err.message }
+    }
+  }
+
+  ipcMain.handle('paystation:create-session', async (event, { purpose = 'credit_recharge', deviceId, packageId, amount, customCredits, customerName, customerPhone, openInBrowser = true }) => {
+    try {
+      const storeId = process.env.PAYSTATION_STORE_ID || '6817-1790658194'
+      const password = process.env.PAYSTATION_PASSWORD || 'ku6d@RY6x4y'
+      const baseUrl = process.env.PAYSTATION_BASE_URL || 'https://api.paystation.com.bd'
+
+      if (!storeId || !password) {
+        return { success: false, error: 'PayStation credentials not found in local environment' }
+      }
+
+      // 1. Grant Token (PayStation returns status_code as string '200')
+      const tokenRes = await fetch(`${baseUrl}/grant-token`, {
+        method: 'POST',
+        headers: {
+          'merchantId': storeId,
+          'password': password,
+          'Content-Type': 'application/json'
+        }
+      })
+      const tokenData = await tokenRes.json().catch(() => null)
+      if (!tokenRes.ok || !tokenData || String(tokenData.status_code) !== '200' || !tokenData.token) {
+        return { success: false, error: tokenData?.message || 'Failed to authenticate with PayStation Gateway' }
+      }
+
+      const invoiceNumber = `PK-CR-${Date.now()}`
+      const numAmount = Number(amount ?? 250)
+      const ref = `PK-CR|${deviceId || 'device'}|${packageId || 'custom'}|${customCredits || 100}`
+      const callbackUrl = `http://127.0.0.1:${localCallbackPort}/payment-callback`
+
+      // 2. Create Payment
+      const payRes = await fetch(`${baseUrl}/create-payment`, {
+        method: 'POST',
+        headers: {
+          'token': tokenData.token,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          invoice_number: invoiceNumber,
+          currency: 'BDT',
+          payment_amount: numAmount,
+          reference: ref,
+          cust_name: customerName || 'QuickInk Station Partner',
+          cust_phone: customerPhone || '01700000000',
+          cust_email: 'partner@printkoro.com',
+          cust_address: 'Partner Station Terminal, Bangladesh',
+          callback_url: callbackUrl
+        })
+      })
+
+      const payData = await payRes.json().catch(() => null)
+      if (!payRes.ok || !payData || String(payData.status_code) !== '200' || !payData.payment_url) {
+        return { success: false, error: payData?.message || 'PayStation could not generate checkout session' }
+      }
+
+      // Always launch gateway directly in system's default browser (e.g. Chrome/Edge)
+      try {
+        await shell.openExternal(payData.payment_url)
+      } catch (browserErr) {
+        console.warn('[PayStation Desktop IPC] Failed to open default browser:', browserErr)
+      }
+
+      // Start background status poller in main process to push event to renderer when user completes payment in browser
+      if (activePaymentPoll) {
+        clearInterval(activePaymentPoll)
+        activePaymentPoll = null
+      }
+
+      let checkCount = 0
+      activePaymentPoll = setInterval(async () => {
+        checkCount++
+        try {
+          const status = await checkPayStationStatus(invoiceNumber)
+          if (status.success) {
+            clearInterval(activePaymentPoll)
+            activePaymentPoll = null
+            mainWindow?.webContents?.send('paystation:payment-completed', {
+              invoiceNumber,
+              trx_id: status.trx_id,
+              amount: status.amount,
+              payment_method: status.payment_method,
+              deviceId,
+              packageId,
+              customCredits
+            })
+          } else if (checkCount >= 100) {
+            clearInterval(activePaymentPoll)
+            activePaymentPoll = null
+          }
+        } catch (e) {
+          // Continue polling
+        }
+      }, 3000)
+
+      return {
+        success: true,
+        payment_url: payData.payment_url,
+        invoice_number: invoiceNumber
+      }
+    } catch (err) {
+      console.warn('[PayStation Desktop IPC] Error creating session:', err)
+      return { success: false, error: err.message }
+    }
+  })
+
+  ipcMain.handle('paystation:check-status', async (event, { invoiceNumber }) => {
+    return checkPayStationStatus(invoiceNumber)
+  })
+
+  ipcMain.handle('shell:open-external', async (event, url) => {
+    if (url) {
+      await shell.openExternal(url)
+      return true
+    }
+    return false
   })
 }
 

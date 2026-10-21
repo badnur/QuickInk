@@ -24,6 +24,18 @@ const desktopBridge = {
     const handler = (_event, data) => callback(data)
     ipcRenderer.on('updater:status', handler)
     return () => ipcRenderer.removeListener('updater:status', handler)
+  },
+
+  // Shell & External URL
+  openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
+
+  // PayStation Gateway Native IPC
+  createPayStationSession: (options) => ipcRenderer.invoke('paystation:create-session', options),
+  checkPayStationStatus: (options) => ipcRenderer.invoke('paystation:check-status', options),
+  onPayStationCompleted: (callback) => {
+    const handler = (_event, data) => callback(data)
+    ipcRenderer.on('paystation:payment-completed', handler)
+    return () => ipcRenderer.removeListener('paystation:payment-completed', handler)
   }
 }
 

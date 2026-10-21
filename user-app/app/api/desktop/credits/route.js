@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
 import { enforceRateLimit, RATE_LIMITS } from '@/lib/rate-limiter'
+import { verifyPayStationPayment } from '@/lib/paystation'
 
 export const dynamic = 'force-dynamic'
 
@@ -49,6 +50,17 @@ export const CREDIT_PACKAGES = [
     popular: false,
     badge: '🚀 CAMPUS HUB',
     description: 'Maximum wholesale discount for university campus mega-stations.',
+  },
+  {
+    id: 'pkg_elite',
+    name: 'Elite Mega Pack',
+    name_bn: 'এলিট মেগা প্যাক',
+    credits: 300000,
+    price_taka: 4000,
+    print_value_taka: 300000,
+    popular: false,
+    badge: '👑 ELITE NETWORK',
+    description: 'Ultimate capacity for high-throughput station networks.',
   }
 ]
 
@@ -227,6 +239,20 @@ export async function POST(request) {
       const isPatternValid = cleanPromo && (VALID_PROMOS.includes(cleanPromo) || /^PK-[A-Z0-9]{4,20}$/.test(cleanPromo))
       if (!isPatternValid) {
         return NextResponse.json({ error: 'Invalid or unrecognized recharge voucher code.' }, { status: 400 })
+      }
+    }
+
+    let verifiedMethodLabel = cleanMethod.toUpperCase()
+    // For PayStation online checkout, verify transaction with gateway
+    if (cleanMethod === 'paystation' && cleanRef) {
+      try {
+        const psRes = await verifyPayStationPayment({ invoiceNumber: cleanRef, trxId: cleanRef })
+        if (!psRes.isPaid) {
+          return NextResponse.json({ error: `PayStation payment verification failed: ${psRes.status || 'Payment not completed'}` }, { status: 400 })
+        }
+        verifiedMethodLabel = `PAYSTATION (${psRes.paymentMethod || 'ONLINE'})`
+      } catch (psErr) {
+        console.warn('PayStation verification notice:', psErr.message)
       }
     }
 

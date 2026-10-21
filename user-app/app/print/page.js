@@ -166,8 +166,19 @@ function PrintOrderPageContent({ initialDeviceId }) {
 
   const fileInputRef = useRef(null)
 
-  // Direct step navigation helper for preview/testing
+  // Direct step navigation or payment return handler
   useEffect(() => {
+    if (searchParams.get('status') === 'success' && searchParams.get('otp')) {
+      const otpCode = searchParams.get('otp')
+      const orderId = searchParams.get('orderId') || 'PK-ONLINE'
+      setTicketOtp({ code: otpCode, otp_type: 'type_a' })
+      setTicketOrder({ id: orderId, status: 'ready', payment_type: 'online' })
+      setLiveStatus('ready')
+      setTimeLeft(3600)
+      setStep(4)
+      return
+    }
+
     if (searchParams.get('step') === '2') {
       const sampleSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="380" viewBox="0 0 600 380"><rect width="600" height="380" rx="20" fill="#0f172a"/><rect x="25" y="25" width="550" height="330" rx="15" fill="#1e293b" stroke="#334155" stroke-width="2"/><circle cx="110" cy="150" r="50" fill="#38bdf8"/><text x="110" y="162" fill="#0f172a" font-size="36" font-weight="bold" text-anchor="middle" font-family="sans-serif">ID</text><text x="190" y="115" fill="#38bdf8" font-size="16" font-weight="bold" font-family="sans-serif">PEOPLES REPUBLIC</text><text x="190" y="145" fill="#ffffff" font-size="20" font-weight="bold" font-family="sans-serif">NATIONAL IDENTITY CARD</text><text x="190" y="185" fill="#cbd5e1" font-size="15" font-family="sans-serif">Name: SHAMSUZZAMAN NUR</text><text x="190" y="215" fill="#cbd5e1" font-size="14" font-family="sans-serif">ID: 1994 2819 0021</text><rect x="190" y="240" width="340" height="12" rx="4" fill="#00bf63"/></svg>`
       const sampleImg = `data:image/svg+xml;utf8,${encodeURIComponent(sampleSvg)}`
@@ -614,7 +625,40 @@ function PrintOrderPageContent({ initialDeviceId }) {
 
       setUploadProgress(75)
 
-      // Call order creation route
+      // Online Payment via PayStation Gateway (bKash, Nagad, Rocket, Cards)
+      if (paymentMethod === 'online') {
+        setUploadProgress(85)
+        const initRes = await fetch('/api/payment/paystation/initiate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            purpose: 'print_job',
+            amount: parseFloat(totalPrice) || 0,
+            customerName: 'QuickInk Customer',
+            jobDetails: {
+              file_path: storagePath,
+              file_type: fileExt,
+              file_name: fileToUpload.name || selectedFile.name,
+              copies,
+              color_mode: colorMode,
+              duplex: colorMode === 'color' ? false : duplex,
+              page_count: calculatedSheets,
+              page_range: effectivePageRange,
+              pages_per_sheet: pagesPerSheet || 1,
+              mini_border: Boolean(miniBorder),
+            }
+          })
+        })
+
+        const initData = await initRes.json()
+        if (initData?.paymentUrl) {
+          window.location.href = initData.paymentUrl
+          return
+        }
+        throw new Error(initData?.error || 'Failed to initialize PayStation payment.')
+      }
+
+      // Cash flow (Pay at partner shop upon collection)
       const response = await fetch('/api/print-jobs', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -630,7 +674,7 @@ function PrintOrderPageContent({ initialDeviceId }) {
           pages_per_sheet: pagesPerSheet || 1,
           mini_border: Boolean(miniBorder),
           payment_type: 'cash',
-          amount: 0,
+          amount: parseFloat(totalPrice) || 0,
         }),
       })
 
@@ -1800,31 +1844,72 @@ function PrintOrderPageContent({ initialDeviceId }) {
                 </button>
               </div>
 
-              {/* 3. Payment Method: Pay at Partner Shop (Online temporarily disabled) */}
-              <div className="pt-2 border-t border-gray-100">
+              {/* 3. Payment Method: PayStation Online (bKash/Nagad/Cards) or Pay at Shop */}
+              <div className="pt-2 border-t border-gray-100 space-y-2">
                 <label className="block text-xs font-bold text-gray-800 mb-1.5">
                   {lang === 'bn' ? 'মূল্য পরিশোধ পদ্ধতি' : 'Payment Method'}
                 </label>
-                <div className="w-full p-3.5 rounded-xl border-2 border-[#00bf63] bg-[#00bf63]/5 text-left flex items-start gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-[#00bf63]/15 text-[#00bf63] flex items-center justify-center shrink-0 mt-0.5">
+
+                {/* Option 1: PayStation Online Gateway */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('online')}
+                  className={`w-full p-3.5 rounded-xl border-2 text-left flex items-start gap-3 transition-all ${
+                    paymentMethod === 'online'
+                      ? 'border-[#00bf63] bg-[#00bf63]/5 shadow-sm'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                    paymentMethod === 'online' ? 'bg-[#00bf63]/15 text-[#00bf63]' : 'bg-gray-100 text-gray-500'
+                  }`}>
+                    <CreditCard className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between">
+                      <b className="text-xs font-bold text-gray-900 block">
+                        {lang === 'bn' ? 'অনলাইন পেমেন্ট (bKash, Nagad, Cards)' : 'Online Payment (bKash, Nagad, Cards)'}
+                      </b>
+                      <span className="bg-[#00bf63] text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
+                        PayStation
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
+                      {lang === 'bn'
+                        ? 'পেস্টেশন গেটওয়ে দিয়ে bKash, Nagad, Rocket বা ডেবিট/ক্রেডিট কার্ডে পরিশোধ করুন। পেমেন্ট শেষেই তাৎক্ষণিক প্রিন্ট ওটিপি পাবেন।'
+                        : 'Instant checkout via bKash, Nagad, Rocket, or Debit/Credit Cards. Receive your print release OTP immediately.'}
+                    </p>
+                  </div>
+                </button>
+
+                {/* Option 2: Pay Directly at Partner Shop */}
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('cash')}
+                  className={`w-full p-3.5 rounded-xl border-2 text-left flex items-start gap-3 transition-all ${
+                    paymentMethod === 'cash'
+                      ? 'border-[#00bf63] bg-[#00bf63]/5 shadow-sm'
+                      : 'border-gray-200 hover:border-gray-300 bg-white'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${
+                    paymentMethod === 'cash' ? 'bg-[#00bf63]/15 text-[#00bf63]' : 'bg-gray-100 text-gray-500'
+                  }`}>
                     <Banknote className="h-4 w-4" />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <b className="text-xs font-bold text-gray-900 block">
-                        {lang === 'bn' ? 'দোকানে সরাসরি মূল্য পরিশোধ (Cash / MFS)' : 'Pay Directly at Partner Shop (Cash / MFS)'}
+                        {lang === 'bn' ? 'দোকানে সরাসরি মূল্য পরিশোধ (Cash / Shop MFS)' : 'Pay Directly at Partner Shop (Cash / MFS)'}
                       </b>
-                      <span className="bg-[#00bf63] text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
-                        {lang === 'bn' ? 'সক্রিয়' : 'Active'}
-                      </span>
                     </div>
                     <p className="text-[11px] text-gray-600 mt-1 leading-relaxed">
                       {lang === 'bn'
-                        ? 'অনলাইন পেমেন্ট বর্তমানে বন্ধ রয়েছে। ওটিপি কোডটি নিয়ে পার্টনার দোকানে যান; প্রিন্ট বুঝে নিয়ে সরাসরি দোকানদারের সাথে নির্ধারিত মূল্য পরিশোধ করুন।'
-                        : 'Online payment is temporarily disabled. Take your OTP code to any partner shop, and settle the price directly with the shop owner upon collecting your prints.'}
+                        ? 'ওটিপি কোডটি নিয়ে পার্টনার দোকানে যান; প্রিন্ট বুঝে নিয়ে সরাসরি দোকানদারের কাছে নির্ধারিত মূল্য পরিশোধ করুন।'
+                        : 'Take your OTP code to any partner shop and settle the payment directly with the shop owner upon collecting prints.'}
                     </p>
                   </div>
-                </div>
+                </button>
               </div>
 
               {/* Order Summary Breakdown (Service Price in BDT - Payment Gateway Compliance) */}

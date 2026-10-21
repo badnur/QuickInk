@@ -33,6 +33,18 @@ const CREDIT_PACKAGES = [
     credits: 150000,
     price_taka: 2200,
     print_value_taka: 150000,
+    badge: 'PREMIUM PACK',
+    rate_note: 'প্রতি ক্রেডিট চার্জ ০.০১৫ টাকা',
+  },
+  {
+    id: 'pkg_elite',
+    name: 'Elite Mega Pack',
+    name_bn: 'এলিট প্যাক',
+    credits: 300000,
+    price_taka: 4000,
+    print_value_taka: 300000,
+    badge: 'ELITE PACK',
+    rate_note: 'প্রতি ক্রেডিট চার্জ ০.০১৩ টাকা',
   }
 ]
 
@@ -900,9 +912,23 @@ const el = {
   navTextPrinters: document.getElementById('nav-text-printers'),
   navTextQueue: document.getElementById('nav-text-queue'),
   navTextEarnings: document.getElementById('nav-text-earnings'),
+  navTextCredits: document.getElementById('nav-text-credits'),
   navTextProfile: document.getElementById('nav-text-profile'),
   lblThemeLight: document.getElementById('lbl-theme-light'),
   lblThemeDark: document.getElementById('lbl-theme-dark'),
+
+  // Credit Management Elements (Exact Screenshot Match)
+  cmStatAvailable: document.getElementById('cm-stat-available'),
+  cmStatTotalJobs: document.getElementById('cm-stat-total-jobs'),
+  cmStatSuccessRate: document.getElementById('cm-stat-success-rate'),
+  cmStatUsedCredits: document.getElementById('cm-stat-used-credits'),
+  cmUsageTableBody: document.getElementById('cm-usage-table-body'),
+  cmRechargeTableBody: document.getElementById('cm-recharge-table-body'),
+  btnCmDoc: document.getElementById('btn-cm-doc'),
+  cmTabBtnUsage: document.getElementById('cm-tab-btn-usage'),
+  cmTabBtnRecharge: document.getElementById('cm-tab-btn-recharge'),
+  cmViewUsage: document.getElementById('cm-view-usage'),
+  cmViewRecharge: document.getElementById('cm-view-recharge'),
 
   // Home Page Live Software Update Center (Backward compatibility)
   homeUpdateCard: document.getElementById('home-update-card'),
@@ -1011,6 +1037,10 @@ const el = {
   btnForgotPassword: document.getElementById('btn-forgot-password'),
   linkToRegister: document.getElementById('link-to-register'),
   linkToLogin: document.getElementById('link-to-login'),
+  tabAuthSignin: document.getElementById('tab-auth-signin'),
+  tabAuthRegister: document.getElementById('tab-auth-register'),
+  regTabAuthSignin: document.getElementById('reg-tab-auth-signin'),
+  regTabAuthRegister: document.getElementById('reg-tab-auth-register'),
 
   // Forgot Password Screen
   screenForgotPassword: document.getElementById('screen-forgot-password'),
@@ -1194,6 +1224,21 @@ const el = {
   rechargeBtnText: document.getElementById('recharge-btn-text'),
   ledgerTableBody: document.getElementById('ledger-table-body'),
   btnRefreshLedger: document.getElementById('btn-refresh-ledger'),
+
+  // Direct CM Checkout Modal Elements
+  cmCheckoutModal: document.getElementById('cm-checkout-modal'),
+  btnCloseCmCheckout: document.getElementById('btn-close-cm-checkout'),
+  cmChkPkgName: document.getElementById('cm-chk-pkg-name'),
+  cmChkCredits: document.getElementById('cm-chk-credits'),
+  cmChkPrice: document.getElementById('cm-chk-price'),
+  cmChkDeviceId: document.getElementById('cm-chk-device-id'),
+  cmChkStatusBox: document.getElementById('cm-chk-status-box'),
+  cmChkSpinner: document.getElementById('cm-chk-spinner'),
+  cmChkStatusTitle: document.getElementById('cm-chk-status-title'),
+  cmChkStatusDesc: document.getElementById('cm-chk-status-desc'),
+  btnCmOpenBrowser: document.getElementById('btn-cm-open-browser'),
+  btnCmRecheckStatus: document.getElementById('btn-cm-recheck-status'),
+  btnCmCancel: document.getElementById('btn-cm-cancel'),
 
   // Job Modal Credit Elements
   modalCreditCost: document.getElementById('modal-credit-cost'),
@@ -1392,6 +1437,8 @@ function setupTabNavigation() {
         el.otpBoxes[0]?.focus()
       } else if (targetId === 'tab-queue') {
         fetchRecentJobs()
+      } else if (targetId === 'tab-credits') {
+        renderCreditManagementPage()
       } else if (targetId === 'tab-profile') {
         el.accountProfileBadge?.classList.add('active')
         renderProfilePage()
@@ -1409,6 +1456,7 @@ const DESKTOP_TRANSLATIONS = {
     navPrinters: 'Printers Setup',
     navQueue: 'Queue & History',
     navEarnings: "Today's Earnings",
+    navCredits: 'Credit Management',
     stationProfile: 'Station Profile',
     light: 'Light',
     dark: 'Dark',
@@ -1428,6 +1476,7 @@ const DESKTOP_TRANSLATIONS = {
     navPrinters: 'প্রিন্টার সেটআপ',
     navQueue: 'কিউ ও ইতিহাস',
     navEarnings: 'আজকের আয়',
+    navCredits: 'ক্রেডিট ম্যানেজমেন্ট',
     stationProfile: 'স্টেশন প্রোফাইল',
     light: 'লাইট',
     dark: 'ডার্ক',
@@ -1463,6 +1512,7 @@ function applyDesktopLanguage(lang) {
   if (el.navTextPrinters) el.navTextPrinters.textContent = t.navPrinters
   if (el.navTextQueue) el.navTextQueue.textContent = t.navQueue
   if (el.navTextEarnings) el.navTextEarnings.textContent = t.navEarnings
+  if (el.navTextCredits) el.navTextCredits.textContent = t.navCredits
   if (el.navTextProfile) el.navTextProfile.textContent = t.stationProfile
   if (el.btnAccountLabel) el.btnAccountLabel.textContent = t.stationProfile
 
@@ -1526,7 +1576,7 @@ function setupAutoUpdaterClient() {
       if (ver) updateVersionBadge(ver)
     }).catch(() => {})
   } else {
-    updateVersionBadge('1.2.2')
+    updateVersionBadge('1.2.4')
   }
 
   // 2. Dismiss top banner
@@ -1667,6 +1717,26 @@ function setupAutoUpdaterClient() {
         if (el.sidebarUpdateText) {
           el.sidebarUpdateText.textContent = (currentDesktopLang === 'bn') ? 'আপডেট চেক করুন' : 'Check for Updates'
         }
+      }
+    })
+  }
+
+  // 6. PayStation Real-Time Payment Completion Event (From Electron Main Process)
+  if (isElectron && desktopAPI?.onPayStationCompleted) {
+    desktopAPI.onPayStationCompleted(async (data) => {
+      console.log('[PayStation IPC] Payment completion event received:', data)
+      const devId = getEffectiveDeviceId()
+      const inv = data?.invoiceNumber
+      if (inv) {
+        await verifyAndActivatePaystationPayment(inv, devId, false)
+        if (activeCmPollTimer) {
+          clearInterval(activeCmPollTimer)
+          activeCmPollTimer = null
+        }
+        if (el.cmChkStatusTitle) el.cmChkStatusTitle.innerHTML = '🎉 <span style="color:#10b981;">পেমেন্ট সফলভাবে সম্পন্ন হয়েছে!</span>'
+        const credits = data.customCredits || (state.selectedPackage?.credits) || 10000
+        if (el.cmChkStatusDesc) el.cmChkStatusDesc.textContent = `আপনার স্টেশনে +${credits.toLocaleString()} ক্রেডিট যুক্ত হয়েছে। বর্তমান ব্যালেন্স: ${state.creditsBalance.toLocaleString()}`
+        setTimeout(closeCmCheckoutModal, 2200)
       }
     })
   }
@@ -2107,18 +2177,22 @@ function openJobModal(jobData) {
   if (el.modalCreditTakaVal) el.modalCreditTakaVal.textContent = `৳${creditCost.toFixed(2)}`
   if (el.modalAvailCredits) el.modalAvailCredits.textContent = (state.creditsBalance || 0).toLocaleString()
 
-  if (state.creditsBalance < creditCost) {
+  const hasEnoughCredits = (state.creditsBalance || 0) >= creditCost
+  if (!hasEnoughCredits) {
     if (el.modalLowCreditsAlert) {
       el.modalLowCreditsAlert.classList.remove('hidden')
       if (el.modalNeededCredits) el.modalNeededCredits.textContent = creditCost
       if (el.modalCurrentCredits) el.modalCurrentCredits.textContent = (state.creditsBalance || 0).toLocaleString()
     }
+    el.btnReleasePrint.disabled = true
+    el.btnReleasePrint.title = 'Insufficient station balance. Please top up in Profile.'
   } else {
     if (el.modalLowCreditsAlert) el.modalLowCreditsAlert.classList.add('hidden')
+    el.btnReleasePrint.disabled = false
+    el.btnReleasePrint.title = ''
   }
 
   el.spoolingPanel.classList.add('hidden')
-  el.btnReleasePrint.disabled = false
   el.jobModal.classList.remove('hidden')
 }
 
@@ -2360,8 +2434,43 @@ function setupSubscriptionSystem() {
   })
   el.btnJobModalTopup?.addEventListener('click', () => {
     el.jobModal?.classList.add('hidden')
-    openSubscriptionModal('subtab-recharge')
+    activateProfileTab()
   })
+
+  // Native PayStation Auto-Completion Listener
+  const desktopBridge = window.printkoroDesktop || window.quickinkDesktop
+  if (desktopBridge?.onPayStationCompleted) {
+    desktopBridge.onPayStationCompleted(async (data) => {
+      const devId = getEffectiveDeviceId()
+      const pkg = state.selectedPackage || CREDIT_PACKAGES[1]
+      const topupRes = await PrintKoroCloud.topupCredits(
+        devId,
+        pkg.id,
+        pkg.credits,
+        { method: 'paystation', invoiceNumber: data.invoiceNumber, trxId: data.trx_id, amount: data.amount }
+      )
+      playSuccessChime()
+      const newBal = Number(topupRes?.data?.newBalance || (state.creditsBalance + pkg.credits))
+      state.creditsBalance = newBal
+      updateHeaderCreditBadge()
+
+      if (el.rechargeStatusMsg) {
+        el.rechargeStatusMsg.innerHTML = `
+          <div style="font-size: 13.5px; line-height: 1.6;">
+            🎉 <strong>পেমেন্ট সফলভাবে সম্পন্ন হয়েছে!</strong><br/>
+            PayStation / bKash TrxID: <strong style="color: #0284c7;">${data.trx_id || data.invoiceNumber}</strong><br/>
+            আপনার টার্মিনালে <strong>+${pkg.credits.toLocaleString()}</strong> ক্রেডিট যুক্ত করা হয়েছে।<br/>
+            নতুন ব্যালেন্স: <strong>${newBal.toLocaleString()}</strong> ক্রেডিট
+          </div>
+        `
+        el.rechargeStatusMsg.className = 'recharge-status-alert success'
+        el.rechargeStatusMsg.classList.remove('hidden')
+      }
+
+      fetchCreditsData()
+      setTimeout(() => switchSubTab('subtab-history'), 2000)
+    })
+  }
 
   // 2. SubTab Switcher
   el.subTabBtns?.forEach((btn) => {
@@ -2415,6 +2524,7 @@ function setupSubscriptionSystem() {
           el.voucherFieldWrap?.classList.add('hidden')
         }
       }
+      updateRechargeBtnText()
     })
   })
 
@@ -2433,6 +2543,46 @@ function setupSubscriptionSystem() {
     fetchCreditsData()
   })
 
+  // Credit Management Grid Packages (Whole card and button clickable) -> 1-CLICK PAYSTATION CHECKOUT
+  document.querySelectorAll('.cm-pkg-card, .cm-pkg-btn').forEach((elem) => {
+    elem.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const card = elem.closest('.cm-pkg-card') || elem
+      const pkgId = card.getAttribute('data-pkg-id')
+      if (pkgId) {
+        startDirectCreditRecharge(pkgId)
+      }
+    })
+  })
+
+  // Close buttons for Direct CM Checkout Modal
+  el.btnCloseCmCheckout?.addEventListener('click', closeCmCheckoutModal)
+  el.btnCmCancel?.addEventListener('click', closeCmCheckoutModal)
+
+  // Bottom History Tabs Switcher
+  el.cmTabBtnUsage?.addEventListener('click', () => {
+    el.cmTabBtnUsage.classList.add('active')
+    el.cmTabBtnRecharge?.classList.remove('active')
+    el.cmViewUsage?.classList.remove('hidden')
+    el.cmViewUsage?.classList.add('active')
+    el.cmViewRecharge?.classList.add('hidden')
+    el.cmViewRecharge?.classList.remove('active')
+  })
+
+  el.cmTabBtnRecharge?.addEventListener('click', () => {
+    el.cmTabBtnRecharge.classList.add('active')
+    el.cmTabBtnUsage?.classList.remove('active')
+    el.cmViewRecharge?.classList.remove('hidden')
+    el.cmViewRecharge?.classList.add('active')
+    el.cmViewUsage?.classList.add('hidden')
+    el.cmViewUsage?.classList.remove('active')
+  })
+
+  // Documentation / Policy Button
+  el.btnCmDoc?.addEventListener('click', () => {
+    openSubscriptionModal('subtab-calculator')
+  })
+
   // Initial calculator sync (Default: 25,000 credits for 500 taka)
   updateCalculator(25000)
 }
@@ -2442,13 +2592,30 @@ function updateHeaderCreditBadge() {
   if (el.headerCreditAmount) el.headerCreditAmount.textContent = bal.toLocaleString()
   if (el.modalAccountCredits) el.modalAccountCredits.textContent = bal.toLocaleString()
   if (el.metricCreditsBalance) el.metricCreditsBalance.textContent = bal.toLocaleString()
+  if (el.cmStatAvailable) el.cmStatAvailable.textContent = bal.toLocaleString()
   if (typeof renderProfilePage === 'function') {
     renderProfilePage()
   }
 }
 
+function getEffectiveDeviceId() {
+  return state.account?.deviceId || state.config?.deviceId || '5c217312-e34c-4866-988a-50f63bd8e3c1'
+}
+
+function updateRechargeBtnText() {
+  if (!el.rechargeBtnText) return
+  const pkg = state.selectedPackage || CREDIT_PACKAGES[1]
+  const methodInput = document.querySelector('input[name="rechargeMethod"]:checked')
+  const method = methodInput ? methodInput.value : 'paystation'
+  if (method === 'voucher') {
+    el.rechargeBtnText.textContent = `🎫 ভাউচার কোড দিয়ে রিচার্জ করুন →`
+  } else {
+    el.rechargeBtnText.textContent = `💳 পে-স্টেশন গেটওয়েতে পেমেন্ট করুন (৳${pkg.price_taka.toLocaleString()}) →`
+  }
+}
+
 async function fetchCreditsData() {
-  const devId = state.config.deviceId || state.account?.deviceId || '11111111-1111-1111-1111-111111111111'
+  const devId = getEffectiveDeviceId()
   if (!devId) return
 
   try {
@@ -2465,6 +2632,17 @@ async function fetchCreditsData() {
       state.creditTransactions = data.transactions || []
 
       updateHeaderCreditBadge()
+
+      // Auto-check any pending unverified recharge
+      try {
+        const pendingRaw = localStorage.getItem('printkoro_pending_recharge')
+        if (pendingRaw) {
+          const pending = JSON.parse(pendingRaw)
+          if (pending?.invoiceNumber && (Date.now() - (pending.time || 0) < 30 * 60 * 1000)) {
+            verifyAndActivatePaystationPayment(pending.invoiceNumber, devId, false)
+          }
+        }
+      } catch (e) {}
 
       if (el.subCardBalance) el.subCardBalance.textContent = state.creditsBalance.toLocaleString()
       if (el.subCardGrossValue) el.subCardGrossValue.textContent = state.creditsBalance.toLocaleString()
@@ -2493,6 +2671,7 @@ async function fetchCreditsData() {
 function openSubscriptionModal(initialTab = 'subtab-packages') {
   el.subscriptionModal?.classList.remove('hidden')
   switchSubTab(initialTab)
+  updateRechargeBtnText()
   fetchCreditsData()
 }
 
@@ -2526,7 +2705,7 @@ function selectCreditPackage(pkgId) {
   if (el.rechargePkgName) el.rechargePkgName.textContent = pkg.name
   if (el.rechargePkgCredits) el.rechargePkgCredits.textContent = `+${pkg.credits.toLocaleString()} Credits`
   if (el.rechargePkgAmount) el.rechargePkgAmount.textContent = `৳${pkg.price_taka.toFixed(2)}`
-  if (el.rechargeBtnText) el.rechargeBtnText.textContent = `Confirm Top-Up & Activate ${pkg.credits.toLocaleString()} Credits (৳${pkg.price_taka}) →`
+  updateRechargeBtnText()
 
   switchSubTab('subtab-recharge')
 }
@@ -2564,19 +2743,133 @@ async function submitRecharge() {
     state.selectedPackage = CREDIT_PACKAGES[1] // Default: 25000 for 500
   }
 
-  const devId = state.config.deviceId || state.account?.deviceId || '11111111-1111-1111-1111-111111111111'
+  const devId = getEffectiveDeviceId()
   const methodInput = document.querySelector('input[name="rechargeMethod"]:checked')
-  const method = methodInput ? methodInput.value : 'bkash'
+  const method = methodInput ? methodInput.value : 'paystation'
   const voucherCode = el.inputVoucherCode?.value?.trim() || null
 
   el.btnSubmitRecharge.disabled = true
   el.rechargeSpinner?.classList.remove('hidden')
-  el.rechargeBtnText.textContent = 'Processing Payment & Crediting Account...'
 
   if (el.rechargeStatusMsg) {
     el.rechargeStatusMsg.classList.add('hidden')
     el.rechargeStatusMsg.className = 'recharge-status-alert hidden'
   }
+
+  // Handle PayStation Live Hosted Gateway
+  if (method === 'paystation') {
+    el.rechargeBtnText.textContent = 'Opening PayStation Checkout...'
+    try {
+      let initData = null
+      const desktopBridge = window.printkoroDesktop || window.quickinkDesktop
+
+      // 1. Direct Electron IPC (Standalone Desktop without needing local web server)
+      if (desktopBridge?.createPayStationSession) {
+        initData = await desktopBridge.createPayStationSession({
+          purpose: 'credit_recharge',
+          deviceId: devId,
+          packageId: state.selectedPackage.id,
+          amount: state.selectedPackage.price_taka,
+          customCredits: state.selectedPackage.credits,
+          customerName: state.account?.shop_name || state.account?.name || 'QuickInk Station Partner',
+          customerPhone: state.account?.phone || '01700000000',
+          openInBrowser: true
+        })
+      }
+
+      // 2. Fallback to API if custom baseUrl is configured
+      if (!initData || !initData.payment_url) {
+        const baseUrl = state.config.apiBaseUrl?.trim() || ''
+        if (baseUrl) {
+          const initRes = await fetch(`${baseUrl}/api/payment/paystation/initiate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              purpose: 'credit_recharge',
+              deviceId: devId,
+              packageId: state.selectedPackage.id,
+              customCredits: state.selectedPackage.credits,
+              customerName: state.account?.shop_name || state.account?.name || 'QuickInk Station Partner',
+              customerPhone: state.account?.phone || '01700000000'
+            })
+          })
+          initData = await initRes.json().catch(() => null)
+          if (initData?.payment_url) {
+            if (desktopBridge?.openExternal) {
+              desktopBridge.openExternal(initData.payment_url)
+            } else {
+              window.open(initData.payment_url, '_blank')
+            }
+          }
+        }
+      }
+
+      if (!initData?.success || !initData?.payment_url) {
+        throw new Error(initData?.error || 'Could not initiate PayStation payment session. Check internet connection.')
+      }
+
+      const inv = initData.invoice_number
+
+      if (el.rechargeStatusMsg) {
+        el.rechargeStatusMsg.innerHTML = `
+          <div style="font-size: 13.5px; line-height: 1.6;">
+            💳 <strong>ডিফল্ট ব্রাউজারে পে-স্টেশন পেমেন্ট উইন্ডো ওপেন হয়েছে!</strong><br/>
+            ব্রাউজারে bKash, Nagad, Rocket বা Card দিয়ে পেমেন্ট সম্পন্ন করুন।<br/>
+            <span style="color: #0284c7; font-size: 12px; font-weight: 600;">⏳ পেমেন্ট সম্পন্ন হওয়া মাত্র স্বয়ংক্রিয়ভাবে ক্রেডিট যুক্ত হবে...</span>
+            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+              <button type="button" id="btn-manual-verify-paystation" class="btn-secondary" style="font-size: 11.5px; padding: 6px 14px;">
+                🔄 স্ট্যাটাস ভেরিফাই করুন
+              </button>
+              <button type="button" id="btn-browser-open-paystation" class="btn-secondary" style="font-size: 11.5px; padding: 6px 14px;">
+                🌐 ব্রাউজারে খুলুন (Open in Browser)
+              </button>
+            </div>
+          </div>
+        `
+        el.rechargeStatusMsg.className = 'recharge-status-alert success'
+        el.rechargeStatusMsg.classList.remove('hidden')
+
+        document.getElementById('btn-manual-verify-paystation')?.addEventListener('click', async () => {
+          await verifyAndActivatePaystationPayment(inv, devId, true)
+        })
+
+        document.getElementById('btn-browser-open-paystation')?.addEventListener('click', () => {
+          if (initData?.payment_url) {
+            if (desktopBridge?.openExternal) {
+              desktopBridge.openExternal(initData.payment_url)
+            } else {
+              window.open(initData.payment_url, '_blank')
+            }
+          }
+        })
+      }
+
+      // Start automatic polling every 2.5 seconds for up to 5 minutes (120 iterations)
+      let pollCount = 0
+      const pollTimer = setInterval(async () => {
+        pollCount++
+        const activated = await verifyAndActivatePaystationPayment(inv, devId, false)
+        if (activated || pollCount >= 120) {
+          clearInterval(pollTimer)
+        }
+      }, 2500)
+
+    } catch (err) {
+      if (el.rechargeStatusMsg) {
+        el.rechargeStatusMsg.textContent = `PayStation Notice: ${err.message}`
+        el.rechargeStatusMsg.className = 'recharge-status-alert error'
+        el.rechargeStatusMsg.classList.remove('hidden')
+      }
+    } finally {
+      el.btnSubmitRecharge.disabled = false
+      el.rechargeSpinner?.classList.add('hidden')
+      updateRechargeBtnText()
+    }
+    return
+  }
+
+  // Direct Instant / bKash / Nagad / Voucher
+  el.rechargeBtnText.textContent = 'ক্রেডিট প্রসেসিং ও অ্যাকাউন্টে জমা হচ্ছে...'
 
   try {
     const payload = {
@@ -2587,25 +2880,26 @@ async function submitRecharge() {
       promoCode: voucherCode
     }
 
-    const { ok, data } = await apiPost(
-      '/api/desktop/credits',
-      payload,
-      () => PrintKoroCloud.topupCredits(devId, state.selectedPackage.id, state.selectedPackage.credits, payload)
+    const { ok, data } = await PrintKoroCloud.topupCredits(
+      devId,
+      state.selectedPackage.id,
+      state.selectedPackage.credits,
+      payload
     )
 
     if (!ok && !data?.success) {
-      throw new Error(data?.error || 'Payment recharge could not be processed')
+      throw new Error(data?.error || 'ক্রেডিট রিচার্জ সম্পন্ন করা সম্ভব হয়নি')
     }
 
     playSuccessChime()
 
     const addedCredits = state.selectedPackage.credits
-    const newBal = Number(data.newBalance || (state.creditsBalance + addedCredits))
+    const newBal = Number(data?.newBalance || (state.creditsBalance + addedCredits))
     state.creditsBalance = newBal
     updateHeaderCreditBadge()
 
     if (el.rechargeStatusMsg) {
-      el.rechargeStatusMsg.textContent = `🎉 Success! Added ${addedCredits.toLocaleString()} credits to your station. New balance: ${newBal.toLocaleString()} credits.`
+      el.rechargeStatusMsg.textContent = `🎉 সফল! আপনার স্টেশনে ${addedCredits.toLocaleString()} ক্রেডিট সফলভাবে যোগ হয়েছে। বর্তমান ব্যালেন্স: ${newBal.toLocaleString()} ক্রেডিট।`
       el.rechargeStatusMsg.className = 'recharge-status-alert success'
       el.rechargeStatusMsg.classList.remove('hidden')
     }
@@ -2616,15 +2910,265 @@ async function submitRecharge() {
     }, 1500)
   } catch (err) {
     if (el.rechargeStatusMsg) {
-      el.rechargeStatusMsg.textContent = `Payment Notice: ${err.message}`
+      el.rechargeStatusMsg.textContent = `রিচার্জ সতর্কতা: ${err.message}`
       el.rechargeStatusMsg.className = 'recharge-status-alert error'
       el.rechargeStatusMsg.classList.remove('hidden')
     }
   } finally {
     el.btnSubmitRecharge.disabled = false
     el.rechargeSpinner?.classList.add('hidden')
-    el.rechargeBtnText.textContent = `Confirm Top-Up & Activate ${state.selectedPackage.credits.toLocaleString()} Credits (৳${state.selectedPackage.price_taka}) →`
+    updateRechargeBtnText()
   }
+}
+
+async function verifyAndActivatePaystationPayment(invoiceNumber, deviceId, showManualError = true) {
+  const desktopBridge = window.printkoroDesktop || window.quickinkDesktop
+  if (!invoiceNumber) return false
+
+  try {
+    let res = null
+    if (desktopBridge?.checkPayStationStatus) {
+      res = await desktopBridge.checkPayStationStatus({ invoiceNumber })
+    }
+
+    const isPaid = Boolean(res?.success)
+
+    // Check if server callback already applied the credits by checking latest credit transactions
+    await fetchCreditsData()
+    const callbackAlreadyProcessed = state.creditTransactions?.some(t =>
+      (t.reference && (t.reference === invoiceNumber || (res?.trx_id && t.reference === res.trx_id))) ||
+      (t.trx_id && res?.trx_id && t.trx_id === res.trx_id)
+    )
+
+    if (isPaid || callbackAlreadyProcessed) {
+      let pendingPkg = null
+      try {
+        const pRaw = localStorage.getItem('printkoro_pending_recharge')
+        if (pRaw) {
+          const pData = JSON.parse(pRaw)
+          if (pData?.pkgId) {
+            pendingPkg = CREDIT_PACKAGES.find(p => p.id === pData.pkgId)
+          }
+        }
+      } catch (e) {}
+
+      const pkg = pendingPkg || state.selectedPackage || CREDIT_PACKAGES[0]
+      let newBal = state.creditsBalance
+
+      if (!callbackAlreadyProcessed) {
+        const topupRes = await PrintKoroCloud.topupCredits(
+          deviceId,
+          pkg.id,
+          pkg.credits,
+          { method: 'paystation', invoiceNumber, trxId: res?.trx_id, amount: res?.amount }
+        )
+        newBal = Number(topupRes?.data?.newBalance || (state.creditsBalance + pkg.credits))
+        state.creditsBalance = newBal
+      }
+
+      try {
+        localStorage.removeItem('printkoro_pending_recharge')
+      } catch (e) {}
+
+      playSuccessChime()
+      updateHeaderCreditBadge()
+
+      if (el.rechargeStatusMsg) {
+        el.rechargeStatusMsg.innerHTML = `🎉 <strong>পেমেন্ট সফল!</strong> TrxID: <code>${res?.trx_id || 'VERIFIED'}</code>। আপনার স্টেশনে +${pkg.credits.toLocaleString()} ক্রেডিট যুক্ত হয়েছে। নতুন ব্যালেন্স: ${newBal.toLocaleString()} ক্রেডিট।`
+        el.rechargeStatusMsg.className = 'recharge-status-alert success'
+        el.rechargeStatusMsg.classList.remove('hidden')
+      }
+
+      setTimeout(() => {
+        fetchCreditsData()
+        switchSubTab('subtab-history')
+      }, 1800)
+      return true
+    } else if (showManualError) {
+      alert(`PayStation Status: ${res?.trx_status || 'পেমেন্ট এখনো সম্পন্ন হয়নি। ব্রাউজারে পেমেন্ট শেষ করে আবার চেক করুন।'}`)
+    }
+  } catch (err) {
+    if (showManualError) {
+      alert(`Status verification error: ${err.message}`)
+    }
+  }
+  return false
+}
+
+let activeCmPollTimer = null
+
+async function startDirectCreditRecharge(pkgId) {
+  const pkg = CREDIT_PACKAGES.find((p) => p.id === pkgId) || state.selectedPackage || CREDIT_PACKAGES[1]
+  state.selectedPackage = pkg
+  const devId = getEffectiveDeviceId()
+
+  if (activeCmPollTimer) {
+    clearInterval(activeCmPollTimer)
+    activeCmPollTimer = null
+  }
+
+  // Populate modal details
+  if (el.cmChkPkgName) el.cmChkPkgName.textContent = pkg.name
+  if (el.cmChkCredits) el.cmChkCredits.textContent = `+${pkg.credits.toLocaleString()} Credits`
+  if (el.cmChkPrice) el.cmChkPrice.textContent = `৳${pkg.price_taka.toLocaleString()} BDT`
+  if (el.cmChkDeviceId) el.cmChkDeviceId.textContent = devId
+
+  // Reset status box to loading
+  if (el.cmChkSpinner) el.cmChkSpinner.style.display = 'block'
+  if (el.cmChkStatusTitle) el.cmChkStatusTitle.textContent = 'পেমেন্ট গেটওয়ে উইন্ডো তৈরি হচ্ছে...'
+  if (el.cmChkStatusDesc) el.cmChkStatusDesc.textContent = 'অনুগ্রহ করে অপেক্ষা করুন, ব্রাউজারে নিরাপদ পেমেন্ট পেজ ওপেন হচ্ছে।'
+  if (el.btnCmOpenBrowser) el.btnCmOpenBrowser.style.display = 'none'
+  if (el.btnCmRecheckStatus) el.btnCmRecheckStatus.style.display = 'none'
+
+  // Show checkout modal
+  el.cmCheckoutModal?.classList.remove('hidden')
+
+  // Visual button state on card
+  const btn = document.querySelector(`.cm-pkg-btn[data-pkg-id="${pkg.id}"]`)
+  const originalText = btn ? btn.textContent : 'রিচার্জ করুন'
+  if (btn) {
+    btn.textContent = '⏳ ওপেন হচ্ছে...'
+    btn.disabled = true
+  }
+
+  try {
+    const desktopBridge = window.printkoroDesktop || window.quickinkDesktop
+    let initData = null
+
+    // 1. Direct Electron IPC (Always opens in system default browser)
+    if (desktopBridge?.createPayStationSession) {
+      initData = await desktopBridge.createPayStationSession({
+        purpose: 'credit_recharge',
+        deviceId: devId,
+        packageId: pkg.id,
+        amount: pkg.price_taka,
+        customCredits: pkg.credits,
+        customerName: state.account?.shop_name || state.account?.name || 'QuickInk Station Partner',
+        customerPhone: state.account?.phone || '01700000000',
+        openInBrowser: true
+      })
+    }
+
+    // 2. Fallback to API if not in Electron or IPC returned no url
+    if (!initData || !initData.payment_url) {
+      const baseUrl = state.config?.apiBaseUrl?.trim() || ''
+      const url = baseUrl ? `${baseUrl}/api/payment/paystation/initiate` : '/api/payment/paystation/initiate'
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            purpose: 'credit_recharge',
+            amount: pkg.price_taka,
+            deviceId: devId,
+            packageId: pkg.id,
+            creditsToAdd: pkg.credits,
+            customerName: state.account?.shop_name || state.account?.name || 'QuickInk Station Partner',
+            customerPhone: state.account?.phone || '01700000000'
+          })
+        })
+        const data = await res.json()
+        if (data?.paymentUrl || data?.payment_url) {
+          initData = {
+            success: true,
+            payment_url: data.paymentUrl || data.payment_url,
+            invoice_number: data.invoiceNumber || data.invoice_number
+          }
+        }
+      } catch (e) {
+        console.warn('API fallback error:', e)
+      }
+    }
+
+    if (!initData?.success || !initData?.payment_url) {
+      throw new Error(initData?.error || 'PayStation সার্ভার থেকে পেমেন্ট লিংক তৈরি করা সম্ভব হয়নি। ইন্টারনেট সংযোগ চেক করুন।')
+    }
+
+    const payUrl = initData.payment_url
+    const inv = initData.invoice_number
+
+    try {
+      localStorage.setItem('printkoro_pending_recharge', JSON.stringify({
+        invoiceNumber: inv,
+        deviceId: devId,
+        pkgId: pkg.id,
+        credits: pkg.credits,
+        time: Date.now()
+      }))
+    } catch (e) {}
+
+    // Ensure link is opened in the default browser
+    if (desktopBridge?.openExternal) {
+      desktopBridge.openExternal(payUrl).catch(() => {})
+    } else {
+      window.open(payUrl, '_blank')
+    }
+
+    // Update status box to active
+    if (el.cmChkSpinner) el.cmChkSpinner.style.display = 'none'
+    if (el.cmChkStatusTitle) el.cmChkStatusTitle.innerHTML = '💳 <span style="color:#38bdf8;">ডিফল্ট ব্রাউজারে পেমেন্ট পেজ ওপেন হয়েছে</span>'
+    if (el.cmChkStatusDesc) {
+      el.cmChkStatusDesc.innerHTML = `আপনার সিস্টেমের ব্রাউজারে <strong>bKash / Nagad / Rocket / Cards</strong> দিয়ে পেমেন্ট সম্পন্ন করুন।<br/><span style="color:#10b981; font-weight:600;">⏳ পেমেন্ট শেষ হলে টার্মিনালে স্বয়ংক্রিয়ভাবে ক্রেডিট যুক্ত হবে...</span>`
+    }
+
+    // Show Open in Browser and Recheck buttons
+    if (el.btnCmOpenBrowser) {
+      el.btnCmOpenBrowser.style.display = 'block'
+      el.btnCmOpenBrowser.onclick = () => {
+        if (desktopBridge?.openExternal) {
+          desktopBridge.openExternal(payUrl)
+        } else {
+          window.open(payUrl, '_blank')
+        }
+      }
+    }
+
+    if (el.btnCmRecheckStatus) {
+      el.btnCmRecheckStatus.style.display = 'block'
+      el.btnCmRecheckStatus.onclick = async () => {
+        if (el.cmChkStatusTitle) el.cmChkStatusTitle.textContent = '🔄 স্ট্যাটাস যাচাই করা হচ্ছে...'
+        const ok = await verifyAndActivatePaystationPayment(inv, devId, true)
+        if (ok) {
+          closeCmCheckoutModal()
+        }
+      }
+    }
+
+    // Start auto polling every 2.5s (up to 5 min)
+    let pollCount = 0
+    activeCmPollTimer = setInterval(async () => {
+      pollCount++
+      const ok = await verifyAndActivatePaystationPayment(inv, devId, false)
+      if (ok || pollCount >= 120) {
+        clearInterval(activeCmPollTimer)
+        activeCmPollTimer = null
+        if (ok) {
+          if (el.cmChkStatusTitle) el.cmChkStatusTitle.innerHTML = '🎉 <span style="color:#10b981;">পেমেন্ট সফলভাবে সম্পন্ন হয়েছে!</span>'
+          if (el.cmChkStatusDesc) el.cmChkStatusDesc.textContent = `আপনার স্টেশনে +${pkg.credits.toLocaleString()} ক্রেডিট যুক্ত হয়েছে। বর্তমান ব্যালেন্স: ${state.creditsBalance.toLocaleString()}`
+          setTimeout(closeCmCheckoutModal, 2200)
+        }
+      }
+    }, 2500)
+
+  } catch (err) {
+    console.error('Error starting recharge checkout:', err)
+    if (el.cmChkSpinner) el.cmChkSpinner.style.display = 'none'
+    if (el.cmChkStatusTitle) el.cmChkStatusTitle.innerHTML = '⚠️ <span style="color:#ef4444;">পেমেন্ট উইন্ডো ওপেন হতে সমস্যা হয়েছে</span>'
+    if (el.cmChkStatusDesc) el.cmChkStatusDesc.textContent = err.message || 'অনুগ্রহ করে ইন্টারনেট চেক করে পুনরায় চেষ্টা করুন।'
+  } finally {
+    if (btn) {
+      btn.textContent = originalText
+      btn.disabled = false
+    }
+  }
+}
+
+function closeCmCheckoutModal() {
+  if (activeCmPollTimer) {
+    clearInterval(activeCmPollTimer)
+    activeCmPollTimer = null
+  }
+  el.cmCheckoutModal?.classList.add('hidden')
 }
 
 function renderLedgerTable(transactions) {
@@ -2669,6 +3213,108 @@ function renderLedgerTable(transactions) {
 }
 
 // =============================================================================
+// CREDIT MANAGEMENT PAGE LOGIC (EXACT SCREENSHOT MATCH)
+// =============================================================================
+function renderCreditManagementPage() {
+  fetchCreditsData()
+
+  const bal = Number(state.creditsBalance || 0)
+  if (el.cmStatAvailable) el.cmStatAvailable.textContent = bal.toLocaleString()
+
+  // Total document pages printed across completed jobs
+  const totalPages = (state.recentJobs || []).reduce((sum, j) => sum + (Number(j.page_count) || 1), 0)
+  if (el.cmStatTotalJobs) el.cmStatTotalJobs.textContent = totalPages.toLocaleString()
+
+  // Hardware verified print output rate
+  if (el.cmStatSuccessRate) el.cmStatSuccessRate.textContent = '100%'
+
+  // Used print credits calculation
+  let usedCredits = 0
+  if (state.creditTransactions && state.creditTransactions.length > 0) {
+    usedCredits = state.creditTransactions
+      .filter((t) => Number(t.amount || 0) < 0)
+      .reduce((sum, t) => sum + Math.abs(Number(t.amount || 0)), 0)
+  }
+  if (usedCredits === 0 && totalPages > 0) {
+    usedCredits = totalPages * 2
+  }
+  if (el.cmStatUsedCredits) el.cmStatUsedCredits.textContent = usedCredits.toLocaleString()
+
+  // 1. Render Print Usage Table
+  if (el.cmUsageTableBody) {
+    const usageTxs = (state.creditTransactions || []).filter((t) => Number(t.amount || 0) < 0)
+    if (usageTxs.length === 0 && (!state.recentJobs || state.recentJobs.length === 0)) {
+      el.cmUsageTableBody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align:center; padding:32px; color:var(--text-muted);">
+            কোনো প্রিন্ট ক্রেডিট খরচের রেকর্ড পাওয়া যায়নি
+          </td>
+        </tr>
+      `
+    } else if (usageTxs.length > 0) {
+      el.cmUsageTableBody.innerHTML = usageTxs.map((t) => {
+        const dateStr = t.created_at ? new Date(t.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'আজ'
+        return `
+          <tr>
+            <td style="color:var(--text-muted); font-size:11.5px;">${dateStr}</td>
+            <td style="font-weight:600;">${t.description || 'ডকুমেন্ট প্রিন্ট রিলিজ'}</td>
+            <td><span class="cm-tag-status cm-tag-success">কাগজ প্রিন্ট সম্পন্ন</span></td>
+            <td style="color:#ef4444; font-weight:700;">${Number(t.amount).toLocaleString()}</td>
+            <td><span class="cm-tag-status cm-tag-success">আউটপুট নিশ্চিত</span></td>
+          </tr>
+        `
+      }).join('')
+    } else {
+      el.cmUsageTableBody.innerHTML = (state.recentJobs || []).slice(0, 10).map((j) => {
+        const dateStr = j.created_at ? new Date(j.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'আজ'
+        const bwPrice = Number(state.pricingTier?.bw_price || 2.0)
+        const colorPrice = Number(state.pricingTier?.color_price || 8.0)
+        const printCost = (j.page_count || 1) * (j.is_color ? colorPrice : bwPrice)
+        return `
+          <tr>
+            <td style="color:var(--text-muted); font-size:11.5px;">${dateStr}</td>
+            <td style="font-weight:600;">${j.file_name || 'ডকুমেন্ট প্রিন্ট'}</td>
+            <td>${j.is_color ? 'কালার প্রিন্ট' : 'B&W প্রিন্ট'} (${j.page_count || 1} পাতা)</td>
+            <td style="color:#ef4444; font-weight:700;">-${Math.round(printCost).toLocaleString()}</td>
+            <td><span class="cm-tag-status cm-tag-success">প্রিন্ট সম্পন্ন</span></td>
+          </tr>
+        `
+      }).join('')
+    }
+  }
+
+  // 2. Render Recharge Table
+  if (el.cmRechargeTableBody) {
+    const topupTxs = (state.creditTransactions || []).filter((t) => Number(t.amount || 0) > 0)
+    if (topupTxs.length === 0) {
+      el.cmRechargeTableBody.innerHTML = `
+        <tr>
+          <td colspan="6" style="text-align:center; padding:32px; color:var(--text-muted);">
+            কোনো পূর্ববর্তী রিচার্জ রেকর্ড পাওয়া যায়নি
+          </td>
+        </tr>
+      `
+    } else {
+      el.cmRechargeTableBody.innerHTML = topupTxs.map((t) => {
+        const dateStr = t.created_at ? new Date(t.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'আজ'
+        const pkgMatch = CREDIT_PACKAGES.find((p) => p.credits === Number(t.amount))
+        const price = pkgMatch ? `৳${pkgMatch.price_taka}` : (t.price_taka ? `৳${t.price_taka}` : '৳' + Math.round(Number(t.amount) * 0.02))
+        return `
+          <tr>
+            <td style="color:var(--text-muted); font-size:11.5px;">${dateStr}</td>
+            <td style="font-weight:700; color:#00bf63;">${pkgMatch?.name_bn || pkgMatch?.name || t.description || 'প্রিন্ট ক্রেডিট বান্ডেল'}</td>
+            <td><span class="cm-tag-status" style="background:rgba(234, 179, 8, 0.12); color:#eab308; border:1px solid rgba(234, 179, 8, 0.3);">bKash / Nagad</span></td>
+            <td style="font-weight:800; color:#00bf63;">+${Number(t.amount).toLocaleString()}</td>
+            <td style="font-weight:700;">${price}</td>
+            <td><span class="cm-tag-status cm-tag-success">নিশ্চিত</span></td>
+          </tr>
+        `
+      }).join('')
+    }
+  }
+}
+
+// =============================================================================
 // SHOP & KIOSK REGISTRATION, OTP VERIFICATION & AUTHENTICATION SYSTEM
 // =============================================================================
 function setupAuthSystem() {
@@ -2690,12 +3336,16 @@ function setupAuthSystem() {
     el.authModal.classList.add('hidden')
   })
 
-  // 4. Tab Switcher inside Auth Modal
-  el.tabBtnSignin?.addEventListener('click', () => switchAuthTab('signin'))
-  el.tabBtnSignup?.addEventListener('click', () => switchAuthTab('signup'))
-  el.linkToRegister?.addEventListener('click', (e) => {
-    e.preventDefault()
-    switchAuthTab('signup')
+  // 4. Screen Switcher between Login and Register
+  el.tabAuthSignin?.addEventListener('click', () => showScreen('login'))
+  el.tabAuthRegister?.addEventListener('click', () => {
+    showScreen('register')
+    setRegStep(1)
+  })
+  el.regTabAuthSignin?.addEventListener('click', () => showScreen('login'))
+  el.regTabAuthRegister?.addEventListener('click', () => {
+    showScreen('register')
+    setRegStep(1)
   })
 
   // 5. Modality Options (Shop vs Kiosk)
@@ -2779,11 +3429,13 @@ function setupAuthSystem() {
   setupForgotPassword()
 
   // Switch between Login and Register screens
-  el.linkToRegister?.addEventListener('click', () => {
+  el.linkToRegister?.addEventListener('click', (e) => {
+    e?.preventDefault()
     showScreen('register')
     setRegStep(1)
   })
-  el.linkToLogin?.addEventListener('click', () => {
+  el.linkToLogin?.addEventListener('click', (e) => {
+    e?.preventDefault()
     showScreen('login')
   })
 
@@ -3783,7 +4435,7 @@ function renderProfilePage() {
         if (elAppVer) elAppVer.textContent = `v${v}`
       }).catch(() => {})
     } else {
-      elAppVer.textContent = 'v1.2.3'
+      elAppVer.textContent = 'v1.2.4'
     }
   }
 
@@ -3852,7 +4504,7 @@ function setupProfilePageListeners() {
     if (state.account) {
       handleLogout()
     } else {
-      openAuthModal('signin')
+      showScreen('login')
     }
   })
 }

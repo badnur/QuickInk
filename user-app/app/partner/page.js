@@ -217,9 +217,9 @@ export default function PartnerPage() {
               className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#00bf63] hover:bg-[#00a855] text-black font-extrabold text-sm shadow-xl shadow-[#00bf63]/20 transition-all hover:scale-[1.02]"
             >
               <Download className="w-5 h-5 text-black" />
-              <span>{lang === 'bn' ? 'প্রিন্টকোরো ডেস্কটপ অ্যাপ ডাউনলোড (.exe)' : 'Download PrintKoro Desktop App (.exe)'}</span>
+              <span>{lang === 'bn' ? 'প্রিন্টকোরো ডেস্কটপ অ্যাপ v1.2.4 ডাউনলোড (.exe)' : 'Download PrintKoro Desktop App v1.2.4 (.exe)'}</span>
             </a>
-            <span className="text-xs text-slate-400">Windows 10 / 11 • Version 1.0.0 • Auto-Updating</span>
+            <span className="text-xs text-slate-400">Windows 10 / 11 (64-bit) • Latest Release v1.2.4 • Auto-Updating</span>
           </div>
         </div>
       </section>
@@ -248,7 +248,7 @@ export default function PartnerPage() {
               className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00bf63] hover:bg-[#00a855] text-black font-bold text-xs shadow-sm transition-all hover:scale-[1.02]"
             >
               <Download className="w-4 h-4 text-black" />
-              <span>{lang === 'bn' ? 'ডাউনলোড ইনস্টলার (.exe)' : 'Download Installer (.exe)'}</span>
+              <span>{lang === 'bn' ? 'ডাউনলোড ইনস্টলার v1.2.4 (.exe)' : 'Download Installer v1.2.4 (.exe)'}</span>
             </a>
           </div>
 
@@ -804,7 +804,7 @@ export default function PartnerPage() {
                             className="inline-flex items-center gap-2 px-4 py-2 bg-[#00bf63] hover:bg-[#00a855] text-white font-semibold text-xs rounded-lg transition-colors shadow-sm"
                           >
                             <Download className="w-4 h-4" />
-                            {lang === 'bn' ? 'ডেস্কটপ অ্যাপ ডাউনলোড (.exe)' : 'Download PrintKoro Desktop App (.exe)'}
+                            {lang === 'bn' ? 'ডেস্কটপ অ্যাপ ডাউনলোড v1.2.4 (.exe)' : 'Download PrintKoro Desktop App v1.2.4 (.exe)'}
                           </a>
                         </div>
                       </div>

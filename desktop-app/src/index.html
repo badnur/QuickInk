@@ -53,6 +53,12 @@
 
         <!-- Login Card -->
         <div class="auth-card">
+          <!-- Segmented Auth Mode Switcher -->
+          <div class="auth-card-tabs">
+            <button type="button" class="auth-card-tab active" id="tab-auth-signin">Sign In</button>
+            <button type="button" class="auth-card-tab" id="tab-auth-register">Register Station</button>
+          </div>
+
           <div class="auth-card-header">
             <h2 class="auth-card-title">Login</h2>
             <p class="auth-card-subtitle">Enter your credentials to access your dashboard.</p>
@@ -117,7 +123,7 @@
         <!-- Footer Link -->
         <div class="auth-bottom-switch">
           <span>Don't have an account?</span>
-          <button type="button" id="link-to-register" class="auth-switch-link">Register</button>
+          <button type="button" id="link-to-register" class="auth-switch-link">Register Station →</button>
         </div>
 
         <!-- Connection / Cloud Status Indicator -->
@@ -301,6 +307,12 @@
         <p class="auth-hero-subtitle">Register your shop or kiosk terminal in 3 quick steps</p>
 
         <div class="auth-card reg-card">
+          <!-- Segmented Auth Mode Switcher -->
+          <div class="auth-card-tabs">
+            <button type="button" class="auth-card-tab" id="reg-tab-auth-signin">Sign In</button>
+            <button type="button" class="auth-card-tab active" id="reg-tab-auth-register">Register Station</button>
+          </div>
+
           <!-- Stepper Progress -->
           <div class="auth-stepper">
             <div class="step-indicator active" id="step-ind-1">
@@ -477,7 +489,7 @@
 
         <div class="auth-bottom-switch">
           <span>Already registered with PrintKoro?</span>
-          <button type="button" id="link-to-login" class="auth-switch-link">Sign In</button>
+          <button type="button" id="link-to-login" class="auth-switch-link">← Back to Sign In</button>
         </div>
       </div>
     </div>
@@ -905,6 +917,34 @@
             <span class="nav-tab-text" id="nav-text-earnings">Today's Earnings</span>
           </button>
 
+          <button class="nav-tab" data-tab="tab-credits">
+            <svg class="nav-3d-icon" width="22" height="22" viewBox="0 0 32 32" fill="none">
+              <defs>
+                <linearGradient id="cm-base-grad" x1="2" y1="4" x2="30" y2="28" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#34D399" />
+                  <stop offset="50%" stop-color="#059669" />
+                  <stop offset="100%" stop-color="#047857" />
+                </linearGradient>
+                <linearGradient id="cm-depth-grad" x1="2" y1="20" x2="30" y2="30" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#064E3B" />
+                  <stop offset="100%" stop-color="#022C22" />
+                </linearGradient>
+                <linearGradient id="cm-gold-chip" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#FEF08A" />
+                  <stop offset="100%" stop-color="#EAB308" />
+                </linearGradient>
+              </defs>
+              <rect x="2" y="6" width="28" height="21" rx="5.5" fill="url(#cm-depth-grad)" />
+              <rect x="2" y="4" width="28" height="21" rx="5" fill="url(#cm-base-grad)" />
+              <rect x="2" y="9" width="28" height="4.5" fill="#022C22" />
+              <rect x="6.5" y="16.5" width="6.5" height="4.5" rx="1.5" fill="url(#cm-gold-chip)" />
+              <circle cx="21.5" cy="18.5" r="3.2" fill="#34D399" opacity="0.9" />
+              <circle cx="25" cy="18.5" r="3.2" fill="#FBBF24" opacity="0.85" />
+            </svg>
+            <span class="nav-tab-text" id="nav-text-credits">Credit Management</span>
+            <span class="badge-pill" id="credits-badge-pill" style="background: rgba(0, 191, 99, 0.15); color: #00bf63; border: 1px solid rgba(0, 191, 99, 0.3);">Recharge</span>
+          </button>
+
           <button class="nav-tab" data-tab="tab-profile">
             <svg class="nav-3d-icon" width="22" height="22" viewBox="0 0 32 32" fill="none">
               <defs>
@@ -943,7 +983,7 @@
                 </svg>
                 <span class="update-btn-text" id="sidebar-update-text">Check for Updates</span>
               </span>
-              <span class="update-btn-badge" id="sidebar-update-badge">v1.2.2</span>
+              <span class="update-btn-badge" id="sidebar-update-badge">v1.2.4</span>
             </button>
 
             <!-- Download Progress Bar (shown when downloading update) -->
@@ -1502,6 +1542,299 @@
             </div>
           </section>
 
+          <!-- TAB: PRINT STATION CREDIT MANAGEMENT & RECHARGE BUNDLES -->
+          <section id="tab-credits" class="tab-panel">
+            <div class="credit-mgmt-container">
+              <!-- Top Page Header -->
+              <div class="cm-page-header">
+                <div class="cm-header-left">
+                  <div class="cm-header-icon-box">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#00bf63" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="2" y="5" width="20" height="14" rx="3" />
+                      <line x1="2" y1="10" x2="22" y2="10" />
+                      <line x1="6" y1="15" x2="10" y2="15" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h1 class="cm-page-title" id="cm-main-title">প্রিন্ট ক্রেডিট ম্যানেজমেন্ট ও রিচার্জ</h1>
+                    <p class="cm-page-subtitle" id="cm-main-subtitle">আপনার প্রিন্ট স্টেশনের ক্রেডিট ব্যালেন্স, রিচার্জ কোটা এবং ব্যবহারের হিস্টরি পরিচালনা করুন</p>
+                  </div>
+                </div>
+                <div class="cm-header-right">
+                  <button type="button" class="cm-doc-btn" id="btn-cm-doc" title="Print Capacity Estimator">
+                    <span id="cm-doc-btn-text">প্রিন্ট ক্যাপাসিটি ক্যালকুলেটর</span>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M7 17l9.2-9.2M17 17V8H8"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- 4 Stat Summary Cards (Grid layout inspired by reference) -->
+              <div class="cm-metrics-row">
+                <!-- Card 1: Available Credits -->
+                <div class="cm-stat-card cm-stat-card-highlight">
+                  <div class="cm-stat-header">
+                    <span class="cm-stat-badge highlight" id="cm-lbl-avail">AVAILABLE CREDITS</span>
+                    <div class="cm-stat-icon-wrap highlight">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M12 6v12M8 10h8" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="cm-stat-value" id="cm-stat-available">10,000</div>
+                  <div class="cm-stat-sub" id="cm-sub-avail">ব্যবহারযোগ্য প্রিন্ট ক্রেডিট ব্যালেন্স</div>
+                </div>
+
+                <!-- Card 2: Total Document Pages Printed -->
+                <div class="cm-stat-card">
+                  <div class="cm-stat-header">
+                    <span class="cm-stat-badge" id="cm-lbl-sent">TOTAL PAGES PRINTED</span>
+                    <div class="cm-stat-icon-wrap">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="cm-stat-value" id="cm-stat-total-jobs">0</div>
+                  <div class="cm-stat-sub" id="cm-sub-sent">সর্বমোট প্রিন্টকৃত ডকুমেন্টের পৃষ্ঠা</div>
+                </div>
+
+                <!-- Card 3: Print Success Rate -->
+                <div class="cm-stat-card">
+                  <div class="cm-stat-header">
+                    <span class="cm-stat-badge" id="cm-lbl-rate">PRINT SUCCESS RATE</span>
+                    <div class="cm-stat-icon-wrap">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                        <polyline points="22 4 12 14.01 9 11.01" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="cm-stat-value" id="cm-stat-success-rate">100%</div>
+                  <div class="cm-stat-sub" id="cm-sub-rate">হার্ডওয়্যার ভেরিফাইড প্রিন্ট আউটপুট</div>
+                </div>
+
+                <!-- Card 4: Used Print Credits -->
+                <div class="cm-stat-card">
+                  <div class="cm-stat-header">
+                    <span class="cm-stat-badge" id="cm-lbl-used">USED PRINT CREDITS</span>
+                    <div class="cm-stat-icon-wrap">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                      </svg>
+                    </div>
+                  </div>
+                  <div class="cm-stat-value" id="cm-stat-used-credits">0</div>
+                  <div class="cm-stat-sub" id="cm-sub-used">মোট প্রিন্টে খরচকৃত ক্রেডিট</div>
+                </div>
+              </div>
+
+              <!-- Print Credit Recharge Bundles Section -->
+              <div class="cm-bundles-section">
+                <div class="cm-section-title-wrap">
+                  <span class="cm-sparkle-icon">✨</span>
+                  <h2 id="cm-bundles-title">প্রিন্ট ক্রেডিট রিচার্জ বান্ডেলসমূহ</h2>
+                </div>
+
+                <div class="cm-packages-grid">
+                  <!-- Card 1: Starter Booster -->
+                  <div class="cm-pkg-card" data-pkg-id="pkg_starter">
+                    <div class="cm-pkg-badge-pill">STARTER BOOSTER</div>
+                    <div class="cm-pkg-credits-row">
+                      <span class="cm-pkg-credits-num">10,000</span>
+                      <span class="cm-pkg-credits-unit">Credits</span>
+                    </div>
+                    <div class="cm-pkg-price">250 <span class="cm-pkg-price-unit">BDT</span></div>
+                    <div class="cm-pkg-note">প্রতি ক্রেডিট মাত্র ৳০.০২৫<br/>(৳১০,০০০ প্রিন্ট ভ্যালু)</div>
+                    <button type="button" class="cm-pkg-btn" data-pkg-id="pkg_starter">
+                      রিচার্জ করুন
+                    </button>
+                  </div>
+
+                  <!-- Card 2: Partner Value Pack (Featured Hero) -->
+                  <div class="cm-pkg-card cm-pkg-featured" data-pkg-id="pkg_value">
+                    <div class="cm-pkg-popular-banner">⭐ MOST POPULAR</div>
+                    <div class="cm-pkg-badge-pill featured">PARTNER VALUE PACK</div>
+                    <div class="cm-pkg-credits-row">
+                      <span class="cm-pkg-credits-num">25,000</span>
+                      <span class="cm-pkg-credits-unit">Credits</span>
+                    </div>
+                    <div class="cm-pkg-price featured">500 <span class="cm-pkg-price-unit">BDT</span></div>
+                    <div class="cm-pkg-note">প্রতি ক্রেডিট মাত্র ৳০.০২০<br/>(৳২৫,০০০ প্রিন্ট ভ্যালু)</div>
+                    <button type="button" class="cm-pkg-btn cm-pkg-btn-featured" data-pkg-id="pkg_value">
+                      রিচার্জ করুন
+                    </button>
+                  </div>
+
+                  <!-- Card 3: Commercial Pro -->
+                  <div class="cm-pkg-card" data-pkg-id="pkg_commercial">
+                    <div class="cm-pkg-badge-pill">COMMERCIAL PRO</div>
+                    <div class="cm-pkg-credits-row">
+                      <span class="cm-pkg-credits-num">60,000</span>
+                      <span class="cm-pkg-credits-unit">Credits</span>
+                    </div>
+                    <div class="cm-pkg-price">1,000 <span class="cm-pkg-price-unit">BDT</span></div>
+                    <div class="cm-pkg-note">প্রতি ক্রেডিট মাত্র ৳০.০১৭<br/>(৳৬০,০০০ প্রিন্ট ভ্যালু)</div>
+                    <button type="button" class="cm-pkg-btn" data-pkg-id="pkg_commercial">
+                      রিচার্জ করুন
+                    </button>
+                  </div>
+
+                  <!-- Card 4: Campus Enterprise -->
+                  <div class="cm-pkg-card" data-pkg-id="pkg_enterprise">
+                    <div class="cm-pkg-badge-pill">CAMPUS ENTERPRISE</div>
+                    <div class="cm-pkg-credits-row">
+                      <span class="cm-pkg-credits-num">150,000</span>
+                      <span class="cm-pkg-credits-unit">Credits</span>
+                    </div>
+                    <div class="cm-pkg-price">2,200 <span class="cm-pkg-price-unit">BDT</span></div>
+                    <div class="cm-pkg-note">প্রতি ক্রেডিট মাত্র ৳০.০১৫<br/>(৳১৫০,০০০ প্রিন্ট ভ্যালু)</div>
+                    <button type="button" class="cm-pkg-btn" data-pkg-id="pkg_enterprise">
+                      রিচার্জ করুন
+                    </button>
+                  </div>
+
+                  <!-- Card 5: Elite Mega Pack -->
+                  <div class="cm-pkg-card" data-pkg-id="pkg_elite">
+                    <div class="cm-pkg-badge-pill">ELITE MEGA PACK</div>
+                    <div class="cm-pkg-credits-row">
+                      <span class="cm-pkg-credits-num">300,000</span>
+                      <span class="cm-pkg-credits-unit">Credits</span>
+                    </div>
+                    <div class="cm-pkg-price">4,000 <span class="cm-pkg-price-unit">BDT</span></div>
+                    <div class="cm-pkg-note">প্রতি ক্রেডিট মাত্র ৳০.০১৩<br/>(৳৩০০,০০০ প্রিন্ট ভ্যালু)</div>
+                    <button type="button" class="cm-pkg-btn" data-pkg-id="pkg_elite">
+                      রিচার্জ করুন
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bottom History Tabs -->
+              <div class="cm-history-wrap">
+                <div class="cm-history-tabs-bar">
+                  <button type="button" class="cm-hist-tab active" id="cm-tab-btn-usage" data-view="cm-view-usage">
+                    প্রিন্ট ব্যবহারের হিস্টরি
+                  </button>
+                  <button type="button" class="cm-hist-tab" id="cm-tab-btn-recharge" data-view="cm-view-recharge">
+                    রিচার্জ লেনদেন রেকর্ড
+                  </button>
+                </div>
+
+                <!-- History View 1: Print Usage Table -->
+                <div class="cm-hist-content active" id="cm-view-usage">
+                  <div class="card table-card cm-table-card">
+                    <div class="table-wrap">
+                      <table class="data-table cm-ledger-table">
+                        <thead>
+                          <tr>
+                            <th>তারিখ ও সময়</th>
+                            <th>ডকুমেন্ট / ফাইলনেম</th>
+                            <th>প্রিন্ট ধরন ও পৃষ্ঠা</th>
+                            <th>খরচকৃত ক্রেডিট</th>
+                            <th>স্ট্যাটাস</th>
+                          </tr>
+                        </thead>
+                        <tbody id="cm-usage-table-body">
+                          <!-- Populated dynamically -->
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- History View 2: Recharge Table -->
+                <div class="cm-hist-content hidden" id="cm-view-recharge">
+                  <div class="card table-card cm-table-card">
+                    <div class="table-wrap">
+                      <table class="data-table cm-ledger-table">
+                        <thead>
+                          <tr>
+                            <th>তারিখ ও সময়</th>
+                            <th>প্যাকেজ বিবরণ</th>
+                            <th>পেমেন্ট মেথড</th>
+                            <th>ক্রেডিট যুক্ত</th>
+                            <th>পরিশোধিত টাকা</th>
+                            <th>স্ট্যাটাস</th>
+                          </tr>
+                        </thead>
+                        <tbody id="cm-recharge-table-body">
+                          <!-- Populated dynamically -->
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- DIRECT PAYSTATION RECHARGE CHECKOUT MODAL -->
+              <div id="cm-checkout-modal" class="modal-overlay hidden" style="z-index: 300;">
+                <div class="modal-dialog cm-checkout-dialog" style="max-width: 520px;">
+                  <div class="modal-header">
+                    <div class="modal-title-group">
+                      <span class="badge-success" style="background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.35);">
+                        💳 PAYSTATION LIVE GATEWAY
+                      </span>
+                      <h2 id="cm-chk-title">প্রিন্ট ক্রেডিট অনলাইন রিচার্জ</h2>
+                      <p class="modal-subtitle-text">bKash, Nagad, Rocket, ভিসা ও মাস্টারকার্ড দিয়ে আসল টাকায় সরাসরি রিচার্জ করুন</p>
+                    </div>
+                    <button id="btn-close-cm-checkout" class="btn-close" type="button">✕</button>
+                  </div>
+
+                  <div class="modal-body cm-checkout-body" style="padding: 20px;">
+                    <!-- Summary Strip -->
+                    <div class="cm-checkout-summary" style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; display: flex; flex-direction: column; gap: 8px;">
+                      <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                        <span style="color: var(--text-muted);">নির্বাচিত প্যাকেজ:</span>
+                        <strong id="cm-chk-pkg-name" style="color: var(--text-main);">Partner Value Pack</strong>
+                      </div>
+                      <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                        <span style="color: var(--text-muted);">ক্রেডিট সংখ্যা:</span>
+                        <strong id="cm-chk-credits" style="color: #00bf63; font-weight: 800;">+25,000 Credits</strong>
+                      </div>
+                      <div style="display: flex; justify-content: space-between; font-size: 13px;">
+                        <span style="color: var(--text-muted);">মোট প্রদেয় মূল্য:</span>
+                        <strong id="cm-chk-price" style="color: #38bdf8; font-weight: 800; font-size: 15px;">৳500.00 BDT</strong>
+                      </div>
+                      <div style="display: flex; justify-content: space-between; font-size: 12px;">
+                        <span style="color: var(--text-muted);">টার্মিনাল আইডি:</span>
+                        <code id="cm-chk-device-id" style="font-family: monospace; color: var(--text-muted); font-size: 11px;">5c217312-e34c-4866-988a-50f63bd8e3c1</code>
+                      </div>
+                    </div>
+
+                    <!-- Status Display Box -->
+                    <div id="cm-chk-status-box" style="background: #131722; border: 1px solid rgba(56, 189, 248, 0.3); border-radius: 10px; padding: 16px; margin-bottom: 16px; display: flex; gap: 14px; align-items: center;">
+                      <div id="cm-chk-spinner" class="spinner" style="width: 24px; height: 24px; border: 3px solid rgba(56, 189, 248, 0.2); border-top-color: #38bdf8; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0;"></div>
+                      <div>
+                        <div id="cm-chk-status-title" style="font-size: 14px; font-weight: 700; color: #e4e4e7; margin-bottom: 3px;">পেমেন্ট গেটওয়ে উইন্ডো তৈরি হচ্ছে...</div>
+                        <div id="cm-chk-status-desc" style="font-size: 12px; color: var(--text-muted); line-height: 1.4;">অনুগ্রহ করে অপেক্ষা করুন, PayStation নিরাপদ পেমেন্ট উইন্ডো ওপেন হচ্ছে।</div>
+                      </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                      <button type="button" class="btn-signin-white" id="btn-cm-open-browser" style="display: none; background: #0284c7; color: #ffffff; border: none; padding: 10px; font-weight: 700; border-radius: 8px; cursor: pointer; text-align: center;">
+                        🌐 ব্রাউজারে খুলুন (Open in Chrome/Edge)
+                      </button>
+                      <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn-secondary" id="btn-cm-recheck-status" style="flex: 1; display: none; font-size: 12px; padding: 9px;">
+                          🔄 স্ট্যাটাস ভেরিফাই করুন
+                        </button>
+                        <button type="button" class="btn-secondary" id="btn-cm-cancel" style="flex: 1; padding: 9px 16px; font-size: 12px;">
+                          বন্ধ করুন
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <!-- TAB 5: STATION PROFILE -->
           <section id="tab-profile" class="tab-panel">
             <div class="profile-page-container">
@@ -1581,7 +1914,7 @@
                   <div class="profile-detail-cell">
                     <span class="cell-label">App Version</span>
                     <div class="cell-value">
-                      <span class="font-mono text-green" id="profile-page-app-version">v1.2.3</span>
+                      <span class="font-mono text-green" id="profile-page-app-version">v1.2.4</span>
                     </div>
                   </div>
                 </div>
@@ -1707,23 +2040,21 @@
                   </svg>
                 </span>
                 <div>
-                  <div class="credit-badge-title">Wholesale Cost: <strong id="modal-credit-cost">0 Credits</strong>
-                    (<span id="modal-credit-taka-val">৳0.00</span> value)</div>
-                  <div class="credit-badge-sub">Balance: <strong id="modal-avail-credits">10,000</strong> credits ·
-                    Deducted ONLY upon paper output</div>
+                  <div class="credit-badge-title">Station Credit Cost: <strong id="modal-credit-cost">0 Credits</strong></div>
+                  <div class="credit-badge-sub">Available Balance: <strong id="modal-avail-credits">10,000</strong> credits · Deducted only upon physical print</div>
+                  <span id="modal-credit-taka-val" class="hidden">৳0.00</span>
                 </div>
               </div>
-              <div class="credit-safe-pill" title="If SumatraPDF or printer jams/fails after OTP, zero credits are cut">
-                🛡️ Safe Print Rule
+              <div class="credit-safe-pill" title="If printer jams or encounters a hardware error, zero credits are deducted">
+                🛡️ Safe Print Guarantee
               </div>
             </div>
 
             <div class="credit-low-warning hidden" id="modal-low-credits-alert">
               <div class="low-credits-msg">
-                <strong>⚠️ Low Credit Balance:</strong> You need <span id="modal-needed-credits">0</span> credits, but
-                have only <span id="modal-current-credits">0</span>.
+                <strong>⚠️ Insufficient Station Balance:</strong> This print job requires <span id="modal-needed-credits">0</span> credits, but your terminal has only <span id="modal-current-credits">0</span> credits. Please recharge your balance from the <strong>Station Profile</strong> page.
               </div>
-              <button type="button" class="btn-topup-inline" id="btn-job-modal-topup">+ Top Up Credits</button>
+              <button type="button" class="btn-topup-inline" id="btn-job-modal-topup">Open Station Profile →</button>
             </div>
 
             <!-- Spooling Progress Bar -->
@@ -1975,10 +2306,9 @@
         <div class="modal-dialog sub-modal-dialog">
           <div class="modal-header">
             <div class="modal-title-group">
-              <span class="badge-sub-pill">WHOLESALE CREDIT SUBSCRIPTION</span>
-              <h2>PrintKoro Partner Credit Subscriptions</h2>
-              <p class="modal-subtitle-text">Keep 100% of customer print revenue. 1 Credit = ৳1 of gross customer print
-                value.</p>
+              <span class="badge-sub-pill">STATION BILLING</span>
+              <h2>Print Station Credit Top-Up</h2>
+              <p class="modal-subtitle-text">Recharge print credits for this terminal. Credits are deducted per page based on active station rates.</p>
             </div>
             <button id="btn-close-sub-modal" class="btn-close" type="button">✕</button>
           </div>
@@ -2001,7 +2331,7 @@
                   <div class="sub-balance-row">
                     <span class="sub-balance-number" id="sub-card-balance">10,000</span>
                     <span class="sub-balance-unit">Credits</span>
-                    <span class="sub-balance-equiv">(৳<span id="sub-card-gross-value">10,000</span> Value)</span>
+                    <span class="sub-balance-equiv">(৳<span id="sub-card-gross-value">10,000</span> Equivalent Value)</span>
                   </div>
                   <div class="sub-tier-rate-badge" id="sub-card-tier-text">
                     Zone Rate: <strong id="sub-card-bw-rate">৳2.00</strong>/B&W · <strong
@@ -2012,7 +2342,7 @@
 
               <!-- Dynamic Printable Page Estimator -->
               <div class="sub-hero-calc">
-                <div class="sub-calc-title">Print Capacity at Your Rates:</div>
+                <div class="sub-calc-title">Estimated Print Capacity:</div>
                 <div class="sub-calc-pills">
                   <div class="sub-calc-pill bw">
                     <span class="sub-pill-val" id="sub-card-bw-pages">5,000</span>
@@ -2024,7 +2354,7 @@
                     <span class="sub-pill-lbl">Color Sheets</span>
                   </div>
                 </div>
-                <div class="sub-calc-note">Calculated dynamically based on your station's area pricing tier.</div>
+                <div class="sub-calc-note">Calculated dynamically based on your station's active pricing tier.</div>
               </div>
             </div>
 
@@ -2032,10 +2362,8 @@
             <div class="safe-print-strip">
               <div class="safe-strip-icon">🛡️</div>
               <div class="safe-strip-content">
-                <strong>PrintKoro Zero-Risk Credit Safeguard:</strong>
-                <span>Credits are deducted <em>ONLY</em> upon confirmed physical printing output. If SumatraPDF or your
-                  printer jams, runs out of paper, or encounters a hardware error after OTP entry, <strong>zero credits
-                    are cut</strong>.</span>
+                <strong>Zero-Risk Output Guarantee:</strong>
+                <span>Credits are deducted <em>only</em> upon confirmed physical printing output. Hardware errors or paper jams never deduct credits.</span>
               </div>
             </div>
 
@@ -2047,7 +2375,7 @@
               </button>
               <button type="button" class="sub-tab-btn" data-subtab="subtab-calculator">
                 <span class="sub-tab-icon">🧮</span>
-                <span>Profit & Page Calculator</span>
+                <span>Capacity Estimator</span>
               </button>
               <button type="button" class="sub-tab-btn" data-subtab="subtab-recharge">
                 <span class="sub-tab-icon">⚡</span>
@@ -2062,7 +2390,7 @@
             <!-- SUB-TAB 1: PACKAGES GRID -->
             <div id="subtab-packages" class="subtab-content active">
               <div class="packages-header">
-                <h3>Select a Wholesale Credit Package</h3>
+                <h3>Select a Credit Package</h3>
                 <p>Top up credits anytime. Station balance never expires.</p>
               </div>
 
@@ -2071,7 +2399,7 @@
                 <div class="package-card" data-pkg-id="pkg_starter" data-pkg-credits="10000" data-pkg-price="250">
                   <div class="pkg-header">
                     <span class="pkg-badge">STARTER</span>
-                    <h4 class="pkg-name">Starter Booster</h4>
+                    <h4 class="pkg-name">Starter Pack</h4>
                   </div>
                   <div class="pkg-price-row">
                     <span class="pkg-currency">৳</span>
@@ -2081,12 +2409,12 @@
                   <div class="pkg-credits-highlight">
                     <span class="pkg-credits-num">10,000</span> Credits
                   </div>
-                  <div class="pkg-value-tag">৳10,000 Customer Value (40x)</div>
+                  <div class="pkg-value-tag">৳10,000 Customer Value</div>
                   <ul class="pkg-specs">
                     <li>🖨️ <strong class="pkg-calc-bw">5,000</strong> B&W sheets capacity</li>
                     <li>🎨 <strong class="pkg-calc-color">2,000</strong> Color sheets capacity</li>
-                    <li>💰 <strong>৳9,750</strong> Net shop profit</li>
-                    <li>🛡️ Protected by Safe Print Rule</li>
+                    <li>🛡️ Zero credit loss on hardware jams</li>
+                    <li>⚡ Instant balance activation</li>
                   </ul>
                   <button type="button" class="btn-select-pkg" data-pkg="pkg_starter">Select Package</button>
                 </div>
@@ -2094,9 +2422,9 @@
                 <!-- Package 2: Value Pack (Featured Hero: 25000 credits for 500 taka) -->
                 <div class="package-card featured" data-pkg-id="pkg_value" data-pkg-credits="25000"
                   data-pkg-price="500">
-                  <div class="pkg-popular-banner">⭐ MOST POPULAR PARTNER PACK</div>
+                  <div class="pkg-popular-banner">⭐ MOST POPULAR</div>
                   <div class="pkg-header">
-                    <span class="pkg-badge featured-badge">RECOMMENDED (50x VALUE)</span>
+                    <span class="pkg-badge featured-badge">RECOMMENDED</span>
                     <h4 class="pkg-name">Partner Value Pack</h4>
                   </div>
                   <div class="pkg-price-row">
@@ -2107,22 +2435,21 @@
                   <div class="pkg-credits-highlight featured-credits">
                     <span class="pkg-credits-num">25,000</span> Credits
                   </div>
-                  <div class="pkg-value-tag highlight">৳25,000 Customer Value (50x Multiplier!)</div>
+                  <div class="pkg-value-tag highlight">৳25,000 Customer Value</div>
                   <ul class="pkg-specs">
                     <li>🖨️ <strong class="pkg-calc-bw">12,500</strong> B&W sheets capacity</li>
                     <li>🎨 <strong class="pkg-calc-color">5,000</strong> Color sheets capacity</li>
-                    <li>💰 <strong style="color:#4ade80;">৳24,500</strong> Net shop profit (98% margin!)</li>
-                    <li>🛡️ Zero credit risk on print jams</li>
-                    <li>⚡ Instant automatic activation</li>
+                    <li>⚡ Standard high-turnaround pack</li>
+                    <li>🛡️ Zero credit loss on hardware jams</li>
+                    <li>⚡ Instant balance activation</li>
                   </ul>
-                  <button type="button" class="btn-select-pkg btn-pkg-featured" data-pkg="pkg_value">Get 25,000 Credits
-                    Now →</button>
+                  <button type="button" class="btn-select-pkg btn-pkg-featured" data-pkg="pkg_value">Select 25,000 Credits →</button>
                 </div>
 
                 <!-- Package 3: Commercial Pro -->
                 <div class="package-card" data-pkg-id="pkg_commercial" data-pkg-credits="60000" data-pkg-price="1000">
                   <div class="pkg-header">
-                    <span class="pkg-badge">HIGH FOOTFALL</span>
+                    <span class="pkg-badge">HIGH VOLUME</span>
                     <h4 class="pkg-name">Commercial Pro</h4>
                   </div>
                   <div class="pkg-price-row">
@@ -2133,12 +2460,12 @@
                   <div class="pkg-credits-highlight">
                     <span class="pkg-credits-num">60,000</span> Credits
                   </div>
-                  <div class="pkg-value-tag">৳60,000 Customer Value (60x)</div>
+                  <div class="pkg-value-tag">৳60,000 Customer Value</div>
                   <ul class="pkg-specs">
                     <li>🖨️ <strong class="pkg-calc-bw">30,000</strong> B&W sheets capacity</li>
                     <li>🎨 <strong class="pkg-calc-color">12,000</strong> Color sheets capacity</li>
-                    <li>💰 <strong>৳59,000</strong> Net shop profit</li>
-                    <li>🛡️ Protected by Safe Print Rule</li>
+                    <li>🏢 Ideal for high footfall shops</li>
+                    <li>🛡️ Zero credit loss on hardware jams</li>
                   </ul>
                   <button type="button" class="btn-select-pkg" data-pkg="pkg_commercial">Select Package</button>
                 </div>
@@ -2146,7 +2473,7 @@
                 <!-- Package 4: Campus Enterprise -->
                 <div class="package-card" data-pkg-id="pkg_enterprise" data-pkg-credits="150000" data-pkg-price="2200">
                   <div class="pkg-header">
-                    <span class="pkg-badge">CAMPUS HUB</span>
+                    <span class="pkg-badge">CAMPUS & BULK</span>
                     <h4 class="pkg-name">Campus Enterprise</h4>
                   </div>
                   <div class="pkg-price-row">
@@ -2157,12 +2484,12 @@
                   <div class="pkg-credits-highlight">
                     <span class="pkg-credits-num">150,000</span> Credits
                   </div>
-                  <div class="pkg-value-tag">৳150,000 Customer Value (68x)</div>
+                  <div class="pkg-value-tag">৳150,000 Customer Value</div>
                   <ul class="pkg-specs">
                     <li>🖨️ <strong class="pkg-calc-bw">75,000</strong> B&W sheets capacity</li>
                     <li>🎨 <strong class="pkg-calc-color">30,000</strong> Color sheets capacity</li>
-                    <li>💰 <strong>৳147,800</strong> Net shop profit</li>
-                    <li>🛡️ Protected by Safe Print Rule</li>
+                    <li>🎓 Campus hubs & multi-printer operations</li>
+                    <li>🛡️ Zero credit loss on hardware jams</li>
                   </ul>
                   <button type="button" class="btn-select-pkg" data-pkg="pkg_enterprise">Select Package</button>
                 </div>
@@ -2173,14 +2500,13 @@
             <div id="subtab-calculator" class="subtab-content">
               <div class="calculator-panel">
                 <div class="calc-header-box">
-                  <h3>Live Partner Earnings & Capacity Calculator</h3>
-                  <p>Drag the slider below to see how credits translate into printable pages and net shop revenue at
-                    your station's active dynamic pricing.</p>
+                  <h3>Station Capacity & Revenue Estimator</h3>
+                  <p>Adjust the slider below to estimate how credits translate into printable pages and equivalent value at your station's active pricing.</p>
                 </div>
 
                 <div class="calc-slider-box">
                   <div class="calc-slider-header">
-                    <span class="slider-lbl">Choose Desired Credits:</span>
+                    <span class="slider-lbl">Select Credit Amount:</span>
                     <span class="slider-credits-badge"><strong id="calc-slider-val">25,000</strong> Credits</span>
                   </div>
                   <input type="range" id="credit-calc-slider" min="5000" max="150000" step="5000" value="25000"
@@ -2196,19 +2522,19 @@
 
                 <div class="calc-results-grid">
                   <div class="calc-result-card">
-                    <div class="calc-res-label">Wholesale Cost to You</div>
+                    <div class="calc-res-label">Package Cost</div>
                     <div class="calc-res-val cost" id="calc-res-cost">৳500</div>
-                    <div class="calc-res-sub">What you pay PrintKoro</div>
+                    <div class="calc-res-sub">Top-up payment amount</div>
                   </div>
 
                   <div class="calc-result-card">
-                    <div class="calc-res-label">Gross Customer Print Value</div>
+                    <div class="calc-res-label">Gross Print Value</div>
                     <div class="calc-res-val value" id="calc-res-revenue">৳25,000</div>
-                    <div class="calc-res-sub">100% collected by your shop</div>
+                    <div class="calc-res-sub">Equivalent print revenue</div>
                   </div>
 
                   <div class="calc-result-card highlight">
-                    <div class="calc-res-label">Net Shop Profit (Estimated)</div>
+                    <div class="calc-res-label">Estimated Station Margin</div>
                     <div class="calc-res-val profit" id="calc-res-profit">৳24,500</div>
                     <div class="calc-res-sub">Gross margin: <strong id="calc-res-margin">98.0%</strong></div>
                   </div>
@@ -2218,21 +2544,19 @@
                   <div class="breakdown-col">
                     <div class="breakdown-title">🖨️ Black & White Printing</div>
                     <div class="breakdown-stat"><strong id="calc-res-bw-sheets">12,500</strong> Sheets</div>
-                    <div class="breakdown-formula">At ৳<span id="calc-res-bw-price">2.00</span> / page (25,000 ÷ 2.00)
-                    </div>
+                    <div class="breakdown-formula">At ৳<span id="calc-res-bw-price">2.00</span> / page</div>
                   </div>
                   <div class="breakdown-divider"></div>
                   <div class="breakdown-col">
                     <div class="breakdown-title">🎨 Full Color Printing</div>
                     <div class="breakdown-stat"><strong id="calc-res-color-sheets">5,000</strong> Sheets</div>
-                    <div class="breakdown-formula">At ৳<span id="calc-res-color-price">5.00</span> / page (25,000 ÷
-                      5.00)</div>
+                    <div class="breakdown-formula">At ৳<span id="calc-res-color-price">5.00</span> / page</div>
                   </div>
                 </div>
 
                 <div class="calc-cta-row">
                   <button type="button" class="btn-signin-white" id="btn-calc-apply">
-                    Top Up This Amount Now (<span id="calc-cta-text">25,000 Credits for ৳500</span>) →
+                    Recharge This Amount (<span id="calc-cta-text">25,000 Credits for ৳500</span>) →
                   </button>
                 </div>
               </div>
@@ -2257,27 +2581,22 @@
                 </div>
 
                 <div class="payment-methods-selector">
-                  <label class="pay-method-card active">
-                    <input type="radio" name="rechargeMethod" value="bkash" checked />
+                  <label class="pay-method-card active" data-method="paystation">
+                    <input type="radio" name="rechargeMethod" value="paystation" checked />
                     <div class="pay-method-content">
-                      <span class="pay-brand bkash">bKash</span>
-                      <span class="pay-desc">Instant mobile financial settlement</span>
+                      <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                        <span class="pay-brand paystation" style="color: #0284c7; font-weight: 700;">💳 পে-স্টেশন অনলাইন গেটওয়ে (PayStation Live)</span>
+                        <span class="pay-badge-pill" style="background: rgba(14, 165, 233, 0.15); color: #0284c7; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">অফিসিয়াল পেমেন্ট</span>
+                      </div>
+                      <span class="pay-desc">bKash, Nagad, Rocket, ভিসা ও মাস্টারকার্ড দিয়ে আসল টাকায় সরাসরি ক্রেডিট রিচার্জ করুন</span>
                     </div>
                   </label>
 
-                  <label class="pay-method-card">
-                    <input type="radio" name="rechargeMethod" value="nagad" />
-                    <div class="pay-method-content">
-                      <span class="pay-brand nagad">Nagad</span>
-                      <span class="pay-desc">Post Office digital wallet top-up</span>
-                    </div>
-                  </label>
-
-                  <label class="pay-method-card">
+                  <label class="pay-method-card" data-method="voucher">
                     <input type="radio" name="rechargeMethod" value="voucher" />
                     <div class="pay-method-content">
-                      <span class="pay-brand voucher">Voucher / Admin Code</span>
-                      <span class="pay-desc">Redeem scratch card or promo code</span>
+                      <span class="pay-brand voucher" style="font-weight: 700;">🎫 ভাউচার / প্রোমো কোড (Promo Voucher)</span>
+                      <span class="pay-desc">PrintKoro পার্টনার স্ক্র্যাচ কার্ড বা প্রমোশনাল ভাউচার কোড রিডিম করুন</span>
                     </div>
                   </label>
                 </div>
