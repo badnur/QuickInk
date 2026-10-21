@@ -211,15 +211,27 @@ export default function PartnerPage() {
           </div>
 
           {/* Direct Download Call to Action */}
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href="/api/download/desktop"
-              className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#00bf63] hover:bg-[#00a855] text-black font-extrabold text-sm shadow-xl shadow-[#00bf63]/20 transition-all hover:scale-[1.02]"
-            >
-              <Download className="w-5 h-5 text-black" />
-              <span>{lang === 'bn' ? 'প্রিন্টকোরো ডেস্কটপ অ্যাপ v1.2.4 ডাউনলোড (.exe)' : 'Download PrintKoro Desktop App v1.2.4 (.exe)'}</span>
-            </a>
-            <span className="text-xs text-slate-400">Windows 10 / 11 (64-bit) • Latest Release v1.2.4 • Auto-Updating</span>
+          <div className="mt-8 flex flex-col items-center justify-center">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a
+                href="/api/download/desktop?type=zip"
+                className="inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-xl bg-[#00bf63] hover:bg-[#00a855] text-black font-extrabold text-sm shadow-xl shadow-[#00bf63]/20 transition-all hover:scale-[1.02]"
+              >
+                <Download className="w-5 h-5 text-black" />
+                <span>{lang === 'bn' ? 'ডেস্কটপ অ্যাপ ডাউনলোড (.zip - নিরাপদ প্যাকেজ)' : 'Download Desktop App (.zip - Clean Package)'}</span>
+              </a>
+              <a
+                href="/api/download/desktop?type=exe"
+                className="inline-flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-sm border border-slate-700 transition-all hover:scale-[1.02]"
+              >
+                <Download className="w-4 h-4 text-slate-300" />
+                <span>{lang === 'bn' ? 'সরাসরি ইনস্টলার (.exe)' : 'Direct Setup (.exe)'}</span>
+              </a>
+            </div>
+            <div className="text-xs text-slate-400 mt-3 text-center flex flex-wrap items-center justify-center gap-1.5">
+              <span>Windows 10 / 11 (64-bit) • Release v1.2.4 • </span>
+              <span className="text-emerald-400 font-semibold">{lang === 'bn' ? '💡 .zip ফরম্যাটে ডাউনলোড করলে কোনো ব্রাউজার ব্লকিং সতর্কতা আসবে না' : '💡 .zip download completes with zero browser warnings'}</span>
+            </div>
           </div>
         </div>
       </section>
@@ -243,13 +255,23 @@ export default function PartnerPage() {
                 </p>
               </div>
             </div>
-            <a
-              href="/api/download/desktop"
-              className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00bf63] hover:bg-[#00a855] text-black font-bold text-xs shadow-sm transition-all hover:scale-[1.02]"
-            >
-              <Download className="w-4 h-4 text-black" />
-              <span>{lang === 'bn' ? 'ডাউনলোড ইনস্টলার v1.2.4 (.exe)' : 'Download Installer v1.2.4 (.exe)'}</span>
-            </a>
+            <div className="shrink-0 flex items-center gap-2">
+              <a
+                href="/api/download/desktop?type=zip"
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#00bf63] hover:bg-[#00a855] text-black font-bold text-xs shadow-sm transition-all hover:scale-[1.02]"
+                title="Download .zip without warnings"
+              >
+                <Download className="w-4 h-4 text-black" />
+                <span>{lang === 'bn' ? 'ডাউনলোড (.zip)' : 'Download (.zip)'}</span>
+              </a>
+              <a
+                href="/api/download/desktop?type=exe"
+                className="inline-flex items-center gap-1 px-3 py-2.5 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold text-xs transition-all"
+                title="Direct .exe installer"
+              >
+                <span>.exe</span>
+              </a>
+            </div>
           </div>
 
           {/* Segmented Selector Tabs */}
@@ -798,13 +820,19 @@ export default function PartnerPage() {
                         <p className="text-xs text-slate-700 leading-relaxed">
                           {lang === 'bn' ? `আপনার প্রিন্টকোরো ডেস্কটপ টার্মিনাল প্রোফাইল সেটআপ করা হয়েছে। আমাদের টিম ${trackResult.phone} নম্বরে যোগাযোগ করে সফটওয়্যার পেয়ারিং এবং সেটআপ সম্পন্ন করবে।` : `Your PrintKoro Desktop terminal profile has been set up. Our operations team is contacting you at ${trackResult.phone} to deliver your pairing key or dispatch our field technician with the self-service hardware.`}
                         </p>
-                        <div className="pt-2">
+                        <div className="pt-2 flex flex-wrap items-center gap-2">
                           <a
-                            href="/api/download/desktop"
+                            href="/api/download/desktop?type=zip"
                             className="inline-flex items-center gap-2 px-4 py-2 bg-[#00bf63] hover:bg-[#00a855] text-white font-semibold text-xs rounded-lg transition-colors shadow-sm"
                           >
                             <Download className="w-4 h-4" />
-                            {lang === 'bn' ? 'ডেস্কটপ অ্যাপ ডাউনলোড v1.2.4 (.exe)' : 'Download PrintKoro Desktop App v1.2.4 (.exe)'}
+                            <span>{lang === 'bn' ? 'ডেস্কটপ অ্যাপ ডাউনলোড (.zip - নিরাপদ)' : 'Download Desktop App (.zip)'}</span>
+                          </a>
+                          <a
+                            href="/api/download/desktop?type=exe"
+                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs rounded-lg transition-colors border border-slate-300"
+                          >
+                            <span>.exe Setup</span>
                           </a>
                         </div>
                       </div>
