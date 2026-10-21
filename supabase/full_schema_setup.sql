@@ -382,7 +382,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    IF (NEW.status IN ('printed', 'completed')) AND (OLD.status NOT IN ('printed', 'completed')) THEN
+    IF (NEW.status::text IN ('printed', 'completed')) AND (OLD.status::text NOT IN ('printed', 'completed')) THEN
         NEW.file_path := NULL;
         NEW.printed_at := COALESCE(NEW.printed_at, now());
     END IF;
@@ -403,7 +403,7 @@ SECURITY DEFINER
 SET search_path = public, storage, pg_temp
 AS $$
 BEGIN
-    IF (NEW.status IN ('printed', 'completed')) AND (OLD.status NOT IN ('printed', 'completed')) AND OLD.file_path IS NOT NULL THEN
+    IF (NEW.status::text IN ('printed', 'completed')) AND (OLD.status::text NOT IN ('printed', 'completed')) AND OLD.file_path IS NOT NULL THEN
         BEGIN
             DELETE FROM storage.objects
             WHERE bucket_id = 'print-files'
@@ -1091,7 +1091,7 @@ BEGIN
     SELECT * INTO v_job FROM public.print_jobs WHERE id = p_job_id FOR UPDATE;
     IF NOT FOUND THEN RAISE EXCEPTION 'Print job not found' USING ERRCODE = 'P0007'; END IF;
 
-    IF v_job.status = 'completed' THEN
+    IF v_job.status::text IN ('printed', 'completed') THEN
         RETURN jsonb_build_object(
             'success', true,
             'already_completed', true,
@@ -1145,7 +1145,7 @@ BEGIN
     END IF;
 
     UPDATE public.print_jobs
-    SET status = 'completed',
+    SET status = 'printed',
         file_path = NULL,
         printed_at = now(),
         redeemed_by_device_id = p_device_id
