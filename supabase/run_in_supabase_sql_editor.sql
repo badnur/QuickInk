@@ -553,8 +553,9 @@ BEGIN
         FROM public.print_jobs
         WHERE file_path IS NOT NULL
           AND (
-              status IN ('completed', 'printed', 'failed', 'voided', 'expired')
-              OR (status = 'redeemed' AND created_at < (now() - INTERVAL '1 hour'))
+              status::text IN ('printed', 'expired', 'voided', 'failed', 'completed')
+              OR (status::text = 'redeemed' AND created_at < (now() - INTERVAL '1 hour'))
+              OR (status::text NOT IN ('pending_payment', 'awaiting_redemption'))
           )
         FOR UPDATE
     LOOP
@@ -587,7 +588,7 @@ BEGIN
           AND created_at < (now() - INTERVAL '1 hour')
           AND NOT EXISTS (
               SELECT 1 FROM public.print_jobs pj
-              WHERE pj.status IN ('pending_payment', 'awaiting_redemption')
+              WHERE pj.status::text IN ('pending_payment', 'awaiting_redemption')
                 AND pj.file_path IS NOT NULL
                 AND (
                     pj.file_path = storage.objects.name
