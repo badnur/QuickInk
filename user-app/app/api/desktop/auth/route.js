@@ -134,8 +134,8 @@ export async function POST(request) {
 
       console.log(`[Desktop Auth] Mobile verification code generated for ${cleanPhone}: ${code}`)
 
-      // Dispatch SMS only if SMS_API_KEY is configured in server environment
-      const smsApiKey = process.env.SMS_API_KEY
+      // Dispatch SMS via configured SMS Gateway (FraudChecker Link)
+      const smsApiKey = process.env.SMS_API_KEY || '42fc1e917497409da3d3ffc7622e566e'
       let smsDispatched = false
 
       if (smsApiKey) {
@@ -737,8 +737,8 @@ export async function POST(request) {
 
       console.log(`[Reset OTP] Password reset code for ${cleanPhone}: ${code}`)
 
-      // Dispatch SMS only if SMS_API_KEY is configured in server environment
-      const smsApiKey = process.env.SMS_API_KEY
+      // Dispatch SMS via configured SMS Gateway (FraudChecker Link)
+      const smsApiKey = process.env.SMS_API_KEY || '42fc1e917497409da3d3ffc7622e566e'
       let smsDispatched = false
       if (smsApiKey) {
         try {

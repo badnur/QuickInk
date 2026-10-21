@@ -463,18 +463,35 @@ const PrintKoroCloud = {
     }
   },
 
+  SMS_API_KEY: '42fc1e917497409da3d3ffc7622e566e',
+
   async sendOtp(phone) {
     const cleanPhone = phone.trim().replace(/[^0-9]/g, '')
     const code = Math.floor(100000 + Math.random() * 900000).toString()
     this.otpCache.set(cleanPhone, { code, expiresAt: Date.now() + 10 * 60 * 1000 })
+
+    // Dispatch real cellular SMS via FraudChecker Gateway
+    let smsSent = false
+    try {
+      const msg = encodeURIComponent(`Your PrintKoro verification code is: ${code}. Valid for 10 minutes.`)
+      const url = `https://fraudchecker.link/api/v1/sms/?api_key=${this.SMS_API_KEY}&number=${cleanPhone}&message=${msg}`
+      fetch(url)
+        .then((r) => r.json())
+        .then((d) => console.log(`[PrintKoro SMS] Dispatched to ${cleanPhone}:`, d))
+        .catch((e) => console.warn('[PrintKoro SMS Warning]:', e.message))
+      smsSent = true
+    } catch (e) {
+      console.warn('[PrintKoro SMS Error]:', e.message)
+    }
+
     return {
       ok: true,
       data: {
         success: true,
-        message: `Verification code generated for ${cleanPhone}`,
+        message: `Verification code sent to ${cleanPhone}`,
         phone: cleanPhone,
         dev_otp: code,
-        sms_simulated: true,
+        sms_sent: smsSent,
       }
     }
   },
