@@ -4,7 +4,7 @@ export const dynamic = 'force-dynamic'
 
 const GITHUB_OWNER = 'badnur'
 const GITHUB_REPO = 'QuickInk'
-const CURRENT_VERSION = '1.2.4'
+const CURRENT_VERSION = '1.2.5'
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url)
