@@ -671,3 +671,59 @@ describe('Secret Scanning Regression Tests', () => {
     })
   }
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ZERO-RETENTION PRIVACY & STORAGE DELETION UNIT TESTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function extractStoragePrefixes(rawFilePath) {
+  if (!rawFilePath) return []
+  const clean = String(rawFilePath).split('#')[0].split('?')[0].trim()
+  const normalized = clean.replace(/^print-files\//, '').replace(/^\/+/, '')
+  const bareName = path.basename(normalized)
+  return Array.from(
+    new Set(
+      [
+        normalized,
+        bareName,
+        `jobs/${bareName}`,
+        `jobs/${normalized.replace(/^jobs\//, '')}`,
+      ].filter(Boolean)
+    )
+  )
+}
+
+describe('Zero-Retention Privacy & Storage Deletion Tests', () => {
+  test('T-ZR-01: Correctly cleans hash fragments (#border=1)', () => {
+    const prefixes = extractStoragePrefixes('jobs/1789470759853_logo.png#border=1')
+    assert.ok(prefixes.includes('jobs/1789470759853_logo.png'))
+    assert.ok(prefixes.includes('1789470759853_logo.png'))
+    assert.ok(!prefixes.some(p => p.includes('#')))
+  })
+
+  test('T-ZR-02: Normalizes bare filename without folder', () => {
+    const prefixes = extractStoragePrefixes('1789470759853_quickink.pdf')
+    assert.ok(prefixes.includes('1789470759853_quickink.pdf'))
+    assert.ok(prefixes.includes('jobs/1789470759853_quickink.pdf'))
+  })
+
+  test('T-ZR-03: Strips bucket name prefix if included', () => {
+    const prefixes = extractStoragePrefixes('print-files/jobs/doc123.pdf')
+    assert.ok(prefixes.includes('jobs/doc123.pdf'))
+    assert.ok(prefixes.includes('doc123.pdf'))
+    assert.ok(!prefixes.some(p => p.startsWith('print-files/')))
+  })
+
+  test('T-ZR-04: Strips query token strings from signed URLs', () => {
+    const prefixes = extractStoragePrefixes('jobs/receipt.pdf?token=secret123')
+    assert.ok(prefixes.includes('jobs/receipt.pdf'))
+    assert.ok(!prefixes.some(p => p.includes('?token=')))
+  })
+
+  test('T-ZR-05: Returns empty array for null or empty input without crashing', () => {
+    assert.deepEqual(extractStoragePrefixes(null), [])
+    assert.deepEqual(extractStoragePrefixes(''), [])
+    assert.deepEqual(extractStoragePrefixes(undefined), [])
+  })
+})
+

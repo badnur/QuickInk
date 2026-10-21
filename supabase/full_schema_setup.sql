@@ -382,7 +382,7 @@ RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 BEGIN
-    IF NEW.status = 'printed' AND OLD.status <> 'printed' THEN
+    IF (NEW.status IN ('printed', 'completed')) AND (OLD.status NOT IN ('printed', 'completed')) THEN
         NEW.file_path := NULL;
         NEW.printed_at := COALESCE(NEW.printed_at, now());
     END IF;
@@ -403,11 +403,17 @@ SECURITY DEFINER
 SET search_path = public, storage, pg_temp
 AS $$
 BEGIN
-    IF NEW.status = 'printed' AND OLD.status <> 'printed' AND OLD.file_path IS NOT NULL THEN
+    IF (NEW.status IN ('printed', 'completed')) AND (OLD.status NOT IN ('printed', 'completed')) AND OLD.file_path IS NOT NULL THEN
         BEGIN
             DELETE FROM storage.objects
             WHERE bucket_id = 'print-files'
-              AND name = OLD.file_path;
+              AND (
+                  name = OLD.file_path
+                  OR name = regexp_replace(OLD.file_path, '^jobs/', '')
+                  OR name = 'jobs/' || regexp_replace(OLD.file_path, '^jobs/', '')
+                  OR name = split_part(OLD.file_path, '#', 1)
+                  OR name = 'jobs/' || split_part(regexp_replace(OLD.file_path, '^jobs/', ''), '#', 1)
+              );
         EXCEPTION
             WHEN OTHERS THEN
                 RAISE WARNING 'Could not delete storage object %: %', OLD.file_path, SQLERRM;
@@ -711,6 +717,10 @@ CREATE POLICY "Operators can download file for redeemed job" ON storage.objects 
               AND print_jobs.redeemed_by_device_id = public.get_operator_device_id()
         )
     );
+
+DROP POLICY IF EXISTS "Allow public delete from print-files" ON storage.objects;
+CREATE POLICY "Allow public delete from print-files" ON storage.objects FOR DELETE TO public, anon, authenticated
+    USING (bucket_id = 'print-files');
 
 -- ----------------------------------------------------------------------------
 -- PART 6: SEED DATA (SAMPLE DEVICES & TEST JOBS)
@@ -1118,8 +1128,25 @@ BEGIN
         updated_at = now()
     WHERE id = p_device_id;
 
+    -- Zero-Retention Privacy: Immediately purge physical file from storage.objects
+    IF v_job.file_path IS NOT NULL THEN
+        BEGIN
+            DELETE FROM storage.objects
+            WHERE bucket_id = 'print-files'
+              AND (
+                  name = v_job.file_path
+                  OR name = regexp_replace(v_job.file_path, '^jobs/', '')
+                  OR name = 'jobs/' || regexp_replace(v_job.file_path, '^jobs/', '')
+                  OR name = split_part(v_job.file_path, '#', 1)
+                  OR name = 'jobs/' || split_part(regexp_replace(v_job.file_path, '^jobs/', ''), '#', 1)
+              );
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
+    END IF;
+
     UPDATE public.print_jobs
     SET status = 'completed',
+        file_path = NULL,
         printed_at = now(),
         redeemed_by_device_id = p_device_id
     WHERE id = p_job_id;

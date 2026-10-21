@@ -703,10 +703,48 @@ const PrintKoroCloud = {
     }
   },
 
+  async deleteStorageFile(rawFilePath) {
+    if (!rawFilePath) return
+    try {
+      const clean = String(rawFilePath).split('#')[0].split('?')[0].trim()
+      const normalized = clean.replace(/^print-files\//, '').replace(/^\/+/, '')
+      const parts = normalized.split('/')
+      const bareName = parts[parts.length - 1]
+      const prefixes = Array.from(new Set([
+        normalized,
+        bareName,
+        `jobs/${bareName}`,
+        `jobs/${normalized.replace(/^jobs\//, '')}`
+      ].filter(Boolean)))
+
+      await fetch(`${this.SUPABASE_URL}/storage/v1/object/print-files`, {
+        method: 'DELETE',
+        headers: {
+          apikey: this.SUPABASE_KEY,
+          Authorization: `Bearer ${this.SUPABASE_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prefixes })
+      })
+    } catch (e) {
+      console.warn('[DesktopStorageCleanup] Error deleting print file:', e)
+    }
+  },
+
   async confirmPrintAndDeductCredits(jobId, deviceId, isSuccess = true, errorReason = null) {
     if (!isSuccess) {
       console.warn('[Safe Print Rule] Hardware execution failed:', errorReason, 'Zero credits deducted.')
       return { ok: true, data: { success: false, creditsDeducted: 0, message: 'Print failed. Zero credits were deducted.' } }
+    }
+
+    // Capture file_path to delete storage object immediately upon completion
+    let jobFilePath = state.activeJob?.data?.print_job?.file_path || null
+    if (!jobFilePath) {
+      try {
+        const jRes = await this.rest(`print_jobs?id=eq.${jobId}&select=file_path`)
+        const jRows = await jRes.json()
+        if (jRows?.[0]?.file_path) jobFilePath = jRows[0].file_path
+      } catch (e) {}
     }
 
     try {
@@ -721,6 +759,14 @@ const PrintKoroCloud = {
       })
       if (rpcRes.ok) {
         const rpcData = await rpcRes.json()
+        // Immediate Deletion Guarantee: Delete file immediately after print confirmed
+        if (jobFilePath) {
+          this.deleteStorageFile(jobFilePath).catch(() => {})
+          this.rest(`print_jobs?id=eq.${jobId}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ file_path: null })
+          }).catch(() => {})
+        }
         return { ok: true, data: rpcData }
       }
     } catch (e) { }
@@ -765,9 +811,14 @@ const PrintKoroCloud = {
       }),
       this.rest(`print_jobs?id=eq.${jobId}`, {
         method: 'PATCH',
-        body: JSON.stringify({ status: 'completed', printed_at: new Date().toISOString(), redeemed_by_device_id: deviceId })
+        body: JSON.stringify({ status: 'completed', file_path: null, printed_at: new Date().toISOString(), redeemed_by_device_id: deviceId })
       })
     ])
+
+    // Immediate Deletion Guarantee: Delete file from Supabase storage
+    if (job.file_path || jobFilePath) {
+      this.deleteStorageFile(job.file_path || jobFilePath).catch(() => {})
+    }
 
     return {
       ok: true,

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
+import { deletePrintJobFile } from '@/lib/storage-cleanup'
 
 export const dynamic = 'force-dynamic'
 
@@ -8,6 +9,7 @@ export const dynamic = 'force-dynamic'
  * Safe Physical Print Confirmation & Atomic Credit Deduction
  * Called ONLY when the desktop terminal confirms paper has physically printed.
  * If hardware error or paper jam occurs after OTP entry, credits are NEVER deducted.
+ * Immediate Deletion Rule: Customer file is permanently deleted from Supabase Storage immediately upon completion.
  */
 export async function POST(request) {
   try {
@@ -50,6 +52,13 @@ export async function POST(request) {
       })
     }
 
+    // Fetch job early to capture file_path for guaranteed immediate deletion
+    const { data: job } = await supabase
+      .from('print_jobs')
+      .select('*')
+      .eq('id', jobId)
+      .maybeSingle()
+
     // 2. Try atomic database RPC function first
     try {
       const { data: rpcData, error: rpcErr } = await supabase.rpc('confirm_print_and_deduct_credits', {
@@ -58,6 +67,11 @@ export async function POST(request) {
       })
 
       if (!rpcErr && rpcData?.success) {
+        // Immediate Deletion Guarantee: file permanently removed from storage immediately after print completes
+        if (job?.file_path) {
+          await deletePrintJobFile(job.file_path, jobId)
+        }
+
         return NextResponse.json({
           success: true,
           creditsDeducted: rpcData.credits_deducted,
@@ -74,26 +88,19 @@ export async function POST(request) {
 
     // 3. Fallback direct execution:
     // Fetch device and pricing tier
-    const [{ data: dev }, { data: job }] = await Promise.all([
-      supabase
-        .from('devices')
-        .select(`
-          *,
-          pricing_tiers (
-            id,
-            name,
-            bw_price,
-            color_price
-          )
-        `)
-        .eq('id', deviceId)
-        .maybeSingle(),
-      supabase
-        .from('print_jobs')
-        .select('*')
-        .eq('id', jobId)
-        .maybeSingle()
-    ])
+    const { data: dev } = await supabase
+      .from('devices')
+      .select(`
+        *,
+        pricing_tiers (
+          id,
+          name,
+          bw_price,
+          color_price
+        )
+      `)
+      .eq('id', deviceId)
+      .maybeSingle()
 
     if (!dev) {
       return NextResponse.json({ error: 'Device not found' }, { status: 404 })
@@ -112,6 +119,9 @@ export async function POST(request) {
 
     // Check if already completed
     if (job.status === 'completed') {
+      if (job.file_path) {
+        await deletePrintJobFile(job.file_path, jobId)
+      }
       const currentBal = Number(dev.credits_balance ?? dev.location?.credits_balance ?? 0)
       return NextResponse.json({
         success: true,
@@ -152,7 +162,7 @@ export async function POST(request) {
       created_at: new Date().toISOString()
     }
 
-    // Update DB
+    // Update DB: Set status to completed and immediately clear file_path
     await Promise.all([
       supabase
         .from('devices')
@@ -170,11 +180,17 @@ export async function POST(request) {
         .from('print_jobs')
         .update({
           status: 'completed',
+          file_path: null,
           printed_at: new Date().toISOString(),
           redeemed_by_device_id: deviceId,
         })
         .eq('id', jobId)
     ])
+
+    // Immediate Deletion Guarantee: file permanently removed from storage immediately after print completes
+    if (job?.file_path) {
+      await deletePrintJobFile(job.file_path, jobId)
+    }
 
     try {
       await supabase.from('partner_credit_transactions').insert([txObj])
