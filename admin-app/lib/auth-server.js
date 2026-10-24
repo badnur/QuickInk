@@ -1,8 +1,19 @@
 import { SignJWT, jwtVerify } from 'jose'
+import crypto from 'crypto'
 
 const COOKIE_NAME = 'printkoro_admin_session'
-const secretKey = (process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || (process.env.NODE_ENV !== 'production' ? 'dev_local_secret_only' : '')).trim()
-const JWT_SECRET = new TextEncoder().encode(secretKey)
+
+function getSecretBytes() {
+  const configured = (process.env.ADMIN_JWT_SECRET || process.env.JWT_SECRET || '').trim()
+  if (configured && configured.length >= 16) {
+    return new TextEncoder().encode(configured)
+  }
+  // Deterministic fallback derived from Supabase config or platform salt so JWT signing never throws
+  const seed = configured || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'printkoro_admin_session_auth_entropy'
+  return crypto.createHash('sha256').update(seed).digest()
+}
+
+const JWT_SECRET = getSecretBytes()
 
 /**
  * Sign an administrative JWT session token

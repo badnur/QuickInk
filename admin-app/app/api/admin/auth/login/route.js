@@ -60,6 +60,17 @@ export async function POST(request) {
     const cleanEnvPin = rawEnvPin ? String(rawEnvPin).replace(/['"\s]/g, '') : null
     const cleanInputPin = String(pin || '').replace(/['"\s]/g, '')
 
+    if (pin && !cleanEnvPin) {
+      console.warn('[Admin Auth] Master PIN login attempted, but ADMIN_MASTER_PIN is not configured in environment variables.')
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Master PIN is not configured in deployment environment variables (ADMIN_MASTER_PIN missing). Please configure it in your Vercel Project Settings.',
+        },
+        { status: 500 }
+      )
+    }
+
     let isPinMatch = false
     if (cleanEnvPin && cleanInputPin && cleanEnvPin.length === cleanInputPin.length) {
       isPinMatch = crypto.timingSafeEqual(Buffer.from(cleanInputPin), Buffer.from(cleanEnvPin))
